@@ -56,6 +56,11 @@ class ModeSearchAllFreeLM:
             if i > 0:
                 _N = self.N_step
             self.full_fit = QNMFitVaryingStartingTime(self.h, self.t0_arr, _N, self.found_modes)
+            # if self.full_fit.pickle_exists():
+            #     _file_path = self.full_fit.file_path
+            #     with open(_file_path, "rb") as f:
+            #         self.full_fit = pickle.load(f)
+            #     print(f"reloaded fit {self.full_fit.run_string} from an old run.")
             self.full_fit.do_fits()
             self.mode_selector = ModeSelectorAllFree(self.full_fit.result_full, 
                                                      self.potential_modes, **self.kwargs)

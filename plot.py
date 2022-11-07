@@ -65,7 +65,8 @@ def plot_predicted_qnms(ax, predicted_qnm_list, label_offset = (0, 0.025), facec
     ymin, ymax = ax.get_ylim()
     for mode in predicted_qnm_list:
         if xmin < mode.omegar < xmax and ymax < mode.omegai < ymin: # remember that y-axis is flipped
-            ax.scatter(mode.omegar, mode.omegai, marker = 'o', facecolor = facecolor, edgecolor = edgecolor)
+            ax.scatter(mode.omegar, mode.omegai, marker = 'o', 
+                       facecolor = facecolor, edgecolor = edgecolor)
             transform = ax.transData.transform((mode.omegar, mode.omegai))
             mode_ax_coord = ax.transAxes.inverted().transform(transform)
             label_ax_coord = mode_ax_coord + label_offset
@@ -74,6 +75,8 @@ def plot_predicted_qnms(ax, predicted_qnm_list, label_offset = (0, 0.025), facec
     
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax)
+    xmin, xmax = ax.get_xlim()
+    ax.set_xlim(xmin, xmax)
     ax.axhspan(0, 1e2, color = "gray", alpha = 0.5)
         
     ax.set_xlabel("$\omega_r$")
@@ -169,7 +172,8 @@ def plot_lm_row(mode_searcher_vary_N, predicted_qnm_list = [], indx = None, axs 
     if indx == None:
         indx = mode_searcher_vary_N.best_run_indx
     if not hasattr(axs, "__iter__"):
-        fig, axs = plt.subplots(1,5,figsize = (30,5))
+        fig, axs = plt.subplots(1,5,figsize = (35,5),
+                                gridspec_kw={'width_ratios': [2, 1, 1, 1, 1]})
     mode_searcher = mode_searcher_vary_N.mode_searchers[indx]
     plot_omega_free(mode_searcher.full_fit.result_full,
                     ax = axs[0])
@@ -195,12 +199,16 @@ def plot_relevant_mode_search_full(mode_search_complete, predicted_qnm_list = []
     if indxs == None:
         indxs = [None]*n_rows
         
-    fig, ax_mat = plt.subplots(n_rows, 5, figsize = (30, 5*n_rows))
+    fig, ax_mat = plt.subplots(n_rows, 5, figsize = (35, 5*n_rows),
+                               gridspec_kw={'width_ratios': [2, 1, 1, 1, 1]})
     
     for i, ax_row in enumerate(ax_mat):
         plot_lm_row(varying_N_searcher_list[i].mode_searcher_vary_N, 
                     predicted_qnm_list = predicted_qnm_list,
                     indx = indxs[i], axs = ax_row, lm = relevant_lm_list[i])
+        
+    fig.tight_layout()
+    plt.savefig(f"./plots/{mode_search_complete.SXSnum}.pdf")
     
 def phase_break_for_plot(times, phis_in):
     phis = phis_in %(2*np.pi)

@@ -3,6 +3,8 @@ import jax.numpy as jnp
 from jaxfit import CurveFit
 from utils import *
 from tqdm import tqdm
+import os
+import pickle
 
 def qnm_fit_func(t, qnm_fixed_list, fix_mode_params_list, free_mode_params_list, part = None):
     Q = 0
@@ -92,7 +94,7 @@ class QNMFit:
 
 class QNMFitVaryingStartingTimeResult:
     
-    def __init__(self, t0_arr, qnm_fixed_list, N_free):
+    def __init__(self, t0_arr, qnm_fixed_list, N_free, run_string_prefix = "Default"):
         self.t0_arr = t0_arr
         self.qnm_fixed_list = qnm_fixed_list
         self.N_fix = len(self.qnm_fixed_list)
@@ -100,6 +102,16 @@ class QNMFitVaryingStartingTimeResult:
         self._popt_full = np.zeros((2*self.N_fix + 4*self.N_free, len(self.t0_arr)), dtype = float)    
         self._mismatch_arr = np.zeros(len(self.t0_arr), dtype = float)
         self.result_processed = False
+        if self.N_fix > 0:
+            _qnm_fixed_string_list = qnms_to_string(qnm_fixed_list)
+            _qnm_fixed_string_list.sort()
+            self.qnm_fixed_string_ordered = '_'.join(_qnm_fixed_string_list)
+            self.run_string = f"{run_string_prefix}_N_{self.N_free}\
+            _fix_{self.qnm_fixed_string_ordered}"
+        else:
+            self.qnm_fixed_string_ordered = ''
+            self.run_string = f"{run_string_prefix}_N_{self.N_free}"
+        self.file_path = f"./pickle/fits/{self.run_string}_result.pickle"
         
     def fill_result(self, i, result):
         self._popt_full[:, i] = result.popt
@@ -128,12 +140,18 @@ class QNMFitVaryingStartingTimeResult:
                              **self.omega_r_dict, **self.omega_i_dict}
         self.omega_dict = {"real": self.omega_r_dict, "imag": self.omega_i_dict}
         self.result_processed = True
+        self.pickle_save()
     
-        
+    def pickle_save(self):
+        with open(self.file_path, "wb") as f:
+            pickle.dump(self, f)
+
+    def pickle_exists(self):
+        return os.path.exists(self.file_path)
         
 class QNMFitVaryingStartingTime:
     
-    def __init__(self, h, t0_arr, N_free, qnm_fixed_list = [], params0 = None, max_nfev = 100000, sequential_guess = True):
+    def __init__(self, h, t0_arr, N_free, qnm_fixed_list = [], run_string_prefix = "Default", params0 = None, max_nfev = 100000, sequential_guess = True):
         self.h = h
         self.t0_arr = t0_arr
         self.N_fix = len(qnm_fixed_list)
@@ -144,17 +162,27 @@ class QNMFitVaryingStartingTime:
         if not hasattr(self.params0, "__iter__"):
             self.params0 = jnp.array([1,1]*self.N_fix + [1,1,1,-1]*self.N_free)
         self.sequential_guess = sequential_guess
+        self.run_string_prefix = run_string_prefix
         
     def do_fits(self):
         self._time_longest, _, _ = self.h.postmerger(self.t0_arr[0])
         _jcf = CurveFit(flength = 2*len(self._time_longest))
-        self.result_full = QNMFitVaryingStartingTimeResult(self.t0_arr, self.qnm_fixed_list, self.N_free)
-        _params0 = self.params0
-        for i, _t0 in tqdm(enumerate(self.t0_arr)):
-            qnm_fit = QNMFit(self.h, _t0, self.N_free, qnm_fixed_list = self.qnm_fixed_list,
-                             jcf = _jcf, params0 = _params0, max_nfev = self.max_nfev)
-            qnm_fit.do_fit()
-            self.result_full.fill_result(i, qnm_fit.result)
-            if self.sequential_guess:
-                _params0 = qnm_fit.result.popt
-        self.result_full.process_results()
+        self.result_full = QNMFitVaryingStartingTimeResult(self.t0_arr,
+                                               self.qnm_fixed_list, 
+                                               self.N_free,
+                                               run_string_prefix = self.run_string_prefix)
+        if self.result_full.pickle_exists():
+            _file_path = self.result_full.file_path
+            with open(_file_path, "rb") as f:
+                self.result_full = pickle.load(f)
+            print(f"reloaded fit {self.result_full.run_string} from an old run.")
+        else:
+            _params0 = self.params0
+            for i, _t0 in tqdm(enumerate(self.t0_arr)):
+                qnm_fit = QNMFit(self.h, _t0, self.N_free, qnm_fixed_list = self.qnm_fixed_list,
+                                 jcf = _jcf, params0 = _params0, max_nfev = self.max_nfev)
+                qnm_fit.do_fit()
+                self.result_full.fill_result(i, qnm_fit.result)
+                if self.sequential_guess:
+                    _params0 = qnm_fit.result.popt
+            self.result_full.process_results()
