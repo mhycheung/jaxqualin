@@ -120,12 +120,20 @@ def lmnxs_to_string(lmnxs):
     return string_list
 
 
+def lmnx_to_string(lmnx):
+    lmnstrings = []
+    for lmn in lmnx:
+        l, m, n = tuple(lmn)
+        lmnstrings.append(f"{l}.{m}.{n}")
+    return 'x'.join(lmnstrings)
+
+
 def potential_modes(l, m, M, a, relevant_lm_list):
     potential_lmnx_list = []
     potential_lmnx_list.extend(overtone_modes(l, m))
     potential_lmnx_list.extend(spheroidal_mixing_modes(l, m))
     potential_lmnx_list.extend(recoil_modes(relevant_lm_list))
-    potential_lmnx_list.extend(retrograde_modes(relevant_lm_list))
+    potential_lmnx_list.extend(retrograde_modes_spheroidal(l, m))
     potential_lmnx_list.extend(quadratic_modes(relevant_lm_list))
     potential_mode_strings = lmnxs_to_string(potential_lmnx_list)
     potential_mode_strings.append("constant")
@@ -177,10 +185,17 @@ def quadratic_modes(relevant_lm_list_unsorted, quadratic_n_max=1):
     return quad_mode_list
 
 
-def retrograde_modes(relevant_lm_list, retrograde_n_max=3):
+def retrograde_modes_relevant(relevant_lm_list, retrograde_n_max=3):
     retrograde_mode_list = []
     for lm in relevant_lm_list:
         l, m = lm
+        for n in range(retrograde_n_max + 1):
+            retrograde_mode_list.append([[l, -m, n]])
+    return retrograde_mode_list
+
+def retrograde_modes_spheroidal(l, m, retrograde_n_max=3, retrograde_l_max = 10):
+    retrograde_mode_list = []
+    for l in range(max(2, m), retrograde_l_max + 1):
         for n in range(retrograde_n_max + 1):
             retrograde_mode_list.append([[l, -m, n]])
     return retrograde_mode_list
@@ -205,6 +220,23 @@ def lower_overtone_present(test_mode, found_modes):
                 return False
     return True
 
+def lower_l_mode_present(l, m, relevant_lm_list, test_mode, found_modes):
+    lmnx = test_mode.lmnx
+    if lmnx == "constant":
+        return True
+    if len(lmnx) >= 2:
+        return True
+    l_test, m_test, n_test = tuple(lmnx[0])
+    if l_test == l and m_test == m:
+        return True
+    if m_test != m or l_test == m_test or l_test == 2:
+        return True
+    if (l_test, m_test) in relevant_lm_list:
+        return True
+    lower_l_mode_lmnx = [[l_test-1, m_test, n_test]]
+    if lmnx_to_string(lower_l_mode_lmnx) not in qnms_to_string(found_modes):
+        return False
+    return True
 
 def sort_lmnx(lmnx_in):
     lmnx = sorted(lmnx_in)

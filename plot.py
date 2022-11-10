@@ -237,7 +237,8 @@ def plot_lm_row(
 def plot_relevant_mode_search_full(
         mode_search_complete,
         predicted_qnm_list=[],
-        indxs=None):
+        indxs=None,
+        postfix_string = "default"):
 
     varying_N_searcher_list = mode_search_complete.relevant_lm_mode_searcher_varying_N
     relevant_lm_list = mode_search_complete.relevant_lm_list
@@ -249,12 +250,16 @@ def plot_relevant_mode_search_full(
                                gridspec_kw={'width_ratios': [2, 1, 1, 1, 1, 1, 1]})
 
     for i, ax_row in enumerate(ax_mat):
+        if predicted_qnm_list == []:
+            predicted_qnm_list_lm = varying_N_searcher_list[i].mode_searcher_vary_N.mode_searchers[0].potential_modes_full
+        else:
+            predicted_qnm_list_lm = predicted_qnm_list
         plot_lm_row(varying_N_searcher_list[i].mode_searcher_vary_N,
-                    predicted_qnm_list=predicted_qnm_list,
+                    predicted_qnm_list=predicted_qnm_list_lm,
                     indx=indxs[i], axs=ax_row, lm=relevant_lm_list[i])
 
     fig.tight_layout()
-    plt.savefig(f"./plots/{mode_search_complete.SXSnum}.pdf")
+    plt.savefig(f"./plots/{mode_search_complete.SXSnum}_{postfix_string}.pdf")
 
 
 def phase_break_for_plot(times, phis_in):
