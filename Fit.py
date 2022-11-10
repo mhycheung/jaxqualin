@@ -1,6 +1,7 @@
 import numpy as np
 import jax.numpy as jnp
 from jaxfit import CurveFit
+import scipy
 from utils import *
 from QuasinormalMode import *
 from tqdm import tqdm
@@ -108,10 +109,12 @@ class QNMFit:
                 [1, 1] * self.N_fix + [1, 1, 1, -1] * self.N_free)
 
         self.popt, self.pcov = self.jcf.curve_fit(
+        # self.popt, self.pcov = scipy.optimize.curve_fit(
             lambda t, *params: qnm_fit_func_wrapper_complex(
                 t, self.qnm_fixed_list, self.N_free, params), np.array(
                 self._time_interweave), np.array(
-                self._h_interweave), p0=self.params0, max_nfev=self.max_nfev)
+                self._h_interweave), p0=self.params0, max_nfev=self.max_nfev,
+                method = "trf")
         self.reconstruct_h = qnm_fit_func_wrapper(
             self.time, self.qnm_fixed_list, self.N_free, self.popt)
         self.h_true = self.hr + 1.j * self.hi
