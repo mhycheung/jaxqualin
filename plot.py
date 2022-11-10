@@ -207,8 +207,8 @@ def plot_lm_row(
     if indx is None:
         indx = mode_searcher_vary_N.best_run_indx
     if not hasattr(axs, "__iter__"):
-        fig, axs = plt.subplots(1, 5, figsize=(35, 5),
-                                gridspec_kw={'width_ratios': [2, 1, 1, 1, 1]})
+        fig, axs = plt.subplots(1, 7, figsize=(45, 5),
+                                gridspec_kw={'width_ratios': [2, 1, 1, 1, 1, 1, 1]})
     mode_searcher = mode_searcher_vary_N.mode_searchers[indx]
     plot_omega_free(mode_searcher.full_fit.result_full,
                     ax=axs[0])
@@ -219,12 +219,16 @@ def plot_lm_row(
         mode_searcher.mode_selector.omega_r_tol,
         mode_searcher.mode_selector.omega_i_tol,
         ax=axs[1])
+    plot_amplitudes(mode_searcher.full_fit.result_full,
+                    ax=axs[2])
+    plot_phases(mode_searcher.full_fit.result_full,
+                ax=axs[3])
     plot_amplitudes(mode_searcher_vary_N.fixed_fitters[indx].result_full,
-                    fixed_modes=mode_searcher.found_modes, ax=axs[2])
+                    fixed_modes=mode_searcher.found_modes, ax=axs[4])
     plot_phases(mode_searcher_vary_N.fixed_fitters[indx].result_full,
-                fixed_modes=mode_searcher.found_modes, ax=axs[3])
+                fixed_modes=mode_searcher.found_modes, ax=axs[5])
     plot_mismatch(
-        mode_searcher_vary_N.fixed_fitters[indx].result_full, ax=axs[4])
+        mode_searcher_vary_N.fixed_fitters[indx].result_full, ax=axs[6])
     if lm is not None:
         axs[0].text(0.95, 0.05, r"$\ell m = {}{}$".format(*lm), ha="right",
                     va="bottom", transform=axs[0].transAxes)
@@ -241,8 +245,8 @@ def plot_relevant_mode_search_full(
     if indxs is None:
         indxs = [None] * n_rows
 
-    fig, ax_mat = plt.subplots(n_rows, 5, figsize=(35, 5 * n_rows),
-                               gridspec_kw={'width_ratios': [2, 1, 1, 1, 1]})
+    fig, ax_mat = plt.subplots(n_rows, 7, figsize=(45, 5 * n_rows),
+                               gridspec_kw={'width_ratios': [2, 1, 1, 1, 1, 1, 1]})
 
     for i, ax_row in enumerate(ax_mat):
         plot_lm_row(varying_N_searcher_list[i].mode_searcher_vary_N,
