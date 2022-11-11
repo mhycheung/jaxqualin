@@ -3,3 +3,4 @@ pickle/mode_searchers/
 plots/
 __pycache__/
 test_script.py
+slurm_scripts/
