@@ -46,8 +46,13 @@ def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2):
     h = waveform(hs[:, indx].time, hs[:, indx].real +
                  1.j * hs[:, indx].imag, l=l, m=m)
     Mf = metadata['remnant_mass']
-    af = np.linalg.norm(metadata['remnant_dimensionless_spin'])
-    return h, Mf, af, Level
+    a_arr = metadata['remnant_dimensionless_spin']
+    af = np.linalg.norm(a_arr)
+    if a_arr[2] >= 0:
+        retro = False
+    else:
+        retro = True
+    return h, Mf, af, Level, retro
 
 
 def get_SXS_waveform_dict(SXSnum, res=0, N_ext=2):
@@ -69,8 +74,13 @@ def get_SXS_waveform_dict(SXSnum, res=0, N_ext=2):
     m1 = metadata['reference_mass1']
     m2 = metadata['reference_mass2']
     Mf = metadata['remnant_mass']
-    af = np.linalg.norm(metadata['remnant_dimensionless_spin'])
-    return Mf, af, Level, hdict
+    a_arr = metadata['remnant_dimensionless_spin']
+    af = np.linalg.norm(a_arr)
+    if a_arr[2] >= 0:
+        retro = False
+    else:
+        retro = True
+    return Mf, af, Level, hdict, retro
 
 
 def waveformabsmax(time, hr, hi, startcut=500):
@@ -111,7 +121,7 @@ def get_relevant_lm_waveforms_SXS(
         includem0=False,
         res=0,
         N_ext=2):
-    Mf, af, Level, hdict = get_SXS_waveform_dict(SXSnum, res=res, N_ext=N_ext)
+    Mf, af, Level, hdict, retro = get_SXS_waveform_dict(SXSnum, res=res, N_ext=N_ext)
     relevant_lm_list = getdommodes(
         hdict, tol=1 / 40, prec=False, includem0=False)
     waveform_dict = {}
@@ -121,7 +131,7 @@ def get_relevant_lm_waveforms_SXS(
         h_time, h_r, h_i = tuple(hdict[f"{l},{m}"])
         h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m)
         waveform_dict[f"{l}.{m}"] = h
-    return waveform_dict
+    return waveform_dict, retro
 
 
 def lm_string_list_to_tuple(lm_string_list):
