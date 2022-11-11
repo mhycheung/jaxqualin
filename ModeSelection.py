@@ -128,8 +128,12 @@ class ModeSearchAllFreeLM:
         self.kwargs = kwargs
         self.retro = self.kwargs["retro"]
         self.run_string_prefix = self.kwargs["run_string_prefix"]
-        self.potential_modes_full = potential_modes(
-            self.l, self.m, self.M, self.a, self.relevant_lm_list, retro = self.retro)
+        if self.a >= 0.3:
+            self.potential_modes_full = potential_modes(
+                self.l, self.m, self.M, self.a, self.relevant_lm_list, retro = self.retro)
+        else:
+            self.potential_modes_full = potential_modes(
+                self.l, self.m, self.M, self.a, [(self.l, self.m)], retro = self.retro)
         self.potential_modes = self.potential_modes_full.copy()
 
     def mode_search_all_free(self):
