@@ -112,7 +112,7 @@ class ModeSearchAllFreeLM:
             N_init=5,
             N_step=3,
             iterations=2,
-            **kwargs):
+            **kwargs_in):
         self.h = h
         self.l = self.h.l
         self.m = self.h.m
@@ -123,14 +123,14 @@ class ModeSearchAllFreeLM:
         self.N_init = N_init
         self.N_step = N_step
         self.iterations = iterations
-        self.potential_modes_full = potential_modes(
-            self.l, self.m, self.M, self.a, self.relevant_lm_list)
-        self.potential_modes = self.potential_modes_full.copy()
+        kwargs = {"retro": False, "run_string_prefix": "Default"}
+        kwargs.update(kwargs_in)
         self.kwargs = kwargs
-        if not ("run_string_prefix" in list(kwargs.keys())):
-            self.run_string_prefix = "Default"
-        else:
-            self.run_string_prefix = kwargs["run_string_prefix"]
+        self.retro = self.kwargs["retro"]
+        self.run_string_prefix = self.kwargs["run_string_prefix"]
+        self.potential_modes_full = potential_modes(
+            self.l, self.m, self.M, self.a, self.relevant_lm_list, retro = self.retro)
+        self.potential_modes = self.potential_modes_full.copy()
 
     def mode_search_all_free(self):
         _N = self.N_init
@@ -202,6 +202,7 @@ class ModeSearchAllFreeLMSXS:
             N_init=self.N_init,
             N_step=self.N_step,
             iterations=self.iterations,
+            retro = self.retro,
             **self.kwargs)
         self.mode_searcher.do_mode_search()
         self.found_modes = self.mode_searcher.found_modes
@@ -210,11 +211,11 @@ class ModeSearchAllFreeLMSXS:
         self.mode_search_all_free_sxs()
 
     def get_waveform(self):
-        _relevant_modes_dict = get_relevant_lm_waveforms_SXS(self.SXSnum)
+        _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum)
         self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
             _relevant_modes_dict)
         peaktime_dom = list(_relevant_modes_dict.values())[0].peaktime
-        self.h, self.M, self.a, self.Lev = get_waveform_SXS(
+        self.h, self.M, self.a, self.Lev, _retro = get_waveform_SXS(
             self.SXSnum, self.l, self.m)
         self.h.update_peaktime(peaktime_dom)
 
@@ -337,7 +338,7 @@ class ModeSearchAllFreeVaryingNSXS:
         self.pickle_save()
 
     def get_waveform(self):
-        _relevant_modes_dict = get_relevant_lm_waveforms_SXS(self.SXSnum)
+        _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum)
         self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
             _relevant_modes_dict)
         peaktime_dom = list(_relevant_modes_dict.values())[0].peaktime
@@ -393,7 +394,7 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
                 )
 
     def get_relevant_lm_list(self):
-        _relevant_modes_dict = get_relevant_lm_waveforms_SXS(self.SXSnum)
+        _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum)
         self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
             _relevant_modes_dict)
 
