@@ -329,7 +329,7 @@ class ModeSearchAllFreeVaryingNSXS:
             self.relevant_lm_list,
             t0_arr=self.t0_arr,
             N_list=self.N_list,
-            retro = self.retro
+            retro = self.retro,
             **self.kwargs)
         self.mode_searcher_vary_N.do_mode_searches()
         self.found_modes_final = self.mode_searcher_vary_N.found_modes_final
