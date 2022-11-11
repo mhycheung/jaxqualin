@@ -130,11 +130,11 @@ def lmnx_to_string(lmnx):
 
 def potential_modes(l, m, M, a, relevant_lm_list, retro = False):
     potential_lmnx_list = []
-    potential_lmnx_list.extend(overtone_modes(l, m))
-    potential_lmnx_list.extend(spheroidal_mixing_modes(l, m))
-    potential_lmnx_list.extend(recoil_modes(relevant_lm_list))
-    potential_lmnx_list.extend(retrograde_modes_spheroidal(l, m))
-    potential_lmnx_list.extend(quadratic_modes_matching_m(m, relevant_lm_list))
+    potential_lmnx_list.extend(overtone_modes(l, m, retro = retro))
+    potential_lmnx_list.extend(spheroidal_mixing_modes(l, m, retro = retro))
+    potential_lmnx_list.extend(recoil_modes(relevant_lm_list, retro = retro))
+    potential_lmnx_list.extend(retrograde_modes_spheroidal(l, m, retro = retro))
+    potential_lmnx_list.extend(quadratic_modes_matching_m(m, relevant_lm_list, retro = retro))
     potential_mode_strings = lmnxs_to_string(potential_lmnx_list)
     potential_mode_strings.append("constant")
     potential_mode_list = lmnxs_to_qnms(
@@ -279,7 +279,10 @@ def lower_l_mode_present(l, m, relevant_lm_list, test_mode, found_modes):
         return True
     if (l_test, m_test) in relevant_lm_list:
         return True
-    lower_l_mode_lmnx = [[l_test-1, m_test, n_test]]
+    if l_test > l:
+        lower_l_mode_lmnx = [[l_test-1, m_test, n_test]]
+    else:
+        lower_l_mode_lmnx = [[l_test+1, m_test, n_test]]
     if lmnx_to_string(lower_l_mode_lmnx) not in qnms_to_string(found_modes):
         return False
     return True
