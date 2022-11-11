@@ -8,6 +8,9 @@ from tqdm import tqdm
 import os
 import pickle
 
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+FIT_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/fits")
+
 
 def qnm_fit_func(
         t,
@@ -146,7 +149,7 @@ class QNMFitVaryingStartingTimeResult:
         else:
             self.qnm_fixed_string_ordered = ''
             self.run_string = f"{run_string_prefix}_N_{self.N_free}_t0_{t0_arr[0]:.4f}_{t0_arr[-1]:.4f}_{len(t0_arr)}"
-        self.file_path = f"./pickle/fits/{self.run_string}_result.pickle"
+        self.file_path = os.path.join(FIT_SAVE_PATH, f"{self.run_string}_result.pickle")
 
     def fill_result(self, i, result):
         self._popt_full[:, i] = result.popt

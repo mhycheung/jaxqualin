@@ -7,6 +7,10 @@ from QuasinormalMode import *
 from ModeSelection import *
 from bisect import bisect_right
 
+import os
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+PLOT_SAVE_PATH = os.path.join(ROOT_PATH, "plots/")
+
 plt.rc('text', usetex=True)
 plt.rc('font', family='qpl')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
@@ -259,7 +263,9 @@ def plot_relevant_mode_search_full(
                     indx=indxs[i], axs=ax_row, lm=relevant_lm_list[i])
 
     fig.tight_layout()
-    plt.savefig(f"./plots/{mode_search_complete.SXSnum}_{postfix_string}.pdf")
+    save_file_path = os.path.join(PLOT_SAVE_PATH, f"{mode_search_complete.SXSnum}_{postfix_string}.pdf")
+    
+    plt.savefig(save_file_path)
 
 
 def phase_break_for_plot(times, phis_in):
