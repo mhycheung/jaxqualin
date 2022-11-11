@@ -6,6 +6,9 @@ import numpy as np
 import pickle
 import os
 
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+MODE_SEARCHERS_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/mode_searchers")
+
 
 class IterativeFlatnessChecker:
     
@@ -311,7 +314,7 @@ class ModeSearchAllFreeVaryingNSXS:
         self.get_waveform()
         self.N_list_string = '_'.join(list(map(str, self.N_list)))
         self.run_string = f"SXS{self.SXSnum}_lm_{self.l}.{self.m}_N_{self.N_list_string}"
-        self.file_path = f"./pickle/mode_searchers/ModeSearcher_{self.run_string}.pickle"
+        self.file_path = os.path.join(MODE_SEARCHERS_SAVE_PATH, f"ModeSearcher_{self.run_string}.pickle")
         if "load_pickle" not in self.kwargs:
             self.load_pickle = True
         else:
