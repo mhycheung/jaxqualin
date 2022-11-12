@@ -144,3 +144,13 @@ def lm_string_list_to_tuple(lm_string_list):
 def relevant_modes_dict_to_lm_tuple(relevant_modes_dict):
     lm_string_list = list(relevant_modes_dict.keys())
     return lm_string_list_to_tuple(lm_string_list)
+
+def get_chi_q_SXS(SXSnum, res = 0):
+    catalog = sxs.catalog.Catalog.load()
+    metaloadname = catalog.select(
+        f"SXS:BBH:{SXSnum}/Lev./metadata.json")[-1 + res]
+    metadata = sxs.load(metaloadname)
+    q = metadata['reference_mass_ratio']
+    chi_1_z = metadata['reference_dimensionless_spin1'][2]
+    chi_2_z = metadata['reference_dimensionless_spin2'][2]
+    return {'q' : q, "chi_1_z" : chi_1_z, "chi_2_z" : chi_2_z}

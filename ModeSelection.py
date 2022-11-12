@@ -60,6 +60,7 @@ class IterativeFlatnessChecker:
                 del _current_modes[_worst_mode_indx]
                 
             i += 1
+        self.fluc_least_indx_list = _fluc_least_indx_list
         self.found_modes_screened = _current_modes
 
 
