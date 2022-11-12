@@ -30,7 +30,8 @@ class IterativeFlatnessChecker:
         _current_modes = self.found_modes
         i = 0
         _discard_mode = True
-        while _discard_mode:
+        _more_than_one_mode = True
+        while _discard_mode and _more_than_one_mode:
             self.fitter_list.append(QNMFitVaryingStartingTime(
                     self.h,
                     self.t0_arr,
@@ -58,7 +59,7 @@ class IterativeFlatnessChecker:
             if _discard_mode:
                 print(f"discarding {_current_modes[_worst_mode_indx].string()} mode because it failed flatness test")
                 del _current_modes[_worst_mode_indx]
-                
+            _more_than_one_mode = len(_current_modes)>1
             i += 1
         self.fluc_least_indx_list = _fluc_least_indx_list
         self.found_modes_screened = _current_modes
