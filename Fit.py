@@ -7,6 +7,7 @@ from QuasinormalMode import *
 from tqdm import tqdm
 import os
 import pickle
+from copy import copy
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 FIT_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/fits")
@@ -102,6 +103,7 @@ class QNMFit:
         self.N_fix = len(qnm_fixed_list)
         self.jcf = jcf
         self.max_nfev = max_nfev
+        self.fit_done = False
 
     def do_fit(self):
         self.time, self.hr, self.hi = self.h.postmerger(self.t0)
@@ -124,6 +126,21 @@ class QNMFit:
         self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
             np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
         self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
+        self.fit_done = True
+        
+    def copy_from_result(self, other_result):
+        if self.fit_done == False:
+            self.popt = other_result.popt
+            self.pcov = other_result.pcov
+            self.time, self.hr, self.hi = self.h.postmerger(self.t0)
+            self._h_interweave = interweave(self.hr, self.hi)
+            self._time_interweave = interweave(self.time, self.time)
+            self.reconstruct_h = qnm_fit_func_wrapper(
+                self.time, self.qnm_fixed_list, self.N_free, self.popt)
+            self.h_true = self.hr + 1.j * self.hi
+            self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
+                np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
+            self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
 
 
 class QNMFitVaryingStartingTimeResult:
@@ -244,8 +261,13 @@ class QNMFitVaryingStartingTime:
                     jcf=_jcf,
                     params0=_params0,
                     max_nfev=self.max_nfev)
-                qnm_fit.do_fit()
+                try:
+                    qnm_fit.do_fit()
+                except RuntimeError:
+                    print(f"fit did not reach tolerance at t0 = {_t0}.")
+                    qnm_fit.copy_from_result(qnm_fit_result_temp)
                 self.result_full.fill_result(i, qnm_fit.result)
+                qnm_fit_result_temp = qnm_fit.result
                 if self.sequential_guess:
                     _params0 = qnm_fit.result.popt
             self.result_full.process_results()
