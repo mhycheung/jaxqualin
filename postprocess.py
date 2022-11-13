@@ -10,16 +10,19 @@ DF_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/data_frame")
 
 def append_A_and_phis(mode_searcher_vary_N, df, **kwargs):
     best_run_indx = mode_searcher_vary_N.best_run_indx
-    best_run_indx = mode_searcher_vary_N.best_run_indx
+    t_peak_dom = mode_searcher_vary_N.h.t_peak
+    t_peak_lm = mode_searcher_vary_N.h.peaktime
+    t_shift = t_peak_dom - t_peak_lm
     fluc_least_indx_list = mode_searcher_vary_N.flatness_checkers[best_run_indx].fluc_least_indx_list
-    qnm_strings = qnms_to_string(mode_searcher_vary_N.found_modes_final)
+    found_modes = mode_searcher_vary_N.found_modes_final
+    qnm_strings = qnms_to_string(found_modes)
     range_indx = mode_searcher_vary_N.flatness_checkers[best_run_indx].flatness_length
-    for start_indx, qnm_string in zip(fluc_least_indx_list, qnm_strings):
-        A_arr = np.abs(mode_searcher_vary_N.fixed_fitters[best_run_indx].result_full.A_dict["A_" + qnm_string])
+    for i, (start_indx, qnm_string) in enumerate(zip(fluc_least_indx_list, qnm_strings)):
+        A_arr = np.exp(found_modes[i].omegai*t_shift)*np.abs(mode_searcher_vary_N.fixed_fitters[best_run_indx].result_full.A_dict["A_" + qnm_string])
         A_med = np.quantile(A_arr[start_indx:start_indx+range_indx], 0.5)
         A_hi = np.quantile(A_arr[start_indx:start_indx+range_indx], 0.95)
         A_low = np.quantile(A_arr[start_indx:start_indx+range_indx], 0.05)
-        phi_arr = mode_searcher_vary_N.fixed_fitters[best_run_indx].result_full.phi_dict["phi_" + qnm_string]
+        phi_arr = mode_searcher_vary_N.fixed_fitters[best_run_indx].result_full.phi_dict["phi_" + qnm_string] + found_modes[i].omegar*t_shift
         phi_med = np.quantile(phi_arr[start_indx:start_indx+range_indx], 0.5)
         phi_hi = np.quantile(phi_arr[start_indx:start_indx+range_indx], 0.95)
         phi_low = np.quantile(phi_arr[start_indx:start_indx+range_indx], 0.05)
