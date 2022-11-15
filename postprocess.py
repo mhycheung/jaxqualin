@@ -20,11 +20,15 @@ def append_A_and_phis(mode_searcher_vary_N, df, **kwargs):
     qnm_strings = qnms_to_string(found_modes)
     range_indx = mode_searcher_vary_N.flatness_checkers[best_run_indx].flatness_length
     for i, (start_indx, qnm_string) in enumerate(zip(fluc_least_indx_list, qnm_strings)):
-        A_arr = np.exp(found_modes[i].omegai*t_shift)*np.abs(mode_searcher_vary_N.fixed_fitters[best_run_indx].result_full.A_dict["A_" + qnm_string])
-        A_med = np.quantile(A_arr[start_indx:start_indx+range_indx], 0.5)
+        A_arr_pos = np.exp(found_modes[i].omegai*t_shift)*mode_searcher_vary_N.fixed_fitters[best_run_indx].result_full.A_dict["A_" + qnm_string]
+        A_arr = np.abs(A_arr_pos)
+        A_med_pos = np.quantile(A_arr_pos[start_indx:start_indx+range_indx], 0.5)
+        A_med = np.abs(A_med_pos)
         A_hi = np.quantile(A_arr[start_indx:start_indx+range_indx], 0.95)
         A_low = np.quantile(A_arr[start_indx:start_indx+range_indx], 0.05)
         phi_arr = mode_searcher_vary_N.fixed_fitters[best_run_indx].result_full.phi_dict["phi_" + qnm_string] + found_modes[i].omegar*t_shift
+        if A_med_pos < 0:
+            phi_arr -= np.pi
         phi_med = np.quantile(phi_arr[start_indx:start_indx+range_indx], 0.5)
         phi_hi = np.quantile(phi_arr[start_indx:start_indx+range_indx], 0.95)
         phi_low = np.quantile(phi_arr[start_indx:start_indx+range_indx], 0.05)
