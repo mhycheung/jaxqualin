@@ -7,3 +7,6 @@ pickle/fits/*
 pickle/mode_searchers/*
 plots/*
 pickle/data_frame/*
+pickle/mode_searchers/
+test_script.py
+slurm_scripts/

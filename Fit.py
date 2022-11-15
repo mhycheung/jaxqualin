@@ -94,7 +94,7 @@ class QNMFit:
             qnm_fixed_list=[],
             jcf=CurveFit(),
             params0=None,
-            max_nfev=100000):
+            max_nfev=1000000):
         self.h = h
         self.t0 = t0
         self.N_free = N_free
@@ -221,7 +221,7 @@ class QNMFitVaryingStartingTime:
             qnm_fixed_list=[],
             run_string_prefix="Default",
             params0=None,
-            max_nfev=100000,
+            max_nfev=1000000,
             sequential_guess=True):
         self.h = h
         self.t0_arr = t0_arr

@@ -9,6 +9,8 @@ ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 DF_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/data_frame")
 
 def append_A_and_phis(mode_searcher_vary_N, df, **kwargs):
+    M_rem = mode_searcher_vary_N.M
+    chi_rem = mode_searcher_vary_N.a
     best_run_indx = mode_searcher_vary_N.best_run_indx
     t_peak_dom = mode_searcher_vary_N.h.t_peak
     t_peak_lm = mode_searcher_vary_N.h.peaktime
@@ -27,7 +29,8 @@ def append_A_and_phis(mode_searcher_vary_N, df, **kwargs):
         phi_hi = np.quantile(phi_arr[start_indx:start_indx+range_indx], 0.95)
         phi_low = np.quantile(phi_arr[start_indx:start_indx+range_indx], 0.05)
         kwargs.update(A_med = A_med, A_hi = A_hi, A_low = A_low,
-                               phi_med = phi_med, phi_hi = phi_hi, phi_low = phi_low, mode_string = qnm_string)
+                               phi_med = phi_med, phi_hi = phi_hi, phi_low = phi_low, mode_string = qnm_string,
+                               M_rem = M_rem, chi_rem = chi_rem)
         df_row = pd.Series(kwargs)
         df_row_frame = df_row.to_frame().T
         df_row_frame["retro"] = df_row_frame["retro"].astype(bool)
@@ -47,7 +50,7 @@ def append_A_and_phis_all_lm(mode_search_complete, df, **kwargs):
     return df
 
 def create_data_frame(SXS_num_list, N_list, df_save_prefix = "default"):
-    df = pd.DataFrame(columns = ["SXS_num", "chi_1_z", "chi_2_z", "q", "l", "m", "retro", "mode_string",
+    df = pd.DataFrame(columns = ["SXS_num", "M_rem", "chi_rem",  "chi_1_z", "chi_2_z", "q", "l", "m", "retro", "mode_string",
                              "A_med", "A_hi", "A_low",
               "phi_med", "phi_hi", "phi_low"])
     df = df.astype({"retro": bool})
