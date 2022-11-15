@@ -1,0 +1,9 @@
+.gitignore
+.ipynb_checkpoints/
+__pycache__/
+test.ipynb
+gitignore_untracked.sh
+pickle/fits/*
+pickle/mode_searchers/*
+plots/*
+pickle/data_frame/*
