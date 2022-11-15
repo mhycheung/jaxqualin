@@ -12,19 +12,22 @@ MODE_SEARCHERS_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/mode_searchers")
 
 class IterativeFlatnessChecker:
     
-    def __init__(self, h, t0_arr, found_modes, **kwargs_in):
+    def __init__(self, h, t0_arr, l, m, found_modes, **kwargs_in):
         self.h = h
         self.t0_arr = t0_arr
+        self.l = l
+        self.m = m
         self.found_modes = found_modes
         self.fitter_list = []
         kwargs = {"run_string_prefix": "Default", "tolerance": 0.2,
-                  "flatness_range": 10}
+                  "flatness_range": 10, "retro": False}
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
         self.run_string_prefix = self.kwargs["run_string_prefix"]
         self.tolerance = self.kwargs["tolerance"]
         self.flatness_range = self.kwargs["flatness_range"] 
         self.flatness_length = int(self.flatness_range/(self.t0_arr[1] - self.t0_arr[0])+1)
+        self.retro = self.kwargs["retro"]
         
     def do_iterative_flatness_check(self):
         _current_modes = self.found_modes
@@ -38,6 +41,12 @@ class IterativeFlatnessChecker:
                     0,
                     _current_modes,
                     run_string_prefix=self.run_string_prefix))
+            if self.retro:
+                _fund_mode_string = f"{self.l}.-{self.m}.0"
+            else:
+                _fund_mode_string = f"{self.l}.{self.m}.0"
+            _current_modes_string = qnms_to_string(_current_modes)
+            _fund_mode_indx = _current_modes_string.index(_fund_mode_string)
             _fitter = self.fitter_list[i]
             _fitter.do_fits()
             _fluc_least_list = []
@@ -53,7 +62,9 @@ class IterativeFlatnessChecker:
                     quantile_range = 0.95, weight_2 = 1.5)
                 _fluc_least_list.append(_fluc_least)
                 _fluc_least_indx_list.append(_fluc_least_indx)
-            _worst_mode_indx = _fluc_least_list.index(max(_fluc_least_list))
+            _fluc_least_list_no_fund = _fluc_least_list.copy()
+            del _fluc_least_list_no_fund[_fund_mode_indx]
+            _worst_mode_indx = _fluc_least_list.index(max(_fluc_least_list_no_fund))
             _discard_mode = _fluc_least_list[_worst_mode_indx] > self.tolerance
             # print(_fluc_least_list)
             if _discard_mode:
@@ -277,8 +288,8 @@ class ModeSearchAllFreeVaryingN:
         self.flatness_checkers = []
         for i, _mode_searcher in enumerate(self.mode_searchers):
             _mode_searcher.do_mode_search()
-            self.flatness_checkers.append(IterativeFlatnessChecker(self.h, self.t0_arr,
-            _mode_searcher.found_modes, run_string_prefix = self.run_string_prefix))
+            self.flatness_checkers.append(IterativeFlatnessChecker(self.h, self.t0_arr, self.l, self.m,
+            _mode_searcher.found_modes, run_string_prefix = self.run_string_prefix, retro = self.kwargs["retro"]))
             _flatness_checker = self.flatness_checkers[i]
             _flatness_checker.do_iterative_flatness_check()
             _flatness_checker.found_modes_screened
