@@ -11,7 +11,7 @@ import os
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 PLOT_SAVE_PATH = os.path.join(ROOT_PATH, "plots/")
 
-plt.rc('text', usetex=False)
+plt.rc('text', usetex=True)
 plt.rc('font', family='qpl')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
@@ -363,9 +363,60 @@ def mode_plot_3D(df, l, m, mode_string_pro, mode_string_retro):
     cbar = fig.colorbar(sc, cax=cb_ax)
     cb_ax.set_ylabel(r"$\log_{10} A$")
 
-    # fig.colorbar(sc, ax=axs.ravel().tolist(), shrink=0.95)
+def linfunc(p, x):
+    m, c= p
+    return m * x + c 
+
+def linfunc1(p, x):
+    c = p
+    return x + c 
+
+def linfunc2(p, x):
+    c = p
+    return 2*x + c 
     
-    # fig.subplots_adjust(right=0.8)
-    # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-    # cbar = fig.colorbar(sc, ax = cbar_ax)
-    # cbar_ax.set_ylabel(r"$\log_{10} A$")
+def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
+                                l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic"):
+    df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) | 
+              ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
+    df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
+              ((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_retro_2)& (df["retro"] == True))]
+    df_merged = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2"))
+    xerr_low = df_merged["A_med_2"]-df_merged["A_low_2"]
+    xerr_hi = df_merged["A_hi_2"]-df_merged["A_med_2"]
+    yerr_low = df_merged["A_med_1"]-df_merged["A_low_1"]
+    yerr_hi = df_merged["A_hi_1"]-df_merged["A_med_1"]
+    xs = df_merged["A_med_2"]*df_merged["M_rem_1"]
+    ys = df_merged["A_med_1"]*df_merged["M_rem_1"]
+    
+    if fit_type == "linear":
+        fitfunc = linfunc1
+        beta0 = [0.]
+    if fit_type == "quadratic":
+        fitfunc = linfunc2
+        beta0 = [0.]
+    if fit_type == "agnostic":
+        fitfunc = linfunc
+        beta0 = [1., 0.]
+    lin_model = Model(fitfunc)
+    errxlogs = (xerr_hi+xerr_low)/xs/np.log(10)
+    errylogs = (yerr_hi+yerr_low)/ys/np.log(10)
+    data = RealData(np.log10(xs), np.log10(ys), 
+                    sx=errxlogs, sy=errylogs)
+    odr = ODR(data, lin_model, beta0=beta0)
+    out = odr.run()
+    
+    fig, ax = plt.subplots()
+    sc = ax.scatter(xs, ys, c = df_merged["chi_rem_1"])
+    plt.draw()
+    for i in range(len(sc.get_facecolors())):
+        ax.errorbar(xs[i], ys[i], xerr = ([xerr_low.to_numpy()[i]], [xerr_hi.to_numpy()[i]]),
+                 yerr = ([yerr_low.to_numpy()[i]], [yerr_hi.to_numpy()[i]]), ecolor = sc.get_facecolors()[i].tolist(),
+                     fmt = "None")
+    cb = fig.colorbar(sc, ax = ax)
+    cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+    xsfit = np.linspace(*ax.get_xlim(), num = 100)
+    ysfit = fitfunc(out.beta, np.log10(xsfit))
+    ax.loglog(xsfit, 10**ysfit, c = "k", ls = ":")
+    
+    

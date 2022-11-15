@@ -12,11 +12,13 @@ MODE_SEARCHERS_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/mode_searchers")
 
 class IterativeFlatnessChecker:
     
-    def __init__(self, h, t0_arr, l, m, found_modes, **kwargs_in):
+    def __init__(self, h, t0_arr, M, a, l, m, found_modes, **kwargs_in):
         self.h = h
         self.t0_arr = t0_arr
         self.l = l
         self.m = m
+        self.M = M
+        self.a = a
         self.found_modes = found_modes
         self.fitter_list = []
         kwargs = {"run_string_prefix": "Default", "tolerance": 0.2,
@@ -30,7 +32,14 @@ class IterativeFlatnessChecker:
         self.retro = self.kwargs["retro"]
         
     def do_iterative_flatness_check(self):
+        if self.retro:
+            _fund_mode_string = f"{self.l}.-{self.m}.0"
+        else:
+            _fund_mode_string = f"{self.l}.{self.m}.0"
         _current_modes = self.found_modes
+        _current_modes_string = qnms_to_string(_current_modes)
+        if _fund_mode_string not in _current_modes_string:
+            _current_modes.append(mode(_fund_mode_string, self.M, self.a, retro=self.retro))
         i = 0
         _discard_mode = True
         _more_than_one_mode = True
@@ -41,10 +50,6 @@ class IterativeFlatnessChecker:
                     0,
                     _current_modes,
                     run_string_prefix=self.run_string_prefix))
-            if self.retro:
-                _fund_mode_string = f"{self.l}.-{self.m}.0"
-            else:
-                _fund_mode_string = f"{self.l}.{self.m}.0"
             _current_modes_string = qnms_to_string(_current_modes)
             _fund_mode_indx = _current_modes_string.index(_fund_mode_string)
             _fitter = self.fitter_list[i]
@@ -288,7 +293,7 @@ class ModeSearchAllFreeVaryingN:
         self.flatness_checkers = []
         for i, _mode_searcher in enumerate(self.mode_searchers):
             _mode_searcher.do_mode_search()
-            self.flatness_checkers.append(IterativeFlatnessChecker(self.h, self.t0_arr, self.l, self.m,
+            self.flatness_checkers.append(IterativeFlatnessChecker(self.h, self.t0_arr, self.M, self.a, self.l, self.m,
             _mode_searcher.found_modes, run_string_prefix = self.run_string_prefix, retro = self.kwargs["retro"]))
             _flatness_checker = self.flatness_checkers[i]
             _flatness_checker.do_iterative_flatness_check()
