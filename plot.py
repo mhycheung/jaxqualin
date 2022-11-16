@@ -7,6 +7,8 @@ from QuasinormalMode import *
 from ModeSelection import *
 from bisect import bisect_right
 
+from scipy.odr import Model, ODR, RealData
+
 import os
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 PLOT_SAVE_PATH = os.path.join(ROOT_PATH, "plots/")
@@ -406,8 +408,8 @@ def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro
     odr = ODR(data, lin_model, beta0=beta0)
     out = odr.run()
     
-    fig, ax = plt.subplots()
-    sc = ax.scatter(xs, ys, c = df_merged["chi_rem_1"])
+    fig, ax = plt.subplots(figsize = (8,5))
+    sc = ax.scatter(xs, ys, c = df_merged["chi_rem_1"], cmap = "cividis")
     plt.draw()
     for i in range(len(sc.get_facecolors())):
         ax.errorbar(xs[i], ys[i], xerr = ([xerr_low.to_numpy()[i]], [xerr_hi.to_numpy()[i]]),
@@ -417,6 +419,48 @@ def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro
     cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
     xsfit = np.linspace(*ax.get_xlim(), num = 100)
     ysfit = fitfunc(out.beta, np.log10(xsfit))
-    ax.loglog(xsfit, 10**ysfit, c = "k", ls = ":")
+    # ax.loglog(xsfit, 10**ysfit, c = "k", ls = ":")
+    xlabel_string = r"$A_{{{}}}$".format(mode_string_pro_2)
+    ylabel_string = r"$A_{{{}}}$".format(mode_string_pro_1)
+    ax.set_xlabel(xlabel_string.replace('x', r" \times "))
+    ax.set_ylabel(ylabel_string.replace('x', r" \times "))
+    return fig, ax
     
-    
+def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
+                                l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "quadratic"):
+    if fit_type == "quadratic":
+        fit_fac = 2
+    elif fit_type == "linear":
+        fit_fac = 1
+    else:
+        raise ValueError
+    df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) | 
+              ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
+    df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
+              ((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_retro_2)& (df["retro"] == True))]
+    df_merged = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2"))    
+    xerr_low = df_merged["phi_med_2"]-df_merged["phi_low_2"]
+    xerr_hi = df_merged["phi_hi_2"]-df_merged["phi_med_2"]
+    yerr_low = df_merged["phi_med_1"]-df_merged["phi_low_1"]
+    yerr_hi = df_merged["phi_hi_1"]-df_merged["phi_med_1"]
+    xs = df_merged["phi_med_2"]
+    ys = df_merged["phi_med_1"]
+    fig, ax = plt.subplots(figsize = (8,5))
+    sc = ax.scatter(fit_fac*xs%(2*np.pi), ys%(2*np.pi), c = df_merged["chi_rem_1"], cmap = "cividis")
+    plt.draw()
+    for i in range(len(sc.get_facecolors())):
+        ax.errorbar(fit_fac*xs[i]%(2*np.pi), ys[i]%(2*np.pi), xerr = ([xerr_low.to_numpy()[i]], [xerr_hi.to_numpy()[i]]),
+                 yerr = ([yerr_low.to_numpy()[i]], [yerr_hi.to_numpy()[i]]), ecolor = sc.get_facecolors()[i].tolist(),
+                     fmt = "None")
+    cb = fig.colorbar(sc, ax = ax)
+    cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+    ax.set_xlim(0, 2*np.pi)
+    ax.set_ylim(0, 2*np.pi)
+    xsfit = np.linspace(0, 2*np.pi, num = 100)
+    ysfit = xsfit
+    # ax.plot(xsfit, ysfit, c = "k", ls = ":")
+    xlabel_string = r"${}\phi_{{{}}}$".format(fit_fac, mode_string_pro_2)
+    ylabel_string = r"$\phi_{{{}}}$".format(mode_string_pro_1)
+    ax.set_xlabel(xlabel_string.replace('x', r" \times "))
+    ax.set_ylabel(ylabel_string.replace('x', r" \times "))
+    return fig, ax
