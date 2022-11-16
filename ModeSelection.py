@@ -67,6 +67,8 @@ class IterativeFlatnessChecker:
                     quantile_range = 0.95, weight_2 = 1.5)
                 _fluc_least_list.append(_fluc_least)
                 _fluc_least_indx_list.append(_fluc_least_indx)
+            if len(_current_modes) <= 1:
+                break
             _fluc_least_list_no_fund = _fluc_least_list.copy()
             del _fluc_least_list_no_fund[_fund_mode_indx]
             _worst_mode_indx = _fluc_least_list.index(max(_fluc_least_list_no_fund))

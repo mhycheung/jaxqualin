@@ -11,7 +11,7 @@ import os
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 PLOT_SAVE_PATH = os.path.join(ROOT_PATH, "plots/")
 
-plt.rc('text', usetex=True)
+plt.rc('text', usetex=False)
 plt.rc('font', family='qpl')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
