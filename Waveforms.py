@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 from bisect import bisect_left, bisect_right
 from utils import *
+from scipy.interpolate import griddata
 
 
 class waveform:
@@ -154,3 +155,79 @@ def get_chi_q_SXS(SXSnum, res = 0):
     chi_1_z = metadata['reference_dimensionless_spin1'][2]
     chi_2_z = metadata['reference_dimensionless_spin2'][2]
     return {'q' : q, "chi_1_z" : chi_1_z, "chi_2_z" : chi_2_z}
+
+def waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l = 2, m = 2):
+    if not len(A_list) == len(phi_list) == len(qnm_list):
+        raise ValueError
+    N = len(A_list)
+    fullh = np.zeros(len(t_arr), dtype = np.complex128)
+    for i in range(N):
+        omegar = qnm_list[i].omegar
+        omegai = qnm_list[i].omegai
+        fullh += A_list[i] * np.exp(-1.j * ((omegar + 1.j * omegai) * t_arr + phi_list[i]))
+    return fullh
+
+def get_waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l = 2, m = 2):
+    fullh = waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l = l, m = m)
+    h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
+    return h
+
+def get_waveform_toy_bump(A_list, phi_list, qnm_list, t_arr, A_bump, sig_bump, t0_bump, l = 2, m = 2):
+    bump = A_bump*np.exp(-(t_arr - t0_bump)**2/(2*sig_bump**2))
+    fullh = waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l = l, m = m)
+    fullh += bump
+    h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
+    return h
+
+def get_waveform_toy_stretch(A_list, phi_list, qnm_list, t_arr, A_stretch, sig_stretch, l = 2, m = 2):
+    fullh_clean = waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l = l, m = m)
+    t_stretch = t_arr*(A_stretch*np.exp(-t_arr/sig_stretch)+1)
+    fullh = griddata(t_stretch, fullh_clean, t_arr)
+    h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
+    return h
+
+def waveform_toy_EOB_model(A_list, phi_list, qnm_list, t_arr, t_match, c_list, d_list, l = 2, m = 2):
+    if not len(A_list) == len(phi_list) == len(qnm_list):
+        raise ValueError
+    c1, c3 = tuple(c_list)
+    d1, d2, d3 = tuple(d_list)
+    N = len(A_list)
+    fullh = np.zeros(len(t_arr), dtype = np.complex128)
+    for i in range(N):
+        omegar = qnm_list[i].omegar
+        omegai = qnm_list[i].omegai
+        A_prime = -c1*(np.tanh(c3*(t_arr - t_match))-1)/2 + A_list[i]
+        phi_prime = phi_list[i] - d1*np.log((1+d2*np.exp(-d3*(t_arr-t_match)))/(1+d2)) + d1*np.log(1/(1+d2))
+        fullh += A_prime * np.exp(-1.j*phi_prime) * np.exp(-1.j * (omegar + 1.j * omegai) * t_arr)
+    return fullh
+
+def get_waveform_toy_EOB_model(A_list, phi_list, qnm_list, t_arr, t_match, c_list, d_list, l = 2, m = 2):
+    fullh = waveform_toy_EOB_model(A_list, phi_list, qnm_list, t_arr, t_match, c_list, d_list, l = l, m = m)
+    h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
+    return h
+
+def get_waveform_toy_EOB_model_no_fund(A_list, phi_list, qnm_list, t_arr, t_match, c_list, d_list, l = 2, m = 2):
+    fullh = waveform_toy_EOB_model(A_list, phi_list, qnm_list, t_arr, t_match, c_list, d_list, l = l, m = m)
+    cleanh = waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l = l, m = m)
+    h = waveform(t_arr, fullh-cleanh, t_peak=0, t0=0, l=l, m=m)
+    return h
+
+def waveform_toy_no_exp(A_list, phi_list, qnm_list, t_arr, t_match, c_list, d_list, l = 2, m = 2):
+    if not len(A_list) == len(phi_list) == len(qnm_list):
+        raise ValueError
+    c1, c3 = tuple(c_list)
+    d1, d2, d3 = tuple(d_list)
+    N = len(A_list)
+    fullh = np.zeros(len(t_arr), dtype = np.complex128)
+    for i in range(N):
+        omegar = qnm_list[i].omegar
+        omegai = qnm_list[i].omegai
+        A_prime = -c1/(t_arr - t_match - c3)**2 + A_list[i]
+        phi_prime = phi_list[i] - d1*np.log((1+d2*np.exp(-d3*(t_arr-t_match)))/(1+d2)) + d1*np.log(1/(1+d2))
+        fullh += A_prime * np.exp(-1.j*phi_prime) * np.exp(-1.j * (omegar + 1.j * omegai) * t_arr)
+    return fullh
+
+def get_waveform_toy_no_exp(A_list, phi_list, qnm_list, t_arr, t_match, c_list, d_list, l = 2, m = 2):
+    fullh = waveform_toy_no_exp(A_list, phi_list, qnm_list, t_arr, t_match, c_list, d_list, l = l, m = m)
+    h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
+    return h

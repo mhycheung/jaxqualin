@@ -222,7 +222,8 @@ class QNMFitVaryingStartingTime:
             run_string_prefix="Default",
             params0=None,
             max_nfev=1000000,
-            sequential_guess=True):
+            sequential_guess=True,
+            load_pickle = True):
         self.h = h
         self.t0_arr = t0_arr
         self.N_fix = len(qnm_fixed_list)
@@ -235,6 +236,7 @@ class QNMFitVaryingStartingTime:
                 [1, 1] * self.N_fix + [1, 1, 1, -1] * self.N_free)
         self.sequential_guess = sequential_guess
         self.run_string_prefix = run_string_prefix
+        self.load_pickle = load_pickle
 
     def do_fits(self):
         self._time_longest, _, _ = self.h.postmerger(self.t0_arr[0])
@@ -244,7 +246,7 @@ class QNMFitVaryingStartingTime:
             self.qnm_fixed_list,
             self.N_free,
             run_string_prefix=self.run_string_prefix)
-        if self.result_full.pickle_exists():
+        if self.result_full.pickle_exists() and self.load_pickle:
             _file_path = self.result_full.file_path
             with open(_file_path, "rb") as f:
                 self.result_full = pickle.load(f)

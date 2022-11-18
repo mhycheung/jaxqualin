@@ -117,6 +117,7 @@ def plot_predicted_qnms(
 
 
 def plot_amplitudes(results_full, fixed_modes=None, ax=None):
+    colori = 0
     if ax is None:
         fig, ax = plt.subplots()
     A_fix_dict = results_full.A_fix_dict
@@ -126,9 +127,11 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None):
         fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
-                ax.semilogy(t0_arr, np.abs(A_fix_dict[f"A_{fixed_mode_string}"]), lw=2, label=fixed_mode_string_tex_list[i])
+                ax.semilogy(t0_arr, np.abs(A_fix_dict[f"A_{fixed_mode_string}"]), lw=2, label=fixed_mode_string_tex_list[i], c = f"C{colori}")
+                colori += 1
     for A in list(A_free_dict.values()):
-        ax.semilogy(t0_arr, np.abs(A), lw=1)
+        ax.semilogy(t0_arr, np.abs(A), lw=1, c = f"C{colori}")
+        colori += 1
     if fixed_modes is not None:
         ax.legend()
 
@@ -139,6 +142,7 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None):
 
 
 def plot_phases(results_full, fixed_modes=None, ax=None):
+    colori = 0
     if ax is None:
         fig, ax = plt.subplots()
     phi_fix_dict = results_full.phi_fix_dict
@@ -155,10 +159,11 @@ def plot_phases(results_full, fixed_modes=None, ax=None):
                             c=f"C{i}", label = fixed_mode_string_tex_list[i])
                 else:
                     ax.plot(t_break, phi_break, lw=2, c=f"C{i}")
+            colori += 1
     for i, phi in enumerate(list(phi_free_dict.values())):
         t_breaks, phi_breaks = phase_break_for_plot(t0_arr, phi)
         for t_break, phi_break in zip(t_breaks, phi_breaks):
-            ax.plot(t_break, phi_break, lw=1, c=f"C{i}")
+            ax.plot(t_break, phi_break, lw=1, c=f"C{colori + i}")
     ax.set_ylim(0, 2 * np.pi)
     if fixed_modes is not None:
         ax.legend()
