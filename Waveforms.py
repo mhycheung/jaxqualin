@@ -29,7 +29,7 @@ class waveform:
 
     def postmerger(self, t0):
         tstart = self.peaktime + t0
-        startindx = bisect_right(self.fulltime, tstart)
+        startindx = bisect_left(self.fulltime, tstart)
         return self.fulltime[startindx:] - self.peaktime, jnp.real(
             self.fullh[startindx:]), jnp.imag(self.fullh[startindx:])
 

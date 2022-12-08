@@ -47,7 +47,11 @@ def plot_omega_free(
         ax=None,
         plot_indxs=[],
         t0_min=None,
-        t0_max=None):
+        t0_max=None,
+        indicate_start = False,
+        color = None,
+        line_alpha = 0.3,
+        scatter_alpha = 0.5):
     omega_dict = results_full.omega_dict
     t0_arr = results_full.t0_arr
     if t0_min is not None:
@@ -68,10 +72,13 @@ def plot_omega_free(
     length = len(omega_r_dict)
     for i in range(length):
         if len(plot_indxs) == 0 or i in plot_indxs:
+            if indicate_start:
+                ax.scatter(omega_r_list[i][t0_min_indx],
+                       omega_i_list[i][t0_min_indx], alpha=1, s=15, c = color)
             ax.plot(omega_r_list[i][t0_min_indx:t0_max_indx],
-                    omega_i_list[i][t0_min_indx:t0_max_indx], alpha=0.3)
+                    omega_i_list[i][t0_min_indx:t0_max_indx], alpha=line_alpha, c = color)
             ax.scatter(omega_r_list[i][t0_min_indx:t0_max_indx],
-                       omega_i_list[i][t0_min_indx:t0_max_indx], alpha=0.5, s=1)
+                       omega_i_list[i][t0_min_indx:t0_max_indx], alpha=scatter_alpha, s=1, c = color)
     ax.invert_yaxis()
 
 
@@ -82,12 +89,16 @@ def plot_predicted_qnms(
             0,
             0.025),
     facecolor="none",
-        edgecolor="gray"):
+        edgecolor="gray",
+        cut_at_0 = False):
     ax.axvline(0, color='k', ls='--')
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
     ax.set_xlim(max(xmin, -2), min(xmax, 2))
-    ax.set_ylim(0.05, max(ymax, -0.7))
+    if cut_at_0:
+        ax.set_ylim(0, max(ymax, -0.7))
+    else:
+        ax.set_ylim(0.05, max(ymax, -0.7))
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
     for mode in predicted_qnm_list:
@@ -115,8 +126,71 @@ def plot_predicted_qnms(
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.yaxis.set_minor_locator(AutoMinorLocator())
 
+def plot_M(
+        results_full,
+        Mf = None,
+        ax=None,
+        t0_min=None,
+        t0_max=None):
+    Ma_dict = results_full.Ma_dict
+    t0_arr = results_full.t0_arr
+    if t0_min is not None:
+        t0_min_indx = bisect_right(t0_arr, t0_min)
+    else:
+        t0_min_indx = 0
+    if t0_max is not None:
+        t0_max_indx = bisect_right(t0_arr, t0_max)
+    else:
+        t0_max_indx = len(t0_arr)
 
-def plot_amplitudes(results_full, fixed_modes=None, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    M = Ma_dict["M"]
+    ax.plot(t0_arr[t0_min_indx:t0_max_indx], M[t0_min_indx:t0_max_indx], alpha = 0.3)
+    if Mf is not None:
+        ax.axhline(Mf, c = 'k', alpha = 0.5)
+    ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
+    ax.set_ylabel(r"$M$")
+    ax.xaxis.set_minor_locator(AutoMinorLocator())
+    ax.yaxis.set_minor_locator(AutoMinorLocator())
+    
+def plot_M_a(
+        results_full,
+        Mf = None,
+        af = None,
+        ax=None,
+        t0_min=None,
+        t0_max=None,
+        color = None,
+        indicate_start = False):
+    Ma_dict = results_full.Ma_dict
+    t0_arr = results_full.t0_arr
+    if t0_min is not None:
+        t0_min_indx = bisect_right(t0_arr, t0_min)
+    else:
+        t0_min_indx = 0
+    if t0_max is not None:
+        t0_max_indx = bisect_right(t0_arr, t0_max)
+    else:
+        t0_max_indx = len(t0_arr)
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    M = Ma_dict["M"]
+    a = Ma_dict["a"]
+    if indicate_start:
+        ax.scatter(M[t0_min_indx], a[t0_min_indx], alpha=1, s=15, c = color)
+    ax.scatter(M[t0_min_indx:t0_max_indx], a[t0_min_indx:t0_max_indx], alpha=0.5, s=1, c = color)
+    ax.plot(M[t0_min_indx:t0_max_indx], a[t0_min_indx:t0_max_indx], alpha = 0.2, c = color)
+    if (Mf is not None) and (af is not None):
+        ax.axvline(Mf, c = 'k', alpha = 0.5)
+        ax.axhline(af, c = 'k', alpha = 0.5)
+    ax.set_xlabel(r"$M$")
+    ax.set_ylabel(r"$a$")
+    ax.xaxis.set_minor_locator(AutoMinorLocator())
+    ax.yaxis.set_minor_locator(AutoMinorLocator())
+
+def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -127,12 +201,18 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None):
         fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
-                ax.semilogy(t0_arr, np.abs(A_fix_dict[f"A_{fixed_mode_string}"]), lw=2, label=fixed_mode_string_tex_list[i], c = f"C{colori}")
+                if use_label:
+                    label = fixed_mode_string_tex_list[i]
+                else:
+                    label = None
+                ax.semilogy(t0_arr, np.abs(A_fix_dict[f"A_{fixed_mode_string}"]), 
+                            lw=2, label=label, c = f"C{colori}",
+                            alpha = alpha, ls = ls)
                 colori += 1
     for A in list(A_free_dict.values()):
-        ax.semilogy(t0_arr, np.abs(A), lw=1, c = f"C{colori}")
+        ax.semilogy(t0_arr, np.abs(A), lw=1, c = f"C{colori}", alpha = alpha, ls = ls)
         colori += 1
-    if fixed_modes is not None:
+    if fixed_modes is not None and use_label:
         ax.legend()
 
     ax.set_xlim(t0_arr[0], t0_arr[-1])
@@ -141,31 +221,38 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None):
     ax.set_ylabel(r"$A$")
 
 
-def plot_phases(results_full, fixed_modes=None, ax=None):
+def plot_phases(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True, shift_phase = True):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
     phi_fix_dict = results_full.phi_fix_dict
     phi_free_dict = results_full.phi_free_dict
+    A_fix_dict = results_full.A_fix_dict
+    A_free_dict = results_full.A_free_dict
     t0_arr = results_full.t0_arr
     if fixed_modes is not None:
         fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
-            t_breaks, phi_breaks = phase_break_for_plot(t0_arr, phi_fix_dict[f"phi_{fixed_mode_string}"])
+            phase_shift = np.where(A_fix_dict[f"A_{fixed_mode_string}"] > 0, 0, np.pi)
+            t_breaks, phi_breaks = phase_break_for_plot(t0_arr, phi_fix_dict[f"phi_{fixed_mode_string}"] + phase_shift)
             for j, (t_break, phi_break) in enumerate(zip(t_breaks, phi_breaks)):
+                if use_label:
+                    label = fixed_mode_string_tex_list[i]
+                else:
+                    label = None
                 if j == 0:
                     ax.plot(t_break, phi_break, lw=2,
-                            c=f"C{i}", label = fixed_mode_string_tex_list[i])
+                            c=f"C{i}", label = label, alpha = alpha, ls = ls)
                 else:
-                    ax.plot(t_break, phi_break, lw=2, c=f"C{i}")
+                    ax.plot(t_break, phi_break, lw=2, c=f"C{i}", alpha = alpha, ls = ls)
             colori += 1
     for i, phi in enumerate(list(phi_free_dict.values())):
         t_breaks, phi_breaks = phase_break_for_plot(t0_arr, phi)
         for t_break, phi_break in zip(t_breaks, phi_breaks):
-            ax.plot(t_break, phi_break, lw=1, c=f"C{colori + i}")
+            ax.plot(t_break, phi_break, lw=1, c=f"C{colori + i}", ls = ls)
     ax.set_ylim(0, 2 * np.pi)
-    if fixed_modes is not None:
+    if fixed_modes is not None and use_label:
         ax.legend()
     ax.set_xlim(t0_arr[0], t0_arr[-1])
     ax.xaxis.set_minor_locator(AutoMinorLocator())

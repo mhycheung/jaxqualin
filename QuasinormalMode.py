@@ -1,29 +1,46 @@
 import qnm
 import jax.numpy as jnp
+import numpy as np
 
-
-class mode:
-    def __init__(self, lmnx, M, a, retro=False, s=-2):
-        self.omegar = 0
-        self.omegai = 0
+class mode_free:
+    
+    def __init__(self, lmnx, s = -2):
+        self.spinseq_list = []
+        self.spinseq_list_neg_a = []
         if lmnx != "constant":
             if isinstance(lmnx, str):
                 lmnx = str_to_lmnx(lmnx)
+            for lmn in lmnx:
+                l, m, n = tuple(lmn)
+                self.spinseq_list.append(qnm.modes_cache(s=s, l=l, m=m, n=n))
+                self.spinseq_list_neg_a.append(qnm.modes_cache(s=s, l=l, m=-m, n=n))
+        self.lmnx = lmnx
+        
+    def fix_mode(self, M, a, retro = False):
+        if a > 0.99:
+            a = 0.99
+        elif a < -0.99:
+            a = -0.99
+        self.omegar = 0
+        self.omegai = 0
+        if self.lmnx != "constant":
             if retro:
                 retrofac = -1
             else:
                 retrofac = 1
-            for lmn in lmnx:
+            if a < 0:
+                spinseq_list = self.spinseq_list_neg_a
+            else:
+                spinseq_list = self.spinseq_list
+            for lmn, spinseq in zip(self.lmnx, spinseq_list):
                 l, m, n = tuple(lmn)
-                spinseq = qnm.modes_cache(s=s, l=l, m=m, n=n)
-                omega, _, _ = spinseq(a=a)
+                omega, _, _ = spinseq(a=np.abs(a))
                 self.omegar += jnp.sign(m) * retrofac * jnp.real(omega) / M
                 self.omegai += jnp.imag(omega) / M
-        self.lmnx = lmnx
         self.omega = self.omegar + 1.j * self.omegai
         self.M = M
         self.a = a
-
+        
     def string(self):
         if self.lmnx == "constant":
             return "constant"
@@ -40,6 +57,16 @@ class mode:
         _tex_string = _string.replace('x', r" \! \times \! ")
         _tex_string = _tex_string.replace('-', r" \! - \! ")
         return _tex_string
+
+class mode(mode_free):
+    
+    def __init__(self, lmnx, M, a, retro = False, s = -2):
+        super().__init__(lmnx, s=s)
+        super().fix_mode(M, a, retro = retro)
+        self.M = M
+        self.a = a
+        self.retro = retro
+
 
 
 def str_to_lmnx(lmnxstring):
@@ -83,9 +110,21 @@ def lmnxs_to_qnms(lmnxs, M, a, **kwargs):
     return qnms
 
 
+def lmnxs_to_qnms_free(lmnxs, **kwargs):
+    qnms = []
+    for lmnx in lmnxs:
+        qnms.append(mode_free(lmnx, **kwargs))
+    return qnms
+
+
 def long_str_to_qnms(longstring, M, a, **kwargs):
     lmnxs = long_str_to_lmnxs(longstring)
     return lmnxs_to_qnms(lmnxs, M, a, **kwargs)
+
+
+def long_str_to_qnms_free(longstring, **kwargs):
+    lmnxs = long_str_to_lmnxs(longstring)
+    return lmnxs_to_qnms_free(lmnxs, **kwargs)
 
 
 def qnms_to_string(qnms):
@@ -126,6 +165,11 @@ def lmnx_to_string(lmnx):
         l, m, n = tuple(lmn)
         lmnstrings.append(f"{l}.{m}.{n}")
     return 'x'.join(lmnstrings)
+
+
+def fix_modes(qnms_free_list, M, a):
+    for qnm in qnms_free_list:
+        qnm.fix_mode(M, a)
 
 
 def potential_modes(l, m, M, a, relevant_lm_list, retro = False):
