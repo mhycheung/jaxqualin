@@ -334,3 +334,8 @@ def lower_l_mode_present(l, m, relevant_lm_list, test_mode, found_modes):
 def sort_lmnx(lmnx_in):
     lmnx = sorted(lmnx_in)
     return lmnx
+
+def first_n_overtones_string(l, m, n):
+    strings = [f"{l}.{m}.{i}" for i in range(n+1)]
+    return "_".join(strings)
+               

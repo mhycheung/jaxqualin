@@ -12,3 +12,5 @@ test_script.py
 slurm_scripts/
 pickle/data_frame/
 data/
+*.ipynb
+./*.ipynb

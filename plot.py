@@ -85,26 +85,33 @@ def plot_omega_free(
 def plot_predicted_qnms(
         ax,
         predicted_qnm_list,
+        fix_indx = [],
         label_offset=(
             0,
             0.025),
-    facecolor="none",
+        change_lim = True,
+        facecolor="none",
         edgecolor="gray",
         cut_at_0 = False):
     ax.axvline(0, color='k', ls='--')
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
     ax.set_xlim(max(xmin, -2), min(xmax, 2))
-    if cut_at_0:
-        ax.set_ylim(0, max(ymax, -0.7))
-    else:
-        ax.set_ylim(0.05, max(ymax, -0.7))
+    if change_lim:
+        if cut_at_0:
+            ax.set_ylim(0, max(ymax, -0.7))
+        else:
+            ax.set_ylim(0.05, max(ymax, -0.7))
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
-    for mode in predicted_qnm_list:
+    for i, mode in enumerate(predicted_qnm_list):
         if xmin < mode.omegar < xmax and ymax < mode.omegai < ymin:  # remember that y-axis is flipped
-            ax.scatter(mode.omegar, mode.omegai, marker='o',
-                       facecolor=facecolor, edgecolor=edgecolor)
+            if i in fix_indx:
+                ax.scatter(mode.omegar, mode.omegai, marker='o',
+                       facecolor='k', edgecolor='k')
+            else:
+                ax.scatter(mode.omegar, mode.omegai, marker='o',
+                           facecolor=facecolor, edgecolor=edgecolor)
             transform = ax.transData.transform((mode.omegar, mode.omegai))
             mode_ax_coord = ax.transAxes.inverted().transform(transform)
             label_ax_coord = mode_ax_coord + label_offset

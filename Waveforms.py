@@ -8,10 +8,10 @@ from scipy.interpolate import griddata
 
 class waveform:
 
-    def __init__(self, fulltime, fullh, t_peak=None, t0=0, l=None, m=None):
+    def __init__(self, fulltime, fullh, t_peak=None, t0=0, l=None, m=None, remove_num=500):
         self.fulltime = fulltime
         self.fullh = fullh
-        self.peakindx = self.argabsmax()
+        self.peakindx = self.argabsmax(remove_num=remove_num)
         if t_peak is None:
             self.peaktime = self.fulltime[self.peakindx]
         else:
