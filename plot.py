@@ -226,6 +226,36 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-"
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
     ax.set_ylabel(r"$A$")
+    
+def plot_amplitudes_unadj(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True):
+    colori = 0
+    if ax is None:
+        fig, ax = plt.subplots()
+    A_fix_dict = results_full.A_fix_dict
+    A_free_dict = results_full.A_free_dict
+    t0_arr = results_full.t0_arr
+    if fixed_modes is not None:
+        fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
+        fixed_mode_string_list = qnms_to_string(fixed_modes)
+        for i, fixed_mode_string in enumerate(fixed_mode_string_list):
+                if use_label:
+                    label = fixed_mode_string_tex_list[i]
+                else:
+                    label = None
+                ax.semilogy(t0_arr, np.exp(fixed_modes[i].omegai*t0_arr)*np.abs(A_fix_dict[f"A_{fixed_mode_string}"]), 
+                            lw=2, label=label, c = f"C{colori}",
+                            alpha = alpha, ls = ls)
+                colori += 1
+    for A in list(A_free_dict.values()):
+        ax.semilogy(t0_arr, np.abs(A), lw=1, c = f"C{colori}", alpha = alpha, ls = ls)
+        colori += 1
+    if fixed_modes is not None and use_label:
+        ax.legend()
+
+    ax.set_xlim(t0_arr[0], t0_arr[-1])
+    ax.xaxis.set_minor_locator(AutoMinorLocator())
+    ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
+    ax.set_ylabel(r"$A$")
 
 
 def plot_phases(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True, shift_phase = True):

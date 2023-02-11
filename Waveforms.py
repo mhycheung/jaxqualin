@@ -4,6 +4,7 @@ import numpy as np
 from bisect import bisect_left, bisect_right
 from utils import *
 from scipy.interpolate import griddata
+from pycbc.waveform.waveform_modes import sum_modes
 
 
 class waveform:
@@ -231,3 +232,23 @@ def get_waveform_toy_no_exp(A_list, phi_list, qnm_list, t_arr, t_match, c_list, 
     fullh = waveform_toy_no_exp(A_list, phi_list, qnm_list, t_arr, t_match, c_list, d_list, l = l, m = m)
     h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
     return h
+
+def get_SXS_waveform_summed(SXSnum, iota, phi, l_max = 4, res = 0, N_ext = 2):
+
+    Mf, af, Level, hdict, retro = get_SXS_waveform_dict(SXSnum, res = res , N_ext = N_ext)
+
+    hdict_complex = {}
+    for key in hdict:
+        lm_string = key.split(',')
+        l = int(lm_string[0])
+        m = int(lm_string[1])
+        if l <= l_max:
+            hdict_complex[(l,m)] = np.array(hdict[key][1] + 1.j*hdict[key][2])
+
+    h_sum = sum_modes(hdict_complex, iota, phi)
+
+    t = hdict["2,2"][0]
+    
+    h = waveform(t, h_sum)
+
+    return h, Mf, af, retro
