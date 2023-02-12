@@ -589,12 +589,24 @@ class QNMFitVaryingStartingTime:
                         qnm_fit.do_fit()
                     except RuntimeError:
                         print(f"fit did not reach tolerance at t0 = {_t0}.")
-                        qnm_fit.copy_from_result(qnm_fit_result_temp)
+                        nan_mismatch = np.nan
+                        if self.var_M_a:
+                            if self.Schwarzschild:
+                                nan_popt = np.full(self.N_fix*2 + self.N_free*2 + 1, np.nan)
+                                nan_pcov = nan_popt
+                            else:
+                                nan_popt = np.full(self.N_fix*2 + self.N_free*2 + 2, np.nan)
+                                nan_pcov = nan_popt
+                        else:
+                                nan_popt = np.full(self.N_fix*2 + self.N_free*4, np.nan)
+                                nan_pcov = nan_popt
+                        qnm_fit.result = QNMFitResult(nan_popt, nan_pcov, nan_mismatch)
                         self.nonconvergence_indx.append(i)
                         self.not_converged = True
+                    else:
+                        if self.sequential_guess:
+                            _params0 = qnm_fit.result.popt      
                 self.result_full.fill_result(i, qnm_fit.result)
                 qnm_fit_result_temp = qnm_fit.result
-                if self.sequential_guess:
-                    _params0 = qnm_fit.result.popt
             self.result_full.nonconvergence_indx = self.nonconvergence_indx
             self.result_full.process_results()

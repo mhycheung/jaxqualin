@@ -143,7 +143,7 @@ class ModeSearchAllFreeLM:
         self.N_init = N_init
         self.N_step = N_step
         self.iterations = iterations
-        kwargs = {"retro": False, "run_string_prefix": "Default"}
+        kwargs = {"retro": False, "run_string_prefix": "Default", "load_pickle": True}
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
         self.retro = self.kwargs["retro"]
@@ -155,6 +155,7 @@ class ModeSearchAllFreeLM:
             self.potential_modes_full = potential_modes(
                 self.l, self.m, self.M, self.a, [(self.l, self.m)], retro = self.retro)
         self.potential_modes = self.potential_modes_full.copy()
+        self.load_pickle = self.kwargs["load_pickle"]
 
     def mode_search_all_free(self):
         _N = self.N_init
@@ -167,7 +168,8 @@ class ModeSearchAllFreeLM:
                 self.t0_arr,
                 _N,
                 self.found_modes,
-                run_string_prefix=self.run_string_prefix)
+                run_string_prefix=self.run_string_prefix,
+                load_pickle = self.load_pickle)
             self.full_fit.do_fits()
             self.mode_selector = ModeSelectorAllFree(
                 self.full_fit.result_full, self.potential_modes, **self.kwargs)
@@ -277,6 +279,10 @@ class ModeSearchAllFreeVaryingN:
             self.run_string_prefix = "Default"
         else:
             self.run_string_prefix = kwargs["run_string_prefix"]
+        if "load_pickle" not in self.kwargs:
+            self.load_pickle = True
+        else:
+            self.load_pickle = self.kwargs["load_pickle"]
 
     def init_searchers(self):
         for _N_init in self.N_list:
@@ -306,7 +312,8 @@ class ModeSearchAllFreeVaryingN:
                     self.t0_arr,
                     0,
                     qnm_fixed_list=_flatness_checker.found_modes_screened,
-                    run_string_prefix=self.run_string_prefix))
+                    run_string_prefix=self.run_string_prefix,
+                    load_pickle = self.load_pickle))
             self.fixed_fitters[i].do_fits()
             if len(_mode_searcher.found_modes) >= len(self.found_modes_final):
                 self.best_run_indx = i
@@ -446,7 +453,7 @@ def closest_free_mode_distance(result_full, mode, r_scale=1, i_scale=1):
     omega_i_arr = np.array(list(omega_i_dict.values()))
     scaled_distance_arr = ((omega_r_arr - mode.omegar) / \
                            r_scale)**2 + ((omega_i_arr - mode.omegai) / i_scale)**2
-    min_distance = np.min(scaled_distance_arr, axis=0)
+    min_distance = np.nanmin(scaled_distance_arr, axis=0)
     return min_distance
 
 def flattest_region(length, arr, quantile_range = 0.95, normalize_by = None):
@@ -475,6 +482,7 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95,
                                med_min = 1e-3, weight_1 = 1, weight_2 = 1):
     if len(arr1) != len(arr2):
         raise Exception("The length of the two arrays do not match")
+    nan_tol = 1 - quantile_range
     total_length = len(arr1)
     quantile_low = (1 - quantile_range)/2
     quantile_hi = 1 - quantile_low
@@ -483,18 +491,25 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95,
     for i in range(total_length - length):
         arr1_in_range = arr1[i:i+length]
         arr2_in_range = arr2[i:i+length]
-        hi1 = np.quantile(arr1_in_range,quantile_hi)
-        low1 = np.quantile(arr1_in_range,quantile_low)
-        med1 = max(np.quantile(arr1_in_range, 0.5), med_min)
+        if length > 0:
+            arr1_nan_frac = np.sum(np.isnan(arr1_in_range))/length
+            arr2_nan_frac = np.sum(np.isnan(arr2_in_range))/length
+        else:
+            arr1_nan_frac = 1
+            arr2_nan_frac = 1
+        quantile_adj = min(arr1_nan_frac/2, nan_tol/2)
+        hi1 = np.nanquantile(arr1_in_range,min(1, quantile_hi+quantile_adj))
+        low1 = np.nanquantile(arr1_in_range,max(0, quantile_low-quantile_adj))
+        med1 = max(np.nanquantile(arr1_in_range, 0.5), med_min)
         if normalize_1_by is None:
             normalize1 = med1
         else:
             normalize1 = normalize_1_by
         fluc1 = (hi1 - low1)/normalize1
         
-        hi2 = np.quantile(arr2_in_range,quantile_hi)
-        low2 = np.quantile(arr2_in_range,quantile_low)
-        med2 = max(np.quantile(arr2_in_range, 0.5), med_min)
+        hi2 = np.nanquantile(arr2_in_range,min(1, quantile_hi+quantile_adj))
+        low2 = np.nanquantile(arr2_in_range,max(0, quantile_low-quantile_adj))
+        med2 = max(np.nanquantile(arr2_in_range, 0.5), med_min)
         if normalize_2_by is None:
             normalize2 = med2
         else:
@@ -503,7 +518,7 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95,
         
         fluc = np.sqrt((fluc1*weight_1)**2 + (fluc2*weight_2)**2)
         
-        if fluc < fluc_least:
+        if fluc < fluc_least and arr1_nan_frac < nan_tol:
             fluc_least = fluc
             fluc_least_indx = i
             hi1_best, low1_best, med1_best, normalize1_best, fluc1_best, hi2_best, low2_best, med2_best, normalize2_best, fluc2_best = (hi1, low1, med1, normalize1, fluc1, hi2, low2, med2, normalize2, fluc2)
