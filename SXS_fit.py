@@ -20,4 +20,4 @@ mode_search_complete.do_all_searches()
 Mf = mode_search_complete.relevant_lm_mode_searcher_varying_N[0].M
 af = mode_search_complete.relevant_lm_mode_searcher_varying_N[0].a
 predicted_qnm_list = []
-plot_relevant_mode_search_full(mode_search_complete, predicted_qnm_list = predicted_qnm_list, postfix_string="run3")
+plot_relevant_mode_search_full(mode_search_complete, predicted_qnm_list = predicted_qnm_list, postfix_string="run4")

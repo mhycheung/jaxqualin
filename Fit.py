@@ -170,7 +170,7 @@ class QNMFit:
             Schwarzschild = False,
             jcf=CurveFit(),
             params0=None,
-            max_nfev=1000000,
+            max_nfev=200000,
             A_bound = np.inf):
         self.h = h
         self.t0 = t0
@@ -240,7 +240,7 @@ class QNMFitVarMa:
             Schwarzschild = False,
             jcf=CurveFit(),
             params0=None,
-            max_nfev=1000000):
+            max_nfev=200000):
         self.h = h
         self.t0 = t0
         self.N_free = len(qnm_free_list)
@@ -496,7 +496,7 @@ class QNMFitVaryingStartingTime:
             Schwarzschild = False,
             run_string_prefix="Default",
             params0=None,
-            max_nfev=1000000,
+            max_nfev=200000,
             sequential_guess=True,
             load_pickle = True,
             nonconvergence_cut = False,
