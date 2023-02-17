@@ -4,10 +4,12 @@ from Fit import *
 from Waveforms import *
 import numpy as np
 import pickle
+import json
 import os
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 MODE_SEARCHERS_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/mode_searchers")
+JSON_SAVE_PATH = os.path.join(ROOT_PATH, "json")
 
 
 class IterativeFlatnessChecker:
@@ -525,3 +527,45 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95,
     # print(hi1_best, low1_best, med1_best, normalize1_best, fluc1_best, hi2_best, low2_best, med2_best, normalize2_best, fluc2_best)
     return fluc_least_indx, fluc_least
     
+
+def eff_mode_search(inject_params, runname, N_list, retro = False, load_pickle = True):
+    
+    Mf = inject_params['Mf']
+    af = inject_params['af']
+    relevant_lm_list = inject_params['relevant_lm_list']
+    h_eff = make_eff_ringdown_waveform_from_param(inject_params)
+    mode_searcher = ModeSearchAllFreeVaryingN(h_eff, Mf, af, relevant_lm_list = relevant_lm_list, 
+                                          retro = retro, N_list=N_list, run_string_prefix = runname,
+                                          load_pickle = load_pickle)
+    mode_searcher.do_mode_searches()
+    
+    return mode_searcher
+    
+def all_eff_mode_searches(inject_params_full, runname, N_list, retro = False, load_pickle = True):
+    
+    mode_searcher_list = []
+    
+    for inject_params in inject_params_full:
+        eff_mode_search(inject_params, runname, N_list, 
+                        retro = retro, load_pickle = load_pickle)
+        mode_searcher_list.append(mode_searcher)
+
+def read_json_eff_mode_search(i, batch_runname, N_list, retro = False, load_pickle = True):
+    
+    with open(f"{JSON_SAVE_PATH}/{batch_runname}.json", 'r') as f:
+        inject_params_full = json.load(f)
+    
+    runname = f"{batch_runname}_{i:03d}"
+    mode_searcher = eff_mode_search(inject_params_full[runname], runname, N_list, 
+                                    retro = retro, load_pickle = load_pickle)
+    
+    return mode_searcher
+
+def read_json_for_param_dict(i, batch_runname):
+    
+    with open(f"{JSON_SAVE_PATH}/{batch_runname}.json", 'r') as f:
+        inject_params_full = json.load(f)
+    
+    runname = f"{batch_runname}_{i:03d}"
+    
+    return inject_params_full[runname]

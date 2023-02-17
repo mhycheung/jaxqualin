@@ -610,3 +610,71 @@ class QNMFitVaryingStartingTime:
                 qnm_fit_result_temp = qnm_fit.result
             self.result_full.nonconvergence_indx = self.nonconvergence_indx
             self.result_full.process_results()
+
+            
+def fit_effective(omega_fund, A_merger, phi_merger, Mf, h):
+    t_comp = np.concatenate((h.time, h.time))
+    h_comp = np.concatenate((h.hr, h.hi))
+    fit_func = lambda t_comp, c2, c3, d3, d4: \
+            effective_ringdown_for_fit(omega_fund, A_merger, phi_merger, Mf, t_comp, c2, c3, d3, d4)
+    popt, pcov = curve_fit(fit_func, t_comp, h_comp, maxfev = 10000)
+    return popt, pcov
+    
+    
+def effective_ringdown(omega_fund, A_merger, phi_merger, Mf, t, c2, c3, d3, d4, part = "complex"):
+    c1 = -A_merger*np.imag(omega_fund)*np.cosh(c3)**2/c2
+    c4 = A_merger - c1*np.tanh(c3)
+    d2 = 2*c2
+    d1 = Mf*(1 + d3 + d4) / (d2 * (d3 + 2*d4)) * (np.real(omega_fund) - phi_merger)
+    A = c1*np.tanh(c2*t + c3) + c4
+    phi = - d1 * np.log( (1 + d3 * np.exp(-d2*t) + d4 * np.exp(-2*d2*t)) / (1 + d3 + d4))
+    if part == "complex":
+        return A*np.exp(1.j*phi)*np.exp(-1.j*(omega_fund*t + phi_merger))
+    elif part == "real":
+        return np.real(A*np.exp(1.j*phi)*np.exp(-1.j*(omega_fund*t + phi_merger)))
+    elif part == "imag":
+        return np.imag(A*np.exp(1.j*phi)*np.exp(-1.j*(omega_fund*t + phi_merger)))
+    else:
+        raise ValueError("part must be complex, real or imag")
+        return
+        
+def effective_ringdown_for_fit(omega_fund, A_merger, phi_merger, Mf, t_comp, c2, c3, d3, d4):
+    fit_params = (c2, c3, d3, d4)
+    N = int(len(t_comp)/2)
+    h_real = effective_ringdown(omega_fund, A_merger, phi_merger, Mf, t_comp[:N], *fit_params, part = "real")
+    h_imag = effective_ringdown(omega_fund, A_merger, phi_merger, Mf, t_comp[N:], *fit_params, part = "imag")
+    h_comp = np.concatenate((h_real, h_imag))
+    return h_comp
+        
+        
+def fit_effective_2(h, A_fund, phi_fund, omega_fund, t_match):
+    t_comp = np.concatenate((h.time, h.time))
+    h_comp = np.concatenate((h.hr, h.hi))
+    fit_func = lambda t_comp, c1, c2, d1, d2: \
+        effective_ringdown_for_fit_2(t_comp, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2)
+    popt, pcov = curve_fit(fit_func, t_comp, h_comp, maxfev = 1000000, bounds = ([-np.inf, 0, 0, 0],
+                                                                                 [np.inf, np.inf, np.inf, np.inf]))
+    return popt, pcov
+    
+    
+def effective_ringdown_2(t, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2, part = "complex"):
+    A = -c1*(np.tanh((t - t_match)/c2)-1)/2 + A_fund
+    phi = phi_fund - d1*(np.tanh((t - t_match)/d2)-1)/2 #d1*np.log(1+d2*np.exp(-d3*(t-t_match)))
+    if part == "complex":
+        return A*np.exp(-1.j*(omega_fund * t + phi))
+    elif part == "real":
+        return np.real(A*np.exp(-1.j*(omega_fund * t + phi)))
+    elif part == "imag":
+        return np.imag(A*np.exp(-1.j*(omega_fund * t + phi)))
+    else:
+        raise ValueError("part must be complex, real or imag")
+        return
+        
+def effective_ringdown_for_fit_2(t_comp, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2):
+    fit_params = (c1, c2, d1, d2)
+    N = int(len(t_comp)/2)
+    h_real = effective_ringdown_2(t_comp[:N], A_fund, phi_fund, omega_fund, t_match, *fit_params, part = "real")
+    h_imag = effective_ringdown_2(t_comp[N:], A_fund, phi_fund, omega_fund, t_match, *fit_params, part = "imag")
+    h_comp = np.concatenate((h_real, h_imag))
+    return h_comp        
+        

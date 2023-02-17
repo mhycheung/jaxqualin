@@ -12,8 +12,11 @@ def append_A_and_phis(mode_searcher_vary_N, df, **kwargs):
     M_rem = mode_searcher_vary_N.M
     chi_rem = mode_searcher_vary_N.a
     best_run_indx = mode_searcher_vary_N.best_run_indx
-    t_peak_dom = mode_searcher_vary_N.h.t_peak
     t_peak_lm = mode_searcher_vary_N.h.peaktime
+    if hasattr(mode_searcher_vary_N.h, "t_peak"):
+        t_peak_dom = mode_searcher_vary_N.h.t_peak
+    else:
+        t_peak_dom = t_peak_lm
     t_shift = t_peak_dom - t_peak_lm
     fluc_least_indx_list = mode_searcher_vary_N.flatness_checkers[best_run_indx].fluc_least_indx_list
     found_modes = mode_searcher_vary_N.found_modes_final
@@ -37,7 +40,8 @@ def append_A_and_phis(mode_searcher_vary_N, df, **kwargs):
                                M_rem = M_rem, chi_rem = chi_rem)
         df_row = pd.Series(kwargs)
         df_row_frame = df_row.to_frame().T
-        df_row_frame["retro"] = df_row_frame["retro"].astype(bool)
+        if "retro" in df_row_frame:
+            df_row_frame["retro"] = df_row_frame["retro"].astype(bool)
         df = pd.concat([df, df_row_frame])
     return df
         
@@ -66,3 +70,19 @@ def create_data_frame(SXS_num_list, N_list, df_save_prefix = "default"):
         df = append_A_and_phis_all_lm(mode_search_complete, df)
     file_path = os.path.join(DF_SAVE_PATH, f"{df_save_prefix}.csv")
     df.to_csv(file_path)
+
+def create_data_frame_eff(eff_num_list, batch_runname, N_list, df_save_prefix = "eff_default", **kwargs):
+    df = pd.DataFrame(columns = ["eff_num", "M_rem", "chi_rem",  "l", "m", "mode_string",
+                             "A_med", "A_hi", "A_low", "phi_med", "phi_hi", "phi_low"])
+    
+    for eff_num in eff_num_list:
+        mode_searcher = read_json_eff_mode_search(eff_num, batch_runname, N_list, load_pickle = True)
+        kwargs.update(eff_num = eff_num)
+        df = append_A_and_phis(mode_searcher, df, **kwargs)
+    
+    file_path = os.path.join(DF_SAVE_PATH, f"{df_save_prefix}.csv")
+    df.to_csv(file_path)
+        
+    return df
+    
+    

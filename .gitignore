@@ -14,3 +14,4 @@ pickle/data_frame/
 data/
 *.ipynb
 ./*.ipynb
+json/*

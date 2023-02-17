@@ -2,8 +2,10 @@ import sxs
 import jax.numpy as jnp
 import numpy as np
 from bisect import bisect_left, bisect_right
+from QuasinormalMode import *
 from utils import *
 from scipy.interpolate import griddata
+from scipy.stats import loguniform, uniform
 from pycbc.waveform.waveform_modes import sum_modes
 
 
@@ -252,3 +254,93 @@ def get_SXS_waveform_summed(SXSnum, iota, phi, l_max = 4, res = 0, N_ext = 2):
     h = waveform(t, h_sum)
 
     return h, Mf, af, retro
+
+def delayed_QNM(mode, t, A, phi, dA_ratio = 0.2, A_delay = 5, A_sig = 1, dphi = -np.pi/2, phi_delay = 5, phi_sig = 1):
+    omega = mode.omega
+    mode_clean = A*np.exp(-1.j*(omega*t + phi))
+    modulation = (1 - dA_ratio) + (dA_ratio)*(1 + np.tanh((t - A_delay)/A_sig))/2
+    phase_delay = dphi*(1-np.tanh((t - phi_delay)/phi_sig))/2
+    return modulation*mode_clean*np.exp(1.j*phase_delay)
+    
+def delayed_QNM_2(mode, t, A, phi, A_red_ratio = 1, A_delay = 5, A_sig = 1, dphi = -np.pi/2, phi_delay = 5, phi_sig = 1):
+    omega_i = mode.omegai
+    omega_r = mode.omegar
+    A_cons = A*np.exp(omega_i*t)
+    A_red = A_red_ratio*A*(np.exp(omega_i*t))*(1 - np.tanh((t - A_delay)/A_sig))/2
+    A_prime = A_cons - A_red
+    A_osci = A_prime*np.exp(-1.j*(omega_r*t + phi))
+    phase_delay = dphi*(1-np.tanh((t - phi_delay)/phi_sig))/2
+    return A_osci*np.exp(1.j*phase_delay)
+
+def make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_sig,
+                               time = np.linspace(0, 150, num = 1501)):
+    fund_string = list(inj_dict.keys())[0]
+    mode_fund = long_str_to_qnms(fund_string, Mf, af)[0]
+    A_fund, phi_fund = inj_dict[fund_string]
+
+
+    h_fund = delayed_QNM_2(mode_fund, time, A_fund, phi_fund,
+                           A_delay = 0, A_sig = 10, 
+                           phi_delay = 0, dphi= -np.pi, phi_sig=5)
+    h0 = waveform(time, h_fund, remove_num=0, t_peak=0)
+
+    h_effective = h0.h
+
+    for key in list(inj_dict.keys())[1:]:
+        omega = long_str_to_qnms(key, Mf, af)[0]
+        A, phi = inj_dict[key]
+        h_delay = delayed_QNM_2(omega, h0.time, A, phi, 
+                                A_red_ratio = 1, A_delay = 5, A_sig = 2,
+                                phi_delay = 0, dphi= -np.pi, phi_sig=2)
+        h_effective += h_delay
+
+    noise = np.random.normal(0, noise_sig, len(h_effective))
+    h_effective += noise
+
+    h_eff = waveform(h0.time, h_effective, l = l, m = m, remove_num=0, t_peak = 0)
+    
+    return h_eff
+
+def make_eff_ringdown_waveform_from_param(inject_params, time = np.linspace(0, 150, num = 1501)):
+    
+    inj_dict = inject_params['inj_dict']
+    l = inject_params['l']
+    m = inject_params['m']
+    Mf = inject_params['Mf']
+    af = inject_params['af']
+    relevant_lm_list = inject_params['relevant_lm_list']
+    noise_sig = inject_params['noise_sig']
+    
+    h_eff = make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_sig,
+                                       time)
+    return h_eff
+
+
+def make_random_inject_params(inject_params_base, randomize_params, inj_dict_randomize, amp_order):
+    
+    inject_params = inject_params_base.copy()
+    inj_dict = inject_params['inj_dict'].copy()
+    
+    for key, val in randomize_params.items(): 
+        if key == 'af':
+            inject_params[key] = uniform.rvs(*val)
+        inject_params[key] = loguniform.rvs(*val)
+
+    amps_list = []
+    for order in amp_order:
+        num = len(order)
+        amps = np.sort(uniform.rvs(*inj_dict_randomize[order[0]][0], size = num))[::-1]
+        amps_list.append(amps)
+
+    for key, val in inj_dict_randomize.items():
+        for amps, order in zip(amps_list, amp_order):
+            if key in order:
+                indx = order.index(key)
+                inj_dict[key] = (amps[indx], uniform.rvs(*val[1]))
+                break
+        else:
+            inj_dict[key] = (loguniform.rvs(*val[0]), uniform.rvs(*val[1]))
+
+    inject_params['inj_dict'] = inj_dict.copy()
+    
+    return inject_params
