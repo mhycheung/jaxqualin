@@ -21,8 +21,13 @@ def read_mass():
             masserrorgammas[row[0]] = float(row[2])
     return massgammas, masserrorgammas
 
-def read_data(gamma, l, radius = 1200, box = 4096, base = 960, gamma_scale = False):
-    dirname = glob.glob(GRChombo_data_root + f"gamma{gamma}/*box{box}_base{base}*")[0]
+def read_data(gamma, l, radius = 1200, box = 4096, base = 960, gamma_scale = False, 
+              GRChombo_data_root_override = None):
+    if GRChombo_data_root_override != None:
+        GRChombo_data_root_actual = GRChombo_data_root_override
+    else:
+        GRChombo_data_root_actual = GRChombo_data_root
+    dirname = glob.glob(GRChombo_data_root_actual + f"gamma{gamma}/*box{box}_base{base}*")[0]
     time = []
     Psi = []
     with open(dirname + f"/Weyl_integral_{l}0.dat", "r") as f:
@@ -49,7 +54,8 @@ def estimate_mass(Psi, qnm_free_list,
                   gamma = None,
                   gamma_scale = False,
                   qnm_fixed_list = [],
-                  t0_arr = np.linspace(0, 100, num = 51)):
+                  t0_arr = np.linspace(0, 100, num = 51),
+                  load_pickle = True):
                   
     qnm_fitter = QNMFitVaryingStartingTime(Psi,
                 t0_arr,
@@ -58,7 +64,7 @@ def estimate_mass(Psi, qnm_free_list,
                 Schwarzschild = True,
                 run_string_prefix=run_string_prefix,
                 var_M_a = True,
-                load_pickle=True)
+                load_pickle=load_pickle)
     
     qnm_fitter.do_fits()
     
