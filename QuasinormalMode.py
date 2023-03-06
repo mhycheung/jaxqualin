@@ -58,6 +58,25 @@ class mode_free:
         _tex_string = _tex_string.replace('-', r" \! - \! ")
         return _tex_string
 
+    def is_overtone(self):
+        if self.lmnx == "constant":
+            return False
+        else:
+            for lmn in self.lmnx:
+                l, m, n = tuple(lmn)
+                if n > 0:
+                    return True
+
+    def sum_lm(self):
+        l_sum = 0
+        m_sum = 0
+        if self.lmnx != "constant":
+            for lmn in self.lmnx:
+                l, m, n = tuple(lmn)
+                l_sum += l
+                m_sum += m
+        return l_sum, m_sum
+
 class mode(mode_free):
     
     def __init__(self, lmnx, M, a, retro = False, s = -2):
