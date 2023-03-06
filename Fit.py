@@ -45,6 +45,7 @@ def qnm_fit_func(
             Q += -A * jnp.exp(omegai * t) * jnp.sin(omegar * t + phi)
     return Q
 
+
 def qnm_fit_func_varMa(
         t,
         qnm_fixed_list,
@@ -53,7 +54,7 @@ def qnm_fit_func_varMa(
         free_mode_params_list,
         M,
         a,
-        retro = False,
+        retro=False,
         part=None):
     Q = 0
     for qnm_fixed, fix_mode_params in zip(
@@ -69,7 +70,7 @@ def qnm_fit_func_varMa(
             Q += -A * np.exp(omegai * t) * np.sin(omegar * t + phi)
     for free_mode_params, qnm_free in zip(free_mode_params_list, qnm_free_list):
         A, phi = tuple(free_mode_params)
-        qnm_free.fix_mode(M, a, retro = retro)
+        qnm_free.fix_mode(M, a, retro=retro)
         omegar = qnm_free.omegar
         omegai = qnm_free.omegai
         if part is None:
@@ -100,7 +101,8 @@ def qnm_fit_func_wrapper(t, qnm_fixed_list, N_free, *args, part=None):
     return qnm_fit_func(t, qnm_fixed_list, fix_mode_params_list,
                         free_mode_params_list, part=part)
 
-def qnm_fit_func_wrapper_varMa(t, qnm_fixed_list, qnm_free_list, retro, *args, Schwarzschild = False, part=None):
+
+def qnm_fit_func_wrapper_varMa(t, qnm_fixed_list, qnm_free_list, retro, *args, Schwarzschild=False, part=None):
     N_fix = len(qnm_fixed_list)
     N_free = len(qnm_free_list)
     fix_mode_params_list = []
@@ -113,19 +115,19 @@ def qnm_fit_func_wrapper_varMa(t, qnm_fixed_list, qnm_free_list, retro, *args, S
         A = args[0][2 * N_fix + 2 * j]
         phi = args[0][2 * N_fix + 2 * j + 1]
         free_mode_params_list.append([A, phi])
-    M = args[0][2 * (N_fix + N_free)] 
+    M = args[0][2 * (N_fix + N_free)]
     if Schwarzschild:
         return qnm_fit_func_varMa(t, qnm_fixed_list, qnm_free_list, fix_mode_params_list,
-                        free_mode_params_list, M, 0., retro = retro, part=part)
+                                  free_mode_params_list, M, 0., retro=retro, part=part)
     else:
-        a = args[0][2 * (N_fix + N_free) + 1] 
+        a = args[0][2 * (N_fix + N_free) + 1]
         return qnm_fit_func_varMa(t, qnm_fixed_list, qnm_free_list, fix_mode_params_list,
-                            free_mode_params_list, M, a, retro = retro, part=part)
+                                  free_mode_params_list, M, a, retro=retro, part=part)
 
 # https://stackoverflow.com/questions/50203879/curve-fitting-of-complex-data
 
 
-def qnm_fit_func_wrapper_complex(t, qnm_fixed_list, N_free, *args, Schwarzschild = False):
+def qnm_fit_func_wrapper_complex(t, qnm_fixed_list, N_free, *args, Schwarzschild=False):
     N = len(t)
     t_real = t[0::2]
     t_imag = t[1::2]
@@ -138,6 +140,7 @@ def qnm_fit_func_wrapper_complex(t, qnm_fixed_list, N_free, *args, Schwarzschild
             t_imag, qnm_fixed_list, N_free, *args, part="imag")
     h_riffle = interweave(h_real, h_imag)
     return h_riffle
+
 
 def qnm_fit_func_wrapper_complex_varMa(t, qnm_fixed_list, qnm_free_list, retro, *args):
     N = len(t)
@@ -167,11 +170,11 @@ class QNMFit:
             t0,
             N_free,
             qnm_fixed_list=[],
-            Schwarzschild = False,
-            jcf=CurveFit(),
+            Schwarzschild=False,
             params0=None,
             max_nfev=200000,
-            A_bound = np.inf):
+            A_bound=np.inf,
+            **fit_kwargs):
         self.h = h
         self.t0 = t0
         self.N_free = N_free
@@ -179,31 +182,33 @@ class QNMFit:
         self.params0 = params0
         self.N_fix = len(qnm_fixed_list)
         self.Schwarzschild = Schwarzschild
-        self.jcf = jcf
         self.max_nfev = max_nfev
         self.fit_done = False
         self.A_bound = A_bound
+        self.fit_kwargs = fit_kwargs
 
-    def do_fit(self):
+    def do_fit(self, jcf=CurveFit(), return_jcf=False):
         self.time, self.hr, self.hi = self.h.postmerger(self.t0)
         self._h_interweave = interweave(self.hr, self.hi)
         self._time_interweave = interweave(self.time, self.time)
         if not hasattr(self.params0, "__iter__"):
             self.params0 = jnp.array(
                 [1, 1] * self.N_fix + [1, 1, 1, -1] * self.N_free)
-        upper_bound = [self.A_bound, np.inf] * self.N_fix + ([self.A_bound] + 3 * [np.inf]) * self.N_free
-        lower_bound = [-self.A_bound, -np.inf] * self.N_fix + ([-self.A_bound] + 3 * [-np.inf]) * self.N_free
+        upper_bound = [self.A_bound, np.inf] * self.N_fix + \
+            ([self.A_bound] + 3 * [np.inf]) * self.N_free
+        lower_bound = [-self.A_bound, -np.inf] * self.N_fix + \
+            ([-self.A_bound] + 3 * [-np.inf]) * self.N_free
         bounds = (np.array(lower_bound), np.array(upper_bound))
-        self.popt, self.pcov = self.jcf.curve_fit(
-        # self.popt, self.pcov = scipy.optimize.curve_fit(
+        self.popt, self.pcov = jcf.curve_fit(
+            # self.popt, self.pcov = scipy.optimize.curve_fit(
             lambda t, *params: qnm_fit_func_wrapper_complex(
-                t, self.qnm_fixed_list, self.N_free, params, Schwarzschild = self.Schwarzschild), np.array(
+                t, self.qnm_fixed_list, self.N_free, params, Schwarzschild=self.Schwarzschild), np.array(
                 self._time_interweave), np.array(
-                self._h_interweave), bounds = bounds, p0=self.params0, max_nfev=self.max_nfev,
-                method = "trf")
+                self._h_interweave), bounds=bounds, p0=self.params0, max_nfev=self.max_nfev,
+            method="trf", **self.fit_kwargs)
         if self.Schwarzschild:
             self.reconstruct_h = qnm_fit_func_wrapper(
-                self.time, self.qnm_fixed_list, self.N_free, self.popt, part = "real")
+                self.time, self.qnm_fixed_list, self.N_free, self.popt, part="real")
         else:
             self.reconstruct_h = qnm_fit_func_wrapper(
                 self.time, self.qnm_fixed_list, self.N_free, self.popt)
@@ -212,7 +217,9 @@ class QNMFit:
             np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
         self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
         self.fit_done = True
-        
+        if return_jcf:
+            return jcf
+
     def copy_from_result(self, other_result):
         if self.fit_done == False:
             self.popt = other_result.popt
@@ -226,8 +233,8 @@ class QNMFit:
             self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
                 np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
             self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
-            
-            
+
+
 class QNMFitVarMa:
 
     def __init__(
@@ -236,11 +243,12 @@ class QNMFitVarMa:
             t0,
             qnm_free_list,
             qnm_fixed_list=[],
-            retro = False,
-            Schwarzschild = False,
+            retro=False,
+            Schwarzschild=False,
             jcf=CurveFit(),
             params0=None,
-            max_nfev=200000):
+            max_nfev=200000,
+            **fit_kwargs):
         self.h = h
         self.t0 = t0
         self.N_free = len(qnm_free_list)
@@ -253,6 +261,7 @@ class QNMFitVarMa:
         self.fit_done = False
         self.retro = retro
         self.Schwarzschild = Schwarzschild
+        self.fit_kwargs = fit_kwargs
 
     def do_fit(self):
         self.time, self.hr, self.hi = self.h.postmerger(self.t0)
@@ -263,28 +272,30 @@ class QNMFitVarMa:
                 self.params0 = np.array(
                     [1, 1] * self.N_fix + [1, 1] * self.N_free + [1])
             fit_func = lambda t, *params: qnm_fit_func_wrapper_varMa(
-            t, self.qnm_fixed_list, self.qnm_free_list, self.retro, params, 0, Schwarzschild = True, part = "real")
+                t, self.qnm_fixed_list, self.qnm_free_list, self.retro, params, 0, Schwarzschild=True, part="real")
             self.popt, self.pcov = curve_fit(fit_func, np.array(
-                    self.time), np.array(
-                    self.hr), p0=self.params0, max_nfev=self.max_nfev,
-                    method = "trf")
+                self.time), np.array(
+                self.hr), p0=self.params0, max_nfev=self.max_nfev,
+                method="trf")
             self.reconstruct_h = qnm_fit_func_wrapper_varMa(
                 self.time, self.qnm_fixed_list, self.qnm_free_list, self.retro, self.popt,
-                0, Schwarzschild = True, part = "real")
+                0, Schwarzschild=True, part="real")
         else:
             if not hasattr(self.params0, "__iter__"):
                 self.params0 = np.array(
                     [1, 1] * self.N_fix + [1, 1] * self.N_free + [1, 0.5])
-            lower_bound = [-np.inf] * (2 * self.N_fix + 2 * self.N_free + 1) + [-0.99]
-            upper_bound = [np.inf] * (2 * self.N_fix + 2 * self.N_free + 1) + [0.99]
+            lower_bound = [-np.inf] * \
+                (2 * self.N_fix + 2 * self.N_free + 1) + [-0.99]
+            upper_bound = [np.inf] * \
+                (2 * self.N_fix + 2 * self.N_free + 1) + [0.99]
             bounds = (np.array(lower_bound), np.array(upper_bound))
             fit_func = lambda t, *params: qnm_fit_func_wrapper_complex_varMa(
-            t, self.qnm_fixed_list, self.qnm_free_list, self.retro, params)
+                t, self.qnm_fixed_list, self.qnm_free_list, self.retro, params)
             self.popt, self.pcov = curve_fit(fit_func, np.array(
-                    self._time_interweave), np.array(
-                    self._h_interweave), p0=self.params0, 
-                    bounds = bounds, max_nfev=self.max_nfev,
-                    method = "trf")
+                self._time_interweave), np.array(
+                    self._h_interweave), p0=self.params0,
+                bounds=bounds, max_nfev=self.max_nfev,
+                method="trf", **self.fit_kwargs)
             self.reconstruct_h = qnm_fit_func_wrapper_varMa(
                 self.time, self.qnm_fixed_list, self.qnm_free_list, self.retro, self.popt)
         self.h_true = self.hr + 1.j * self.hi
@@ -292,7 +303,7 @@ class QNMFitVarMa:
             np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
         self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
         self.fit_done = True
-        
+
     def copy_from_result(self, other_result):
         if self.fit_done == False:
             self.popt = other_result.popt
@@ -306,7 +317,6 @@ class QNMFitVarMa:
             self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
                 np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
             self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
-        
 
 
 class QNMFitVaryingStartingTimeResult:
@@ -317,8 +327,8 @@ class QNMFitVaryingStartingTimeResult:
             qnm_fixed_list,
             N_free,
             run_string_prefix="Default",
-            nonconvergence_cut = False,
-            nonconvergence_indx = []):
+            nonconvergence_cut=False,
+            nonconvergence_indx=[]):
         self.t0_arr = t0_arr
         self.qnm_fixed_list = qnm_fixed_list
         self.N_fix = len(self.qnm_fixed_list)
@@ -337,7 +347,8 @@ class QNMFitVaryingStartingTimeResult:
         if nonconvergence_cut:
             self.run_string += "_nc"
         self.nonconvergence_indx = nonconvergence_indx
-        self.file_path = os.path.join(FIT_SAVE_PATH, f"{self.run_string}_result.pickle")
+        self.file_path = os.path.join(
+            FIT_SAVE_PATH, f"{self.run_string}_result.pickle")
 
     def fill_result(self, i, result):
         self._popt_full[:, i] = result.popt
@@ -380,24 +391,28 @@ class QNMFitVaryingStartingTimeResult:
 
     def pickle_exists(self):
         return os.path.exists(self.file_path)
-    
+
     def reconstruct_waveform(self, indx, t_arr):
         popt = self.popt_full[:, indx]
-        Q = qnm_fit_func_wrapper(t_arr, self.qnm_fixed_list, self.N_free, popt, part = None)
+        Q = qnm_fit_func_wrapper(
+            t_arr, self.qnm_fixed_list, self.N_free, popt, part=None)
         return Q
-    
+
     def reconstruct_mode_by_mode(self, indx, t_arr):
         Q_fix_list = []
         Q_free_list = []
         popt = self.popt_full[:, indx]
         for j in range(self.N_fix):
-            Q = qnm_fit_func_wrapper(t_arr, [self.qnm_fixed_list[j]], 0, popt[2*j:2*j+2], part = None)
+            Q = qnm_fit_func_wrapper(
+                t_arr, [self.qnm_fixed_list[j]], 0, popt[2*j:2*j+2], part=None)
             Q_fix_list.append(Q)
         for j in range(self.N_free):
-            Q = qnm_fit_func_wrapper(t_arr, [], 1, popt[2 * self.N_fix + 4*j:2 * self.N_fix + 4*j + 4], part = None)
+            Q = qnm_fit_func_wrapper(
+                t_arr, [], 1, popt[2 * self.N_fix + 4*j:2 * self.N_fix + 4*j + 4], part=None)
             Q_free_list.append(Q)
         return Q_fix_list, Q_free_list
-    
+
+
 class QNMFitVaryingStartingTimeResultVarMa:
 
     def __init__(
@@ -405,10 +420,10 @@ class QNMFitVaryingStartingTimeResultVarMa:
             t0_arr,
             qnm_fixed_list,
             qnm_free_list,
-            Schwarzschild = False,
+            Schwarzschild=False,
             run_string_prefix="Default",
-            nonconvergence_cut = False,
-            nonconvergence_indx = []):
+            nonconvergence_cut=False,
+            nonconvergence_indx=[]):
         self.t0_arr = t0_arr
         self.qnm_fixed_list = qnm_fixed_list
         self.qnm_free_list = qnm_free_list
@@ -435,7 +450,8 @@ class QNMFitVaryingStartingTimeResultVarMa:
         if nonconvergence_cut:
             self.run_string += "_nc"
         self.nonconvergence_indx = nonconvergence_indx
-        self.file_path = os.path.join(FIT_SAVE_PATH, f"{self.run_string}_result.pickle")
+        self.file_path = os.path.join(
+            FIT_SAVE_PATH, f"{self.run_string}_result.pickle")
 
     def fill_result(self, i, result):
         self._popt_full[:, i] = result.popt
@@ -482,25 +498,28 @@ class QNMFitVaryingStartingTimeResultVarMa:
     def pickle_exists(self):
         return os.path.exists(self.file_path)
 
+
 class QNMFitVaryingStartingTime:
 
     def __init__(
             self,
             h,
             t0_arr,
-            N_free = 0,
+            N_free=0,
             qnm_fixed_list=[],
             qnm_free_list=[],
-            var_M_a = False,
-            retro = False,
-            Schwarzschild = False,
+            var_M_a=False,
+            retro=False,
+            Schwarzschild=False,
             run_string_prefix="Default",
             params0=None,
             max_nfev=200000,
             sequential_guess=True,
-            load_pickle = True,
-            nonconvergence_cut = False,
-            A_bound = np.inf):
+            load_pickle=True,
+            nonconvergence_cut=False,
+            A_bound=np.inf,
+            jcf=None,
+            fit_kwargs={}):
         self.h = h
         self.t0_arr = t0_arr
         self.N_fix = len(qnm_fixed_list)
@@ -531,12 +550,17 @@ class QNMFitVaryingStartingTime:
         self.Schwarzschild = Schwarzschild
         self.nonconvergence_cut = nonconvergence_cut
         self.A_bound = A_bound
+        self.jcf = jcf
+        self.fit_kwargs = fit_kwargs
 
-    def do_fits(self):
+    def do_fits(self, jcf=None, return_jcf=False):
         self.not_converged = False
         self.nonconvergence_indx = []
         self._time_longest, _, _ = self.h.postmerger(self.t0_arr[0])
-        _jcf = CurveFit(flength=2 * len(self._time_longest))
+        if isinstance(jcf, CurveFit):
+            _jcf = self.jcf
+        else:
+            _jcf = CurveFit(flength=2 * len(self._time_longest))
         if self.var_M_a:
             self.result_full = QNMFitVaryingStartingTimeResultVarMa(
                 self.t0_arr,
@@ -544,21 +568,27 @@ class QNMFitVaryingStartingTime:
                 self.qnm_free_list,
                 self.Schwarzschild,
                 run_string_prefix=self.run_string_prefix,
-                nonconvergence_cut = self.nonconvergence_cut)
+                nonconvergence_cut=self.nonconvergence_cut)
         else:
             self.result_full = QNMFitVaryingStartingTimeResult(
                 self.t0_arr,
                 self.qnm_fixed_list,
                 self.N_free,
                 run_string_prefix=self.run_string_prefix,
-                nonconvergence_cut = self.nonconvergence_cut)
+                nonconvergence_cut=self.nonconvergence_cut)
+        loaded_results = False
         if self.result_full.pickle_exists() and self.load_pickle:
-            _file_path = self.result_full.file_path
-            with open(_file_path, "rb") as f:
-                self.result_full = pickle.load(f)
-            print(
-                f"reloaded fit {self.result_full.run_string} from an old run.")
-        else:
+            try:
+                _file_path = self.result_full.file_path
+                with open(_file_path, "rb") as f:
+                    self.result_full = pickle.load(f)
+                print(
+                    f"reloaded fit {self.result_full.run_string} from an old run.")
+                loaded_results = True
+            except EOFError:
+                print("EOFError when loading pickle for fit. Doing new fit now...")
+                loaded_results = False
+        if loaded_results == False:
             _params0 = self.params0
             for i, _t0 in tqdm(enumerate(self.t0_arr)):
                 if self.var_M_a:
@@ -567,67 +597,78 @@ class QNMFitVaryingStartingTime:
                         _t0,
                         self.qnm_free_list,
                         qnm_fixed_list=self.qnm_fixed_list,
-                        Schwarzschild = self.Schwarzschild,
-                        jcf=_jcf,
+                        Schwarzschild=self.Schwarzschild,
                         params0=_params0,
-                        max_nfev=self.max_nfev)
+                        max_nfev=self.max_nfev,
+                        **self.fit_kwargs)
                 else:
                     qnm_fit = QNMFit(
                         self.h,
                         _t0,
                         self.N_free,
                         qnm_fixed_list=self.qnm_fixed_list,
-                        Schwarzschild = self.Schwarzschild,
-                        jcf=_jcf,
+                        Schwarzschild=self.Schwarzschild,
                         params0=_params0,
                         max_nfev=self.max_nfev,
-                        A_bound = self.A_bound)
+                        A_bound=self.A_bound,
+                        **self.fit_kwargs)
                 if self.nonconvergence_cut and self.not_converged:
                     qnm_fit.copy_from_result(qnm_fit_result_temp)
                 else:
                     try:
-                        qnm_fit.do_fit()
+                        qnm_fit.do_fit(jcf=_jcf)
                     except RuntimeError:
                         print(f"fit did not reach tolerance at t0 = {_t0}.")
                         nan_mismatch = np.nan
                         if self.var_M_a:
                             if self.Schwarzschild:
-                                nan_popt = np.full(self.N_fix*2 + self.N_free*2 + 1, np.nan)
+                                nan_popt = np.full(
+                                    self.N_fix*2 + self.N_free*2 + 1, np.nan)
                                 nan_pcov = nan_popt
                             else:
-                                nan_popt = np.full(self.N_fix*2 + self.N_free*2 + 2, np.nan)
+                                nan_popt = np.full(
+                                    self.N_fix*2 + self.N_free*2 + 2, np.nan)
                                 nan_pcov = nan_popt
                         else:
-                                nan_popt = np.full(self.N_fix*2 + self.N_free*4, np.nan)
-                                nan_pcov = nan_popt
-                        qnm_fit.result = QNMFitResult(nan_popt, nan_pcov, nan_mismatch)
+                            nan_popt = np.full(
+                                self.N_fix*2 + self.N_free*4, np.nan)
+                            nan_pcov = nan_popt
+                        qnm_fit.result = QNMFitResult(
+                            nan_popt, nan_pcov, nan_mismatch)
                         self.nonconvergence_indx.append(i)
                         self.not_converged = True
                     else:
                         if self.sequential_guess:
-                            _params0 = qnm_fit.result.popt      
+                            _params0 = qnm_fit.result.popt
                 self.result_full.fill_result(i, qnm_fit.result)
                 qnm_fit_result_temp = qnm_fit.result
             self.result_full.nonconvergence_indx = self.nonconvergence_indx
+            jcf = _jcf
             self.result_full.process_results()
+            if return_jcf:
+                return jcf
 
-            
+
 def fit_effective(omega_fund, A_merger, phi_merger, Mf, h):
     t_comp = np.concatenate((h.time, h.time))
     h_comp = np.concatenate((h.hr, h.hi))
-    fit_func = lambda t_comp, c2, c3, d3, d4: \
-            effective_ringdown_for_fit(omega_fund, A_merger, phi_merger, Mf, t_comp, c2, c3, d3, d4)
-    popt, pcov = curve_fit(fit_func, t_comp, h_comp, maxfev = 10000)
+
+    def fit_func(t_comp, c2, c3, d3, d4): return \
+        effective_ringdown_for_fit(
+            omega_fund, A_merger, phi_merger, Mf, t_comp, c2, c3, d3, d4)
+    popt, pcov = curve_fit(fit_func, t_comp, h_comp, maxfev=10000)
     return popt, pcov
-    
-    
-def effective_ringdown(omega_fund, A_merger, phi_merger, Mf, t, c2, c3, d3, d4, part = "complex"):
+
+
+def effective_ringdown(omega_fund, A_merger, phi_merger, Mf, t, c2, c3, d3, d4, part="complex"):
     c1 = -A_merger*np.imag(omega_fund)*np.cosh(c3)**2/c2
     c4 = A_merger - c1*np.tanh(c3)
     d2 = 2*c2
-    d1 = Mf*(1 + d3 + d4) / (d2 * (d3 + 2*d4)) * (np.real(omega_fund) - phi_merger)
+    d1 = Mf*(1 + d3 + d4) / (d2 * (d3 + 2*d4)) * \
+        (np.real(omega_fund) - phi_merger)
     A = c1*np.tanh(c2*t + c3) + c4
-    phi = - d1 * np.log( (1 + d3 * np.exp(-d2*t) + d4 * np.exp(-2*d2*t)) / (1 + d3 + d4))
+    phi = - d1 * np.log((1 + d3 * np.exp(-d2*t) + d4 *
+                        np.exp(-2*d2*t)) / (1 + d3 + d4))
     if part == "complex":
         return A*np.exp(1.j*phi)*np.exp(-1.j*(omega_fund*t + phi_merger))
     elif part == "real":
@@ -637,29 +678,35 @@ def effective_ringdown(omega_fund, A_merger, phi_merger, Mf, t, c2, c3, d3, d4, 
     else:
         raise ValueError("part must be complex, real or imag")
         return
-        
+
+
 def effective_ringdown_for_fit(omega_fund, A_merger, phi_merger, Mf, t_comp, c2, c3, d3, d4):
     fit_params = (c2, c3, d3, d4)
     N = int(len(t_comp)/2)
-    h_real = effective_ringdown(omega_fund, A_merger, phi_merger, Mf, t_comp[:N], *fit_params, part = "real")
-    h_imag = effective_ringdown(omega_fund, A_merger, phi_merger, Mf, t_comp[N:], *fit_params, part = "imag")
+    h_real = effective_ringdown(
+        omega_fund, A_merger, phi_merger, Mf, t_comp[:N], *fit_params, part="real")
+    h_imag = effective_ringdown(
+        omega_fund, A_merger, phi_merger, Mf, t_comp[N:], *fit_params, part="imag")
     h_comp = np.concatenate((h_real, h_imag))
     return h_comp
-        
-        
+
+
 def fit_effective_2(h, A_fund, phi_fund, omega_fund, t_match):
     t_comp = np.concatenate((h.time, h.time))
     h_comp = np.concatenate((h.hr, h.hi))
-    fit_func = lambda t_comp, c1, c2, d1, d2: \
-        effective_ringdown_for_fit_2(t_comp, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2)
-    popt, pcov = curve_fit(fit_func, t_comp, h_comp, maxfev = 1000000, bounds = ([-np.inf, 0, 0, 0],
-                                                                                 [np.inf, np.inf, np.inf, np.inf]))
+
+    def fit_func(t_comp, c1, c2, d1, d2): return \
+        effective_ringdown_for_fit_2(
+            t_comp, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2)
+    popt, pcov = curve_fit(fit_func, t_comp, h_comp, maxfev=1000000, bounds=([-np.inf, 0, 0, 0],
+                                                                             [np.inf, np.inf, np.inf, np.inf]))
     return popt, pcov
-    
-    
-def effective_ringdown_2(t, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2, part = "complex"):
+
+
+def effective_ringdown_2(t, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2, part="complex"):
     A = -c1*(np.tanh((t - t_match)/c2)-1)/2 + A_fund
-    phi = phi_fund - d1*(np.tanh((t - t_match)/d2)-1)/2 #d1*np.log(1+d2*np.exp(-d3*(t-t_match)))
+    # d1*np.log(1+d2*np.exp(-d3*(t-t_match)))
+    phi = phi_fund - d1*(np.tanh((t - t_match)/d2)-1)/2
     if part == "complex":
         return A*np.exp(-1.j*(omega_fund * t + phi))
     elif part == "real":
@@ -669,12 +716,14 @@ def effective_ringdown_2(t, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d
     else:
         raise ValueError("part must be complex, real or imag")
         return
-        
+
+
 def effective_ringdown_for_fit_2(t_comp, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2):
     fit_params = (c1, c2, d1, d2)
     N = int(len(t_comp)/2)
-    h_real = effective_ringdown_2(t_comp[:N], A_fund, phi_fund, omega_fund, t_match, *fit_params, part = "real")
-    h_imag = effective_ringdown_2(t_comp[N:], A_fund, phi_fund, omega_fund, t_match, *fit_params, part = "imag")
+    h_real = effective_ringdown_2(
+        t_comp[:N], A_fund, phi_fund, omega_fund, t_match, *fit_params, part="real")
+    h_imag = effective_ringdown_2(
+        t_comp[N:], A_fund, phi_fund, omega_fund, t_match, *fit_params, part="imag")
     h_comp = np.concatenate((h_real, h_imag))
-    return h_comp        
-        
+    return h_comp

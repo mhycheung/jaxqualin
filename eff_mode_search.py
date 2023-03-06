@@ -1,20 +1,17 @@
-from postprocess import *
-import argparse
-import configparser
+import sys
 import os
+import configparser
+
+from ModeSelection import *
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(ROOT_PATH, "config")
 
-parser = argparse.ArgumentParser()
+batch_runname = sys.argv[1]
+i = int(sys.argv[2])
+runname = f"{batch_runname}_{i:03d}"
 
-parser.add_argument('setting_name')
-parser.add_argument('runname')
-
-args = parser.parse_args()
-
-setting_name = args.setting_name
-runname = args.runname
+setting_name = sys.argv[3]
 
 config_file_path = os.path.join(CONFIG_PATH, f"{setting_name}.ini")
 config = configparser.ConfigParser()
@@ -32,14 +29,14 @@ for key in flatness_checker_kwargs:
 for key in mode_searcher_kwargs:
     mode_searcher_kwargs[key] = eval(mode_searcher_kwargs[key])
 
-kwargs.update(flatness_checker_kwargs = flatness_checker_kwargs,
+if len(sys.argv) > 4:
+    kwargs_in = eval(sys.argv[4])
+    kwargs.update(kwargs_in, flatness_checker_kwargs = flatness_checker_kwargs,
+               mode_searcher_kwargs = mode_searcher_kwargs)
+else:
+    kwargs.update(flatness_checker_kwargs = flatness_checker_kwargs,
                mode_searcher_kwargs = mode_searcher_kwargs)
 
-SXS_num_list_1 = [] # [str(SXS_num) for SXS_num in range(1419,1510)]
-SXS_num_list_2 = ["0" + str(SXS_num) for SXS_num in range(209,306)]
-SXS_num_list = SXS_num_list_1 + SXS_num_list_2
-create_data_frame(SXS_num_list, 
-                  df_save_prefix = runname, 
-                  postfix_string = setting_name,
-                  pickle_in_scratch = True,
-                   **kwargs)
+mode_searcher = read_json_eff_mode_search(i, batch_runname,  
+                                          load_pickle = True, 
+                                          **kwargs)

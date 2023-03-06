@@ -445,7 +445,7 @@ def phase_break_for_plot(times, phis_in):
     return timeslist, phislist
 
 
-def mode_plot_3D(df, l, m, mode_string_pro, mode_string_retro):
+def mode_plot_3D(df, l, m, mode_string_pro, mode_string_retro, quantile_low = 0.01, quantile_hi = 0.99):
     df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
               ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
     xyz = df[["SXS_num", "chi_1_z", "chi_2_z", "q"]].drop_duplicates()
@@ -453,24 +453,28 @@ def mode_plot_3D(df, l, m, mode_string_pro, mode_string_retro):
     
     fig, axs = plt.subplots(2,2, figsize = (9, 7))
     
-    axs[1,1].scatter(df_mode["chi_1_z"], df_mode["chi_2_z"], c=np.log10(df_mode["A_med"]))
+    vmin = np.quantile(np.log10(df_mode["A_med"]), quantile_low)
+    vmax = np.quantile(np.log10(df_mode["A_med"]), quantile_hi)
+    
+    axs[1,1].scatter(df_mode["chi_1_z"], df_mode["chi_2_z"], c=np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
     axs[1,1].scatter(df_missing["chi_1_z"], df_missing["chi_2_z"], c = "gray", alpha = 0.1)
     axs[1,1].set_xlabel(r"$\chi_1$")
     axs[1,1].set_ylabel(r"$\chi_2$")
-    axs[1,0].scatter(df_mode["chi_1_z"], df_mode["q"], c=np.log10(df_mode["A_med"]))
+    axs[1,0].scatter(df_mode["chi_1_z"], df_mode["q"], c=np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
     axs[1,0].scatter(df_missing["chi_1_z"], df_missing["q"], c = "gray", alpha = 0.1)
     axs[1,0].set_xlabel(r"$\chi_1$")
     axs[1,0].set_ylabel(r"$q$")
-    axs[0,1].scatter(df_mode["chi_2_z"], df_mode["q"], c=np.log10(df_mode["A_med"]))
+    axs[0,1].scatter(df_mode["chi_2_z"], df_mode["q"], c=np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
     axs[0,1].scatter(df_missing["chi_2_z"], df_missing["q"], c = "gray", alpha = 0.1)
     axs[0,1].set_xlabel(r"$\chi_2$")
     axs[0,1].set_ylabel(r"$q$")
     
     axs[0,0].remove()
+
     ax = fig.add_subplot(2,2,1,projection='3d')
-    sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["q"], c = np.log10(df_mode["A_med"]))
+    sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["q"], c = np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
     ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["q"], c = "gray", alpha = 0.1)
-    sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["q"], c = np.log10(df_mode["A_med"]))
+    sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["q"], c = np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
     for i in range(len(sc.get_facecolors())):
         ax.plot([df_mode["chi_1_z"].to_numpy()[i], df_mode["chi_1_z"].to_numpy()[i]], 
                 [df_mode["chi_2_z"].to_numpy()[i], df_mode["chi_2_z"].to_numpy()[i]], 
@@ -488,6 +492,7 @@ def mode_plot_3D(df, l, m, mode_string_pro, mode_string_retro):
     ax.tick_params(axis = 'z', labelsize = 9, pad = -0.75)
     
     # fig.tight_layout()
+    fig.suptitle(f"{mode_string_pro} in lm = {l}{m}", fontsize = 24)
     fig.subplots_adjust(right=0.9,wspace=0.25, hspace=0.3)
     ax.set_position([0,0.45,0.55,0.55])
     cb_ax = fig.add_axes([0.93, 0.2, 0.02, 0.6])
@@ -507,7 +512,8 @@ def linfunc2(p, x):
     return 2*x + c 
     
 def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
-                                l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic"):
+                                l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
+                                fig = None, ax = None, colorbar = True, return_sc = False):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) | 
               ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
@@ -537,15 +543,17 @@ def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro
     odr = ODR(data, lin_model, beta0=beta0)
     out = odr.run()
     
-    fig, ax = plt.subplots(figsize = (8,5))
+    if ax == None:
+        fig, ax = plt.subplots(figsize = (8,5))
     sc = ax.scatter(xs, ys, c = df_merged["chi_rem_1"], cmap = "cividis")
     plt.draw()
     for i in range(len(sc.get_facecolors())):
         ax.errorbar(xs[i], ys[i], xerr = ([xerr_low.to_numpy()[i]], [xerr_hi.to_numpy()[i]]),
                  yerr = ([yerr_low.to_numpy()[i]], [yerr_hi.to_numpy()[i]]), ecolor = sc.get_facecolors()[i].tolist(),
                      fmt = "None")
-    cb = fig.colorbar(sc, ax = ax)
-    cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+    if colorbar:
+        cb = fig.colorbar(sc, ax = ax)
+        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
     xsfit = np.linspace(*ax.get_xlim(), num = 100)
     ysfit = fitfunc(out.beta, np.log10(xsfit))
     # ax.loglog(xsfit, 10**ysfit, c = "k", ls = ":")
@@ -553,10 +561,13 @@ def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro
     ylabel_string = r"$A_{{{}}}$".format(mode_string_pro_1)
     ax.set_xlabel(xlabel_string.replace('x', r" \times "))
     ax.set_ylabel(ylabel_string.replace('x', r" \times "))
-    return fig, ax
+
+    if return_sc:
+        return sc
     
 def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
-                                l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "quadratic"):
+                                l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "quadratic",
+                                fig = None, ax = None, colorbar = True, return_sc = False):
     if fit_type == "quadratic":
         fit_fac = 2
     elif fit_type == "linear":
@@ -574,15 +585,17 @@ def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
     yerr_hi = df_merged["phi_hi_1"]-df_merged["phi_med_1"]
     xs = df_merged["phi_med_2"]
     ys = df_merged["phi_med_1"]
-    fig, ax = plt.subplots(figsize = (8,5))
+    if ax == None:
+        fig, ax = plt.subplots(figsize = (8,5))
     sc = ax.scatter(fit_fac*xs%(2*np.pi), ys%(2*np.pi), c = df_merged["chi_rem_1"], cmap = "cividis")
     plt.draw()
     for i in range(len(sc.get_facecolors())):
         ax.errorbar(fit_fac*xs[i]%(2*np.pi), ys[i]%(2*np.pi), xerr = ([xerr_low.to_numpy()[i]], [xerr_hi.to_numpy()[i]]),
                  yerr = ([yerr_low.to_numpy()[i]], [yerr_hi.to_numpy()[i]]), ecolor = sc.get_facecolors()[i].tolist(),
                      fmt = "None")
-    cb = fig.colorbar(sc, ax = ax)
-    cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+    if colorbar:
+        cb = fig.colorbar(sc)
+        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
     ax.set_xlim(0, 2*np.pi)
     ax.set_ylim(0, 2*np.pi)
     xsfit = np.linspace(0, 2*np.pi, num = 100)
@@ -592,4 +605,6 @@ def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
     ylabel_string = r"$\phi_{{{}}}$".format(mode_string_pro_1)
     ax.set_xlabel(xlabel_string.replace('x', r" \times "))
     ax.set_ylabel(ylabel_string.replace('x', r" \times "))
-    return fig, ax
+
+    if return_sc:
+        return sc

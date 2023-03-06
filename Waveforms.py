@@ -7,6 +7,8 @@ from utils import *
 from scipy.interpolate import griddata
 from scipy.stats import loguniform, uniform
 from pycbc.waveform.waveform_modes import sum_modes
+from numpy.random import default_rng
+rng = default_rng(seed=1234)
 
 
 class waveform:
@@ -272,7 +274,7 @@ def delayed_QNM_2(mode, t, A, phi, A_red_ratio = 1, A_delay = 5, A_sig = 1, dphi
     phase_delay = dphi*(1-np.tanh((t - phi_delay)/phi_sig))/2
     return A_osci*np.exp(1.j*phase_delay)
 
-def make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_sig,
+def make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_arr,
                                time = np.linspace(0, 150, num = 1501)):
     fund_string = list(inj_dict.keys())[0]
     mode_fund = long_str_to_qnms(fund_string, Mf, af)[0]
@@ -282,7 +284,7 @@ def make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_s
     h_fund = delayed_QNM_2(mode_fund, time, A_fund, phi_fund,
                            A_delay = 0, A_sig = 10, 
                            phi_delay = 0, dphi= -np.pi, phi_sig=5)
-    h0 = waveform(time, h_fund, remove_num=0, t_peak=0)
+    h0 = waveform(np.asarray(time), h_fund, remove_num=0, t_peak=0)
 
     h_effective = h0.h
 
@@ -294,14 +296,13 @@ def make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_s
                                 phi_delay = 0, dphi= -np.pi, phi_sig=2)
         h_effective += h_delay
 
-    noise = np.random.normal(0, noise_sig, len(h_effective))
-    h_effective += noise
+    h_effective += np.asarray(noise_arr)
 
     h_eff = waveform(h0.time, h_effective, l = l, m = m, remove_num=0, t_peak = 0)
     
     return h_eff
 
-def make_eff_ringdown_waveform_from_param(inject_params, time = np.linspace(0, 150, num = 1501)):
+def make_eff_ringdown_waveform_from_param(inject_params):
     
     inj_dict = inject_params['inj_dict']
     l = inject_params['l']
@@ -309,10 +310,11 @@ def make_eff_ringdown_waveform_from_param(inject_params, time = np.linspace(0, 1
     Mf = inject_params['Mf']
     af = inject_params['af']
     relevant_lm_list = inject_params['relevant_lm_list']
-    noise_sig = inject_params['noise_sig']
+    noise_arr = np.asarray(inject_params['noise_arr'])
+    time = np.asarray(inject_params['time'])
     
-    h_eff = make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_sig,
-                                       time)
+    h_eff = make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_arr,
+                                       time = time)
     return h_eff
 
 
@@ -324,7 +326,13 @@ def make_random_inject_params(inject_params_base, randomize_params, inj_dict_ran
     for key, val in randomize_params.items(): 
         if key == 'af':
             inject_params[key] = uniform.rvs(*val)
-        inject_params[key] = loguniform.rvs(*val)
+        elif key == 'noise_random':
+            if val:
+                inject_params['noise_arr'] = rng.normal(0, 
+                                inject_params['noise_sig'],
+                                len(inject_params['time']))
+        else:
+            inject_params[key] = loguniform.rvs(*val)
 
     amps_list = []
     for order in amp_order:
