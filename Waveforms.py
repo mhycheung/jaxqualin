@@ -8,12 +8,13 @@ from scipy.interpolate import griddata
 from scipy.stats import loguniform, uniform
 from pycbc.waveform.waveform_modes import sum_modes
 from numpy.random import default_rng
+from scipy.optimize import minimize
 rng = default_rng(seed=1234)
 
 
 class waveform:
 
-    def __init__(self, fulltime, fullh, t_peak=None, t0=0, l=None, m=None, remove_num=500):
+    def __init__(self, fulltime, fullh, t_peak=None, t0=0, t1=np.inf, l=None, m=None, remove_num=500):
         self.fulltime = fulltime
         self.fullh = fullh
         self.peakindx = self.argabsmax(remove_num=remove_num)
@@ -21,7 +22,7 @@ class waveform:
             self.peaktime = self.fulltime[self.peakindx]
         else:
             self.peaktime = t_peak
-        self.time, self.hr, self.hi = self.postmerger(t0)
+        self.time, self.hr, self.hi = self.postmerger(t0, t1)
         self.h = self.hr + 1.j * self.hi
         self.l = l
         self.m = m
@@ -32,14 +33,16 @@ class waveform:
     def argabsmax(self, remove_num=500):
         return jnp.nanargmax(jnp.abs(self.fullh[remove_num:])) + remove_num
 
-    def postmerger(self, t0):
+    def postmerger(self, t0, t1 = np.inf):
         tstart = self.peaktime + t0
+        tend = self.peaktime + t1
         startindx = bisect_left(self.fulltime, tstart)
-        return self.fulltime[startindx:] - self.peaktime, jnp.real(
-            self.fullh[startindx:]), jnp.imag(self.fullh[startindx:])
+        endindx = bisect_left(self.fulltime, tend)
+        return self.fulltime[startindx:endindx] - self.peaktime, jnp.real(
+            self.fullh[startindx:endindx]), jnp.imag(self.fullh[startindx:endindx])
 
 
-def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2):
+def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1 = 120):
     catalog = sxs.catalog.Catalog.load()
     waveformloadname = catalog.select(
         f"SXS:BBH:{SXSnum}/Lev./rhOverM")[-1 + res]
@@ -50,7 +53,7 @@ def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2):
     Level = metaloadname[metaloadname.find("Lev") + 3]
     indx = hs.index(l, m)
     h = waveform(hs[:, indx].time, hs[:, indx].real +
-                 1.j * hs[:, indx].imag, l=l, m=m)
+                 1.j * hs[:, indx].imag, l=l, m=m, t1 = 120)
     Mf = metadata['remnant_mass']
     a_arr = metadata['remnant_dimensionless_spin']
     af = np.linalg.norm(a_arr)
@@ -98,7 +101,8 @@ def waveformabsmax(time, hr, hi, startcut=500):
         np.sqrt(hr[maxindx]**2 + hi[maxindx]**2))[0]
 
 
-def getdommodes(hdict, tol=1 / 40, prec=False, includem0=False):
+def getdommodes(hdict, tol=1 / 50, tol_force = 1/1000, prec=False, includem0=True,
+                force_include_lm = [[2, 2], [3, 3], [4, 4], [5, 5], [6, 6]]):
     keyabsmaxlist = []
 
     for key in hdict:
@@ -112,30 +116,40 @@ def getdommodes(hdict, tol=1 / 40, prec=False, includem0=False):
     for keyabsmax in keyabsmaxsorted:
         keystring = keyabsmax[0]
         lm = [int(string) for string in keystring.split(",")]
+        if lm in force_include_lm:
+            tol_actual = tol_force
+        else:
+            tol_actual = tol
         if lm[1] == 0 and not includem0:
             continue
-        if (lm[1] < 0 and not prec) or keyabsmax[1] < maxamp * tol:
+        if (lm[1] < 0 and not prec) or keyabsmax[1] < maxamp * tol_actual:
             continue
         dommodes.append(lm)
+
     return dommodes
 
 
 def get_relevant_lm_waveforms_SXS(
         SXSnum,
-        tol=1 / 40,
+        tol=1 / 50,
+        tol_force = 1 / 1000,
+        force_early_sim = False,
         prec=False,
-        includem0=False,
+        includem0=True,
+        t1 = 120,
         res=0,
         N_ext=2):
     Mf, af, Level, hdict, retro = get_SXS_waveform_dict(SXSnum, res=res, N_ext=N_ext)
+    if (int(SXSnum) < 305) and (not force_early_sim):
+        tol_force = tol
     relevant_lm_list = getdommodes(
-        hdict, tol=1 / 40, prec=False, includem0=False)
+        hdict, tol=tol, prec=prec, includem0=includem0, tol_force = tol_force)
     waveform_dict = {}
     for lm in relevant_lm_list:
         l = lm[0]
         m = lm[1]
         h_time, h_r, h_i = tuple(hdict[f"{l},{m}"])
-        h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m)
+        h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t1=t1)
         waveform_dict[f"{l}.{m}"] = h
     return waveform_dict, retro
 
@@ -274,16 +288,23 @@ def delayed_QNM_2(mode, t, A, phi, A_red_ratio = 1, A_delay = 5, A_sig = 1, dphi
     phase_delay = dphi*(1-np.tanh((t - phi_delay)/phi_sig))/2
     return A_osci*np.exp(1.j*phase_delay)
 
+def clean_QNM(mode, t, A, phi):
+    omega_i = mode.omegai
+    omega_r = mode.omegar
+    return A*np.exp(omega_i*t)*np.exp(-1.j*(omega_r*t + phi))
+
 def make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_arr,
-                               time = np.linspace(0, 150, num = 1501)):
+                               time = np.linspace(0, 150, num = 1501), delay = True):
     fund_string = list(inj_dict.keys())[0]
     mode_fund = long_str_to_qnms(fund_string, Mf, af)[0]
     A_fund, phi_fund = inj_dict[fund_string]
 
-
-    h_fund = delayed_QNM_2(mode_fund, time, A_fund, phi_fund,
-                           A_delay = 0, A_sig = 10, 
-                           phi_delay = 0, dphi= -np.pi, phi_sig=5)
+    if delay:
+        h_fund = delayed_QNM_2(mode_fund, time, A_fund, phi_fund,
+                            A_delay = 0, A_sig = 10, 
+                            phi_delay = 0, dphi= -np.pi, phi_sig=5)
+    else:
+        h_fund = clean_QNM(mode_fund, time, A_fund, phi_fund)
     h0 = waveform(np.asarray(time), h_fund, remove_num=0, t_peak=0)
 
     h_effective = h0.h
@@ -291,10 +312,13 @@ def make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_a
     for key in list(inj_dict.keys())[1:]:
         omega = long_str_to_qnms(key, Mf, af)[0]
         A, phi = inj_dict[key]
-        h_delay = delayed_QNM_2(omega, h0.time, A, phi, 
-                                A_red_ratio = 1, A_delay = 5, A_sig = 2,
-                                phi_delay = 0, dphi= -np.pi, phi_sig=2)
-        h_effective += h_delay
+        if delay:
+            h_mode = delayed_QNM_2(omega, h0.time, A, phi, 
+                                    A_red_ratio = 1, A_delay = 5, A_sig = 2,
+                                    phi_delay = 0, dphi= -np.pi, phi_sig=2)
+        else:
+            h_mode = clean_QNM(omega, h0.time, A, phi)
+        h_effective += h_mode
 
     h_effective += np.asarray(noise_arr)
 
@@ -302,7 +326,7 @@ def make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_a
     
     return h_eff
 
-def make_eff_ringdown_waveform_from_param(inject_params):
+def make_eff_ringdown_waveform_from_param(inject_params, delay = True):
     
     inj_dict = inject_params['inj_dict']
     l = inject_params['l']
@@ -312,9 +336,8 @@ def make_eff_ringdown_waveform_from_param(inject_params):
     relevant_lm_list = inject_params['relevant_lm_list']
     noise_arr = np.asarray(inject_params['noise_arr'])
     time = np.asarray(inject_params['time'])
-    
     h_eff = make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_arr,
-                                       time = time)
+                                       time = time, delay = delay)
     return h_eff
 
 
@@ -352,3 +375,56 @@ def make_random_inject_params(inject_params_base, randomize_params, inj_dict_ran
     inject_params['inj_dict'] = inj_dict.copy()
     
     return inject_params
+
+def compute_mismatch(t1, h1, t2, h2, tnum = 2000):
+    t_low = t1[0]
+    t_hi = min(t1[-1], t2[-1])
+    t_grid = np.linspace(t_low, t_hi, num = max(tnum, len(t1)))
+    h1_interp = griddata(t1, h1, t_grid)
+    h2_interp = griddata(t2, h2, t_grid)
+    mismatch = 1 - (np.real(np.vdot(h1_interp, h2_interp) / (
+                    np.linalg.norm(h1_interp) * np.linalg.norm(h2_interp))))
+    return mismatch
+
+
+def mismatch_dphi_dt(dphi_dt, t1, h1, t2, h2, tnum = 2000):
+    dphi = dphi_dt[0]
+    dt = dphi_dt[1]
+    t2_shift = t2 + dt
+    h2_shift = h2*np.exp(1.j*dphi)
+    return compute_mismatch(t1, h1, t2_shift, h2_shift, tnum = tnum)
+
+def mismatch_min_phase(t1, h1, t2, h2, tnum = 2000):
+    res = minimize(mismatch_dphi_dt, x0 = [0, 0], args=(t1, h1, t2, h2),
+                   method = 'Nelder-Mead', tol = 1e-13)
+    return res
+
+def estimate_resolution_mismatch(SXS_num, l, m, t0s = np.linspace(0, 50, num = 51), remove_end = 100):
+    h_hi, _, _, Level, _ = get_waveform_SXS(SXS_num, l, m, res = 0)
+    h_low, _, _, Level, _ = get_waveform_SXS(SXS_num, l, m, res = -1)
+    t_low_more, h_low_more_r, h_low_more_i = h_low.postmerger(-10)
+    h_low_more = h_low_more_r + 1.j*h_low_more_i
+
+    mismatches = []
+    res = None
+    for t0 in t0s:
+        t_hi_adj, h_hi_adj_r, h_hi_adj_i = h_hi.postmerger(t0)
+        t_low_adj, h_low_adj_r, h_low_adj_i = h_low.postmerger(t0 - 5)
+        h_hi_adj = h_hi_adj_r + 1.j*h_hi_adj_i
+        h_low_adj = h_low_adj_r + 1.j*h_low_adj_i
+        if t0 == 0:
+            res = mismatch_min_phase(t_hi_adj[:-remove_end-1],
+                                    h_hi_adj[:-remove_end-1], 
+                                    t_low_adj, 
+                                    h_low_adj)
+            mismatches.append(res.fun)
+            dphi = res.x[0]
+            dt = res.x[1]
+        else:
+            mismatch = compute_mismatch(t_hi_adj[:-remove_end-1], 
+                                        h_hi_adj[:-remove_end-1], 
+                                        t_low_adj + dt,
+                                        h_low_adj*np.exp(1.j*dphi))
+            mismatches.append(mismatch)
+    
+    return mismatches

@@ -95,3 +95,24 @@ def create_data_frame_eff(eff_num_list, batch_runname, l=0, m=0, df_save_prefix=
     df.to_csv(file_path)
 
     return df
+
+def get_result(run_string_prefix, t0_arr, qnm_fixed_list, N_free, nonconvergence_cut = False):
+    
+    N_fix = len(qnm_fixed_list)
+
+    if N_fix > 0:
+        _qnm_fixed_string_list = sorted(qnms_to_string(qnm_fixed_list))
+        qnm_fixed_string_ordered = '_'.join(_qnm_fixed_string_list)
+        run_string = f"{run_string_prefix}_N_{N_free}_fix_{qnm_fixed_string_ordered}_t0_{t0_arr[0]:.4f}_{t0_arr[-1]:.4f}_{len(t0_arr)}"
+    else:
+        qnm_fixed_string_ordered = ''
+        run_string = f"{run_string_prefix}_N_{N_free}_t0_{t0_arr[0]:.4f}_{t0_arr[-1]:.4f}_{len(t0_arr)}"
+    if nonconvergence_cut:
+        run_string += "_nc"
+    file_path = os.path.join(
+        FIT_SAVE_PATH, f"{run_string}_result.pickle")
+
+    with open(file_path, 'rb') as f:
+        result = pickle.load(f)
+
+    return result

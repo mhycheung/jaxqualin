@@ -1,6 +1,7 @@
 import qnm
 import jax.numpy as jnp
 import numpy as np
+from utils import *
 
 class mode_free:
     
@@ -35,7 +36,7 @@ class mode_free:
             for lmn, spinseq in zip(self.lmnx, spinseq_list):
                 l, m, n = tuple(lmn)
                 omega, _, _ = spinseq(a=np.abs(a))
-                self.omegar += jnp.sign(m) * retrofac * jnp.real(omega) / M
+                self.omegar += jnpsign0(m) * retrofac * jnp.real(omega) / M
                 self.omegai += jnp.imag(omega) / M
         self.omega = self.omegar + 1.j * self.omegai
         self.M = M
@@ -186,16 +187,26 @@ def lmnx_to_string(lmnx):
     return 'x'.join(lmnstrings)
 
 
+def lmnx_sum_lm(lmnx):
+    l_sum = 0
+    m_sum = 0
+    if lmnx != "constant":
+        for lmn in lmnx:
+            l, m, n = tuple(lmn)
+            l_sum += l
+            m_sum += m
+    return l_sum, m_sum
+
 def fix_modes(qnms_free_list, M, a):
     for qnm in qnms_free_list:
         qnm.fix_mode(M, a)
 
 
-def potential_modes(l, m, M, a, relevant_lm_list, retro = False):
+def potential_modes(l, m, M, a, relevant_lm_list, retro = False, recoil_n_max = 0):
     potential_lmnx_list = []
     potential_lmnx_list.extend(overtone_modes(l, m, retro = retro))
     potential_lmnx_list.extend(spheroidal_mixing_modes(l, m, retro = retro))
-    potential_lmnx_list.extend(recoil_modes(relevant_lm_list, retro = retro))
+    potential_lmnx_list.extend(recoil_modes(relevant_lm_list, retro = retro, recoil_n_max=recoil_n_max))
     potential_lmnx_list.extend(retrograde_modes_spheroidal(l, m, retro = retro))
     potential_lmnx_list.extend(quadratic_modes_matching_m(m, relevant_lm_list, retro = retro))
     potential_mode_strings = lmnxs_to_string(potential_lmnx_list)
@@ -228,7 +239,7 @@ def spheroidal_mixing_modes(l, m, l_max=10, spheroidal_n_max=4, retro = False):
     return spheroidal_mode_list
 
 
-def recoil_modes(relevant_lm_list, recoil_n_max=3, retro = False):
+def recoil_modes(relevant_lm_list, recoil_n_max = 0, retro = False):
     if retro:
         retrofac = -1
     else:
@@ -358,3 +369,9 @@ def first_n_overtones_string(l, m, n):
     strings = [f"{l}.{m}.{i}" for i in range(n+1)]
     return "_".join(strings)
                
+def qnm_string_m_reverse(str):
+    lmnx = str_to_lmnx(str)
+    for lmn in lmnx:
+        lmn[1] *= -1
+    str_out = lmnx_to_string(lmnx)
+    return str_out

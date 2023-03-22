@@ -187,8 +187,11 @@ class ModeSearchAllFreeLM:
         self.N_step = N_step
         self.iterations = iterations
         kwargs = {"retro": False, "run_string_prefix": "Default", "load_pickle": True,
-                  "a_recoil_tol": 0., "omega_r_tol" : 0.05, "omega_i_tol" : 0.05,
-                  "t_tol" : 10, "fraction_tol" : 0.95}
+                  "a_recoil_tol": 0., "recoil_n_max" : 0,
+                  "omega_r_tol" : 0.05, "omega_i_tol" : 0.05,
+                  "t_tol" : 10, "fraction_tol" : 0.95, 'fit_kwargs' : {}, 
+                  "initial_num" : 1, "random_initial" : False, "initial_dict" : {},
+                  "A_guess_relative" : True, "set_seed" : 1234}
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
         self.retro = self.kwargs["retro"]
@@ -198,14 +201,22 @@ class ModeSearchAllFreeLM:
         self.omega_i_tol = self.kwargs["omega_i_tol"]
         self.t_tol = self.kwargs["t_tol"]
         self.fraction_tol = self.kwargs["fraction_tol"]
+        self.recoil_n_max = self.kwargs["recoil_n_max"]
         if self.a >= self.a_recoil_tol:
             self.potential_modes_full = potential_modes(
                 self.l, self.m, self.M, self.a, self.relevant_lm_list, retro = self.retro)
         else:
             self.potential_modes_full = potential_modes(
-                self.l, self.m, self.M, self.a, [(self.l, self.m)], retro = self.retro)
+                self.l, self.m, self.M, self.a, [(self.l, self.m)], retro = self.retro,
+                  recoil_n_max = self.recoil_n_max)
         self.potential_modes = self.potential_modes_full.copy()
         self.load_pickle = self.kwargs["load_pickle"]
+        self.fit_kwargs = self.kwargs["fit_kwargs"]
+        self.initial_num = self.kwargs["initial_num"]
+        self.random_initial = self.kwargs["random_initial"]
+        self.initial_dict = self.kwargs["initial_dict"]
+        self.A_guess_relative = self.kwargs["A_guess_relative"]
+        self.set_seed = self.kwargs["set_seed"]
 
     def mode_search_all_free(self):
         _N = self.N_init
@@ -219,7 +230,13 @@ class ModeSearchAllFreeLM:
                 _N,
                 self.found_modes,
                 run_string_prefix=self.run_string_prefix,
-                load_pickle = self.load_pickle)
+                load_pickle = self.load_pickle,
+                fit_kwargs = self.fit_kwargs,
+                initial_num = self.initial_num,
+                random_initial = self.random_initial,
+                initial_dict = self.initial_dict,
+                A_guess_relative = self.A_guess_relative,
+                set_seed = self.set_seed)
             self.full_fit.do_fits()
             self.mode_selector = ModeSelectorAllFree(
                 self.full_fit.result_full, self.potential_modes, omega_r_tol = self.omega_r_tol,
@@ -280,6 +297,7 @@ class ModeSearchAllFreeLMSXS:
             N_step=self.N_step,
             iterations=self.iterations,
             retro = self.retro,
+            set_seed = int(self.SXSnum),
             **self.kwargs)
         self.mode_searcher.do_mode_search()
         self.found_modes = self.mode_searcher.found_modes
@@ -388,7 +406,9 @@ class ModeSearchAllFreeVaryingNSXS:
         kwargs = {'load_pickle' : True,
                   'N_list' : [5, 6, 7, 8, 9, 10],
                   'postfix_string' : '',
-                  'pickle_in_scratch' : False}
+                  'pickle_in_scratch' : False,
+                  'set_seed_SXS' : True,
+                  'default_seed' : 1234}
         kwargs.update(kwargs_in)
         self.N_list = kwargs['N_list']
         self.postfix_string = kwargs['postfix_string']
@@ -407,6 +427,10 @@ class ModeSearchAllFreeVaryingNSXS:
             self.file_path = os.path.join(save_path,
                                            f"ModeSearcher_{self.run_string}_{self.postfix_string}.pickle")
         self.load_pickle = self.kwargs["load_pickle"]
+        if self.kwargs['set_seed_SXS']:
+            self.set_seed = int(self.SXSnum)
+        else:
+            self.set_seed = self.kwargs['default_seed']
 
     def mode_search_varying_N_sxs(self):
         self.mode_searcher_vary_N = ModeSearchAllFreeVaryingN(
@@ -416,6 +440,7 @@ class ModeSearchAllFreeVaryingNSXS:
             self.relevant_lm_list,
             t0_arr=self.t0_arr,
             retro = self.retro,
+            set_seed = self.set_seed,
             **self.kwargs)
         self.mode_searcher_vary_N.do_mode_searches()
         self.found_modes_final = self.mode_searcher_vary_N.found_modes_final
@@ -583,12 +608,13 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95,
     return fluc_least_indx, fluc_least
     
 
-def eff_mode_search(inject_params, runname, retro = False, load_pickle = True, **kwargs):
+def eff_mode_search(inject_params, runname, retro = False, load_pickle = True, delay = True,
+                     **kwargs):
     
     Mf = inject_params['Mf']
     af = inject_params['af']
     relevant_lm_list = inject_params['relevant_lm_list']
-    h_eff = make_eff_ringdown_waveform_from_param(inject_params)
+    h_eff = make_eff_ringdown_waveform_from_param(inject_params, delay = delay)
     mode_searcher = ModeSearchAllFreeVaryingN(h_eff, Mf, af, relevant_lm_list = relevant_lm_list, 
                                           retro = retro, run_string_prefix = runname,
                                           load_pickle = load_pickle, **kwargs)
@@ -605,14 +631,15 @@ def eff_mode_search(inject_params, runname, retro = False, load_pickle = True, *
 #                         retro = retro, load_pickle = load_pickle)
 #         mode_searcher_list.append(mode_searcher)
 
-def read_json_eff_mode_search(i, batch_runname, retro = False, load_pickle = True, **kwargs):
+def read_json_eff_mode_search(i, batch_runname, retro = False, load_pickle = True, delay = True, **kwargs):
     
     with open(f"{JSON_SAVE_PATH}/{batch_runname}.json", 'r') as f:
         inject_params_full = json.load(f)
     
     runname = f"{batch_runname}_{i:03d}"
     mode_searcher = eff_mode_search(inject_params_full[runname], runname,
-                                    retro = retro, load_pickle = load_pickle, **kwargs)
+                                    retro = retro, load_pickle = load_pickle,
+                                    delay = delay, **kwargs)
     
     return mode_searcher
 

@@ -93,11 +93,16 @@ def qnm_fit_func_wrapper(t, qnm_fixed_list, N_free, *args, part=None):
         fix_mode_params_list.append([A, phi])
     free_mode_params_list = []
     for j in range(N_free):
-        A = args[0][2 * N_fix + 4 * j]
-        phi = args[0][2 * N_fix + 4 * j + 1]
-        omegar = args[0][2 * N_fix + 4 * j + 2]
-        omegai = args[0][2 * N_fix + 4 * j + 3]
-        free_mode_params_list.append([A, phi, omegar, omegai])
+        try:
+            A = args[0][2 * N_fix + 4 * j]
+            phi = args[0][2 * N_fix + 4 * j + 1]
+            omegar = args[0][2 * N_fix + 4 * j + 2]
+            omegai = args[0][2 * N_fix + 4 * j + 3]
+            free_mode_params_list.append([A, phi, omegar, omegai])
+        except:
+            print(args)
+            print(2 * N_fix + 4 * j)
+            raise ValueError
     return qnm_fit_func(t, qnm_fixed_list, fix_mode_params_list,
                         free_mode_params_list, part=part)
 
@@ -156,10 +161,15 @@ def qnm_fit_func_wrapper_complex_varMa(t, qnm_fixed_list, qnm_free_list, retro, 
 
 class QNMFitResult:
 
-    def __init__(self, popt, pcov, mismatch):
+    def __init__(self, popt, pcov, mismatch,
+                 cost, grad, nfev, status):
         self.popt = popt
         self.pcov = pcov
         self.mismatch = mismatch
+        self.cost = cost
+        self.grad = grad
+        self.nfev = nfev
+        self.status = status
 
 
 class QNMFit:
@@ -198,14 +208,28 @@ class QNMFit:
             ([self.A_bound] + 3 * [np.inf]) * self.N_free
         lower_bound = [-self.A_bound, -np.inf] * self.N_fix + \
             ([-self.A_bound] + 3 * [-np.inf]) * self.N_free
+        # upper_bound = [self.A_bound, np.inf] * self.N_fix + \
+        #     [self.A_bound, np.pi, np.inf, np.inf] * self.N_free
+        # lower_bound = [-self.A_bound, -np.inf] * self.N_fix + \
+        #     [-self.A_bound, 0, -np.inf, -np.inf] * self.N_free
         bounds = (np.array(lower_bound), np.array(upper_bound))
-        self.popt, self.pcov = jcf.curve_fit(
+        self.popt, self.pcov, self.res, _, _ = jcf.curve_fit(
             # self.popt, self.pcov = scipy.optimize.curve_fit(
             lambda t, *params: qnm_fit_func_wrapper_complex(
                 t, self.qnm_fixed_list, self.N_free, params, Schwarzschild=self.Schwarzschild), np.array(
                 self._time_interweave), np.array(
                 self._h_interweave), bounds=bounds, p0=self.params0, max_nfev=self.max_nfev,
-            method="trf", **self.fit_kwargs)
+            method="trf", **self.fit_kwargs, timeit = True)
+        try:
+            self.cost = self.res.cost
+            self.grad = self.res.grad
+            self.nfev = self.res.nfev
+            self.status = self.res.status
+        except:
+            self.cost = np.nan
+            self.grad = np.nan
+            self.nfev = np.nan
+            self.status = np.nan
         if self.Schwarzschild:
             self.reconstruct_h = qnm_fit_func_wrapper(
                 self.time, self.qnm_fixed_list, self.N_free, self.popt, part="real")
@@ -215,7 +239,8 @@ class QNMFit:
         self.h_true = self.hr + 1.j * self.hi
         self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
             np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
-        self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
+        self.result = QNMFitResult(self.popt, self.pcov, self.mismatch,
+                                   self.cost, self.grad, self.nfev, self.status)
         self.fit_done = True
         if return_jcf:
             return jcf
@@ -224,13 +249,20 @@ class QNMFit:
         if self.fit_done == False:
             self.popt = other_result.popt
             self.pcov = other_result.pcov
+            try:
+                self.cost = other_result.cost
+                self.grad = other_result.grad
+                self.nfev = other_result.nfev
+                self.status = other_result.status
+            except:
+                pass
             self.time, self.hr, self.hi = self.h.postmerger(self.t0)
             self._h_interweave = interweave(self.hr, self.hi)
             self._time_interweave = interweave(self.time, self.time)
             self.reconstruct_h = qnm_fit_func_wrapper(
                 self.time, self.qnm_fixed_list, self.N_free, self.popt)
             self.h_true = self.hr + 1.j * self.hi
-            self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
+            self.mismatch = 1 - (np.real(np.vdot(self.h_true, self.reconstruct_h) / (
                 np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
             self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
 
@@ -318,6 +350,27 @@ class QNMFitVarMa:
                 np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
             self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
 
+def make_initial_guess(N_free, guess_num, A_log_low = -1, A_log_hi = 1, phi_low = 0, phi_hi = 2*np.pi,
+                       omega_r_low = 0, omega_r_hi = 2, omega_i_low = 0, omega_i_hi = -1, seed = 1234,
+                       A_val = 1, A_guess_relative = True):
+    if not A_guess_relative:
+        A_val = 1
+    rng = np.random.RandomState(seed)
+    A_guesses = A_val*10**(rng.uniform(A_log_low, A_log_hi, size = (guess_num, N_free)))
+    phi_guesses = rng.uniform(phi_low, phi_hi, size = (guess_num, N_free))
+    omegar_guesses = rng.uniform(omega_r_low, omega_r_hi, size = (guess_num, N_free))
+    omegai_guesses = rng.uniform(omega_i_low, omega_i_hi, size = (guess_num, N_free))
+
+    guesses_stack = np.empty((guess_num, 4 * N_free), dtype = A_guesses.dtype)
+    guesses_stack[:,0::4] = A_guesses 
+    guesses_stack[:,1::4] = phi_guesses 
+    guesses_stack[:,2::4] = omegar_guesses
+    guesses_stack[:,3::4] = omegai_guesses
+
+    guess_list = [jnp.array(guess) for guess in guesses_stack]
+
+    return guess_list
+
 
 class QNMFitVaryingStartingTimeResult:
 
@@ -328,14 +381,23 @@ class QNMFitVaryingStartingTimeResult:
             N_free,
             run_string_prefix="Default",
             nonconvergence_cut=False,
-            nonconvergence_indx=[]):
+            nonconvergence_indx=[],
+            initial_num = 1,
+            ):
         self.t0_arr = t0_arr
         self.qnm_fixed_list = qnm_fixed_list
         self.N_fix = len(self.qnm_fixed_list)
         self.N_free = N_free
         self._popt_full = np.zeros(
             (2 * self.N_fix + 4 * self.N_free, len(self.t0_arr)), dtype=float)
+        self.popt_initial = np.zeros(
+            (2 * self.N_fix + 4 * self.N_free, initial_num), dtype=float)
         self._mismatch_arr = np.zeros(len(self.t0_arr), dtype=float)
+        self.mismatch_initial_arr = np.zeros(initial_num, dtype=float)
+        self.cost_arr = np.zeros(len(self.t0_arr), dtype=float)
+        self.grad_arr = np.zeros(len(self.t0_arr), dtype=float)
+        self.nfev_arr = np.zeros(len(self.t0_arr), dtype=int)
+        self.status_arr = np.zeros(len(self.t0_arr), dtype=int)
         self.result_processed = False
         if self.N_fix > 0:
             _qnm_fixed_string_list = sorted(qnms_to_string(qnm_fixed_list))
@@ -349,10 +411,19 @@ class QNMFitVaryingStartingTimeResult:
         self.nonconvergence_indx = nonconvergence_indx
         self.file_path = os.path.join(
             FIT_SAVE_PATH, f"{self.run_string}_result.pickle")
+        self.initila_guess_results = []
 
     def fill_result(self, i, result):
         self._popt_full[:, i] = result.popt
         self._mismatch_arr[i] = result.mismatch
+        self.cost_arr[i] = result.cost
+        # self.grad_arr[i] = result.grad
+        self.nfev_arr[i] = result.nfev
+        self.status_arr[i] = result.status
+
+    def fill_initial_guess(self, i, result):
+        self.popt_initial[:, i] = result.popt
+        self.mismatch_initial_arr[i] = result.mismatch
 
     def process_results(self):
         self.popt_full = self._popt_full
@@ -519,8 +590,17 @@ class QNMFitVaryingStartingTime:
             nonconvergence_cut=False,
             A_bound=np.inf,
             jcf=None,
-            fit_kwargs={}):
+            fit_kwargs={},
+            initial_num = 1,
+            random_initial = False,
+            initial_dict = {},
+            A_guess_relative = True,
+            set_seed = 1234):
         self.h = h
+        if A_guess_relative:
+            A_rel = np.abs(h.h[0])
+        else:
+            A_rel = 1
         self.t0_arr = t0_arr
         self.N_fix = len(qnm_fixed_list)
         self.var_M_a = var_M_a
@@ -536,13 +616,13 @@ class QNMFitVaryingStartingTime:
             if var_M_a:
                 if Schwarzschild:
                     self.params0 = jnp.array(
-                        [1, 1] * self.N_fix + [1, 1] * self.N_free + [1])
+                        [A_rel, 1] * self.N_fix + [A_rel, 1] * self.N_free + [1])
                 else:
                     self.params0 = jnp.array(
-                        [1, 1] * self.N_fix + [1, 1] * self.N_free + [1, 0.5])
+                        [A_rel, 1] * self.N_fix + [A_rel, 1] * self.N_free + [1, 0.5])
             else:
                 self.params0 = jnp.array(
-                    [1, 1] * self.N_fix + [1, 1, 1, -1] * self.N_free)
+                    [A_rel, 1] * self.N_fix + [A_rel, 1, 1, -1] * self.N_free)
         self.sequential_guess = sequential_guess
         self.run_string_prefix = run_string_prefix
         self.load_pickle = load_pickle
@@ -552,8 +632,85 @@ class QNMFitVaryingStartingTime:
         self.A_bound = A_bound
         self.jcf = jcf
         self.fit_kwargs = fit_kwargs
+        self.initial_num = initial_num
+        self.random_initial = (random_initial and not self.var_M_a)
+        self.initial_dict = initial_dict
+        self.A_guess_relative = A_guess_relative
+        self.set_seed = set_seed
+
+    def initial_guesses(self, jcf = None):
+        A_val = np.abs(self.h.h[0])
+        guess_list = make_initial_guess(self.N_free, self.initial_num, 
+                                        A_guess_relative=self.A_guess_relative,
+                                        seed = self.set_seed, A_val = A_val,
+                                        **self.initial_dict)
+        if isinstance(jcf, CurveFit):
+            _jcf = jcf
+        else:
+            _jcf = CurveFit(flength=2 * len(self._time_longest))
+        qnm_fit_list = []
+        for j, guess in tqdm(enumerate(guess_list)):
+            qnm_fit = QNMFit(
+                        self.h,
+                        self.t0_arr[0],
+                        self.N_free,
+                        qnm_fixed_list=self.qnm_fixed_list,
+                        Schwarzschild=self.Schwarzschild,
+                        params0=guess,
+                        max_nfev=self.max_nfev,
+                        A_bound=self.A_bound,
+                        **self.fit_kwargs)
+            try:
+                qnm_fit.do_fit(jcf = _jcf)
+            except RuntimeError:
+                print(f"{j}-th initial guess fit did not reach tolerance.\n")
+                qnm_fit = None
+            qnm_fit_list.append(qnm_fit)
+        
+        mismatches = []
+        for i in range(self.initial_num):
+            if qnm_fit_list[i] is None:
+                mismatches.append(np.nan)
+            else:
+                mismatches.append(qnm_fit_list[i].result.mismatch)
+        mismatches = np.array(mismatches)
+        try:
+            best_guess_index = np.nanargmin(mismatches)
+        except ValueError:
+            best_guess_index = None
+
+        return best_guess_index, qnm_fit_list, guess_list
+
+    def make_nan_result(self):
+
+        nan_mismatch = np.nan
+        if self.var_M_a:
+            if self.Schwarzschild:
+                nan_popt = np.full(
+                    self.N_fix*2 + self.N_free*2 + 1, np.nan)
+                nan_pcov = nan_popt
+            else:
+                nan_popt = np.full(
+                    self.N_fix*2 + self.N_free*2 + 2, np.nan)
+                nan_pcov = nan_popt
+        else:
+            nan_popt = np.full(
+                self.N_fix*2 + self.N_free*4, np.nan)
+            nan_pcov = nan_popt
+        nan_cost = np.nan
+        nan_grad = np.empty(self.N_fix*2 + self.N_free*4)
+        nan_grad[:] = np.nan
+        nan_nfev = self.max_nfev
+        max_status = 0
+        nan_result = QNMFitResult(
+            nan_popt, nan_pcov, nan_mismatch, 
+            nan_cost, nan_grad, nan_nfev, max_status)
+        
+        return nan_result
+
 
     def do_fits(self, jcf=None, return_jcf=False):
+        
         self.not_converged = False
         self.nonconvergence_indx = []
         self._time_longest, _, _ = self.h.postmerger(self.t0_arr[0])
@@ -575,7 +732,8 @@ class QNMFitVaryingStartingTime:
                 self.qnm_fixed_list,
                 self.N_free,
                 run_string_prefix=self.run_string_prefix,
-                nonconvergence_cut=self.nonconvergence_cut)
+                nonconvergence_cut=self.nonconvergence_cut,
+                initial_num = self.initial_num)
         loaded_results = False
         if self.result_full.pickle_exists() and self.load_pickle:
             try:
@@ -589,6 +747,19 @@ class QNMFitVaryingStartingTime:
                 print("EOFError when loading pickle for fit. Doing new fit now...")
                 loaded_results = False
         if loaded_results == False:
+            if self.random_initial:
+                best_guess_index, qnm_initial_fit_list, guess_list = self.initial_guesses(jcf = _jcf)
+                if best_guess_index is None:
+                    initial_converged = False
+                else:
+                    self.result_full.guess_list = guess_list
+                    for i, qnm_initial_fit in enumerate(qnm_initial_fit_list):
+                        if qnm_initial_fit is None:
+                            fit_result = self.make_nan_result()
+                        else:
+                            fit_result = qnm_initial_fit.result
+                        self.result_full.fill_initial_guess(i, fit_result)
+                    initial_converged = True
             _params0 = self.params0
             for i, _t0 in tqdm(enumerate(self.t0_arr)):
                 if self.var_M_a:
@@ -616,25 +787,16 @@ class QNMFitVaryingStartingTime:
                     qnm_fit.copy_from_result(qnm_fit_result_temp)
                 else:
                     try:
-                        qnm_fit.do_fit(jcf=_jcf)
+                        if i == 0 and self.random_initial:
+                            if initial_converged:
+                                qnm_fit = qnm_initial_fit_list[best_guess_index]
+                            else:
+                                raise RuntimeError
+                        else:
+                            qnm_fit.do_fit(jcf=_jcf)
                     except RuntimeError:
                         print(f"fit did not reach tolerance at t0 = {_t0}.")
-                        nan_mismatch = np.nan
-                        if self.var_M_a:
-                            if self.Schwarzschild:
-                                nan_popt = np.full(
-                                    self.N_fix*2 + self.N_free*2 + 1, np.nan)
-                                nan_pcov = nan_popt
-                            else:
-                                nan_popt = np.full(
-                                    self.N_fix*2 + self.N_free*2 + 2, np.nan)
-                                nan_pcov = nan_popt
-                        else:
-                            nan_popt = np.full(
-                                self.N_fix*2 + self.N_free*4, np.nan)
-                            nan_pcov = nan_popt
-                        qnm_fit.result = QNMFitResult(
-                            nan_popt, nan_pcov, nan_mismatch)
+                        qnm_fit.result = self.make_nan_result()
                         self.nonconvergence_indx.append(i)
                         self.not_converged = True
                     else:

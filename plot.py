@@ -10,8 +10,7 @@ from bisect import bisect_right
 from scipy.odr import Model, ODR, RealData
 
 import os
-ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-PLOT_SAVE_PATH = os.path.join(ROOT_PATH, "plots/")
+
 
 plt.rc('text', usetex=False)
 plt.rc('font', family='qpl')
@@ -298,17 +297,19 @@ def plot_phases(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", us
     ax.set_ylabel(r"$\phi$")
 
 
-def plot_mismatch(results_full, ax=None):
+def plot_mismatch(results_full, ax=None, c = 'k', make_ax = True,
+                  alpha = 1):
     if ax is None:
         fig, ax = plt.subplots()
     t0_arr = results_full.t0_arr
     mismatch_arr = results_full.mismatch_arr
-    ax.semilogy(t0_arr, mismatch_arr, c='k')
+    ax.semilogy(t0_arr, mismatch_arr, c=c, alpha = alpha)
 
-    ax.set_xlim(t0_arr[0], t0_arr[-1])
-    ax.xaxis.set_minor_locator(AutoMinorLocator())
-    ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
-    ax.set_ylabel(r"$\mathcal{M}$")
+    if make_ax:
+        ax.set_xlim(t0_arr[0], t0_arr[-1])
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
+        ax.set_ylabel(r"$\mathcal{M}$")
 
 
 def plot_mode_distance(

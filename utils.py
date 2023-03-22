@@ -25,3 +25,15 @@ def max_consecutive_trues(arrin, tol=1):
 def sorti(li, i):
     li.sort(key=lambda x: x[i])
     return li[::-1]
+
+def npsign0(x):
+    if x == 0:
+        return 1
+    else:
+        return np.sign(x)
+    
+def jnpsign0(x):
+    if x == 0:
+        return 1
+    else:
+        return jnp.sign(x)
