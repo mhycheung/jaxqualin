@@ -49,7 +49,10 @@ class IterativeFlatnessChecker:
         
     def do_iterative_flatness_check(self):
         if self.retro:
-            _fund_mode_string = f"{self.l}.-{self.m}.0"
+            if self.m == 0:
+                _fund_mode_string = f"{self.l}.-99.0"
+            else:
+                _fund_mode_string = f"{self.l}.-{self.m}.0"
         else:
             _fund_mode_string = f"{self.l}.{self.m}.0"
         _current_modes = self.found_modes
@@ -501,7 +504,7 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
                     self.relevant_lm_mode_searcher_varying_N[_i] = pickle.load(
                         f)
                 print(
-                    f"reloaded lm = {self.relevant_lm_list[_i][0]}.{self.relevant_lm_list[_i][0]} from an old run.")
+                    f"reloaded lm = {self.relevant_lm_list[_i][0]}.{self.relevant_lm_list[_i][1]} from an old run.")
             else:
                 self.relevant_lm_mode_searcher_varying_N[_i].do_mode_search_varying_N(
                 )

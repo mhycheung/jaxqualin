@@ -40,6 +40,9 @@ params = {'axes.labelsize': 18,
 
 mpl.rcParams.update(params)
 
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+PLOT_SAVE_PATH = os.path.join(ROOT_PATH, "plots")
+
 
 def plot_omega_free(
         results_full,
@@ -50,7 +53,8 @@ def plot_omega_free(
         indicate_start = False,
         color = None,
         line_alpha = 0.3,
-        scatter_alpha = 0.5):
+        scatter_alpha = 0.5,
+        scatter_size = 1):
     omega_dict = results_full.omega_dict
     t0_arr = results_full.t0_arr
     if t0_min is not None:
@@ -77,7 +81,7 @@ def plot_omega_free(
             ax.plot(omega_r_list[i][t0_min_indx:t0_max_indx],
                     omega_i_list[i][t0_min_indx:t0_max_indx], alpha=line_alpha, c = color)
             ax.scatter(omega_r_list[i][t0_min_indx:t0_max_indx],
-                       omega_i_list[i][t0_min_indx:t0_max_indx], alpha=scatter_alpha, s=1, c = color)
+                       omega_i_list[i][t0_min_indx:t0_max_indx], alpha=scatter_alpha, s=scatter_size, c = color)
     ax.invert_yaxis()
 
 
@@ -398,7 +402,7 @@ def plot_relevant_mode_search_full(
                     indx=indxs[i], axs=ax_row, lm=relevant_lm_list[i])
 
     fig.tight_layout()
-    save_file_path = os.path.join(PLOT_SAVE_PATH, f"{mode_search_complete.SXSnum}_{postfix_string}.pdf")
+    save_file_path = os.path.join(PLOT_SAVE_PATH, f"lmplots/{mode_search_complete.SXSnum}_{postfix_string}.pdf")
     
     plt.savefig(save_file_path)
 

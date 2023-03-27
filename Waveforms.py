@@ -53,7 +53,7 @@ def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1 = 120):
     Level = metaloadname[metaloadname.find("Lev") + 3]
     indx = hs.index(l, m)
     h = waveform(hs[:, indx].time, hs[:, indx].real +
-                 1.j * hs[:, indx].imag, l=l, m=m, t1 = 120)
+                 1.j * hs[:, indx].imag, l=l, m=m, t1 = t1)
     Mf = metadata['remnant_mass']
     a_arr = metadata['remnant_dimensionless_spin']
     af = np.linalg.norm(a_arr)
@@ -294,7 +294,8 @@ def clean_QNM(mode, t, A, phi):
     return A*np.exp(omega_i*t)*np.exp(-1.j*(omega_r*t + phi))
 
 def make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_arr,
-                               time = np.linspace(0, 150, num = 1501), delay = True):
+                               time = np.linspace(0, 150, num = 1501), delay = True,
+                               t1 = 120):
     fund_string = list(inj_dict.keys())[0]
     mode_fund = long_str_to_qnms(fund_string, Mf, af)[0]
     A_fund, phi_fund = inj_dict[fund_string]
@@ -322,11 +323,12 @@ def make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_a
 
     h_effective += np.asarray(noise_arr)
 
-    h_eff = waveform(h0.time, h_effective, l = l, m = m, remove_num=0, t_peak = 0)
+    h_eff = waveform(h0.time, h_effective, l = l, m = m, 
+                     remove_num=0, t_peak = 0, t1 = t1)
     
     return h_eff
 
-def make_eff_ringdown_waveform_from_param(inject_params, delay = True):
+def make_eff_ringdown_waveform_from_param(inject_params, delay = True, t1 = 120, noise = True):
     
     inj_dict = inject_params['inj_dict']
     l = inject_params['l']
@@ -335,9 +337,11 @@ def make_eff_ringdown_waveform_from_param(inject_params, delay = True):
     af = inject_params['af']
     relevant_lm_list = inject_params['relevant_lm_list']
     noise_arr = np.asarray(inject_params['noise_arr'])
+    if not noise:
+        noise_arr = 0
     time = np.asarray(inject_params['time'])
     h_eff = make_eff_ringdown_waveform(inj_dict, l, m, Mf, af, relevant_lm_list, noise_arr,
-                                       time = time, delay = delay)
+                                       time = time, delay = delay, t1 = t1)
     return h_eff
 
 

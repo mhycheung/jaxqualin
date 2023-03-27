@@ -37,3 +37,15 @@ def jnpsign0(x):
         return 1
     else:
         return jnp.sign(x)
+
+def get_retrofac(retro):
+    if retro:
+        return -1
+    else:
+        return 1
+    
+def get_m(m):
+    if m == -99:
+        return 0
+    else:
+        return m

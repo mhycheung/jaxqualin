@@ -9,6 +9,7 @@ from tqdm import tqdm
 import os
 import pickle
 from copy import copy
+import random
 
 from jax.config import config
 config.update("jax_enable_x64", True)
@@ -184,6 +185,7 @@ class QNMFit:
             params0=None,
             max_nfev=200000,
             A_bound=np.inf,
+            weighted = False,
             **fit_kwargs):
         self.h = h
         self.t0 = t0
@@ -196,9 +198,20 @@ class QNMFit:
         self.fit_done = False
         self.A_bound = A_bound
         self.fit_kwargs = fit_kwargs
+        self.weighted = weighted
+
+    def make_weights(self, hr, hi):
+        habs = np.abs(hr + 1.j*hi)
+        weight = interweave(habs, habs)
+        return np.array(weight)
 
     def do_fit(self, jcf=CurveFit(), return_jcf=False):
         self.time, self.hr, self.hi = self.h.postmerger(self.t0)
+        if self.weighted:
+            weight = self.make_weights(self.hr, self.hi)
+            sigma = weight
+        else:
+            sigma = None
         self._h_interweave = interweave(self.hr, self.hi)
         self._time_interweave = interweave(self.time, self.time)
         if not hasattr(self.params0, "__iter__"):
@@ -219,7 +232,7 @@ class QNMFit:
                 t, self.qnm_fixed_list, self.N_free, params, Schwarzschild=self.Schwarzschild), np.array(
                 self._time_interweave), np.array(
                 self._h_interweave), bounds=bounds, p0=self.params0, max_nfev=self.max_nfev,
-            method="trf", **self.fit_kwargs, timeit = True)
+            method="trf", sigma = sigma, **self.fit_kwargs, timeit = True)
         try:
             self.cost = self.res.cost
             self.grad = self.res.grad
@@ -351,7 +364,7 @@ class QNMFitVarMa:
             self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
 
 def make_initial_guess(N_free, guess_num, A_log_low = -1, A_log_hi = 1, phi_low = 0, phi_hi = 2*np.pi,
-                       omega_r_low = 0, omega_r_hi = 2, omega_i_low = 0, omega_i_hi = -1, seed = 1234,
+                       omega_r_low = -2, omega_r_hi = 2, omega_i_low = 0, omega_i_hi = -1, seed = 1234,
                        A_val = 1, A_guess_relative = True):
     if not A_guess_relative:
         A_val = 1
@@ -595,7 +608,9 @@ class QNMFitVaryingStartingTime:
             random_initial = False,
             initial_dict = {},
             A_guess_relative = True,
-            set_seed = 1234):
+            set_seed = 1234,
+            weighted = False,
+            double_skip = True):
         self.h = h
         if A_guess_relative:
             A_rel = np.abs(h.h[0])
@@ -637,6 +652,8 @@ class QNMFitVaryingStartingTime:
         self.initial_dict = initial_dict
         self.A_guess_relative = A_guess_relative
         self.set_seed = set_seed
+        self.weighted = weighted
+        self.double_skip = double_skip
 
     def initial_guesses(self, jcf = None):
         A_val = np.abs(self.h.h[0])
@@ -659,6 +676,7 @@ class QNMFitVaryingStartingTime:
                         params0=guess,
                         max_nfev=self.max_nfev,
                         A_bound=self.A_bound,
+                        weighted=self.weighted,
                         **self.fit_kwargs)
             try:
                 qnm_fit.do_fit(jcf = _jcf)
@@ -711,6 +729,8 @@ class QNMFitVaryingStartingTime:
 
     def do_fits(self, jcf=None, return_jcf=False):
         
+        skip_i = 0
+        skip_consect = 0
         self.not_converged = False
         self.nonconvergence_indx = []
         self._time_longest, _, _ = self.h.postmerger(self.t0_arr[0])
@@ -782,6 +802,7 @@ class QNMFitVaryingStartingTime:
                         params0=_params0,
                         max_nfev=self.max_nfev,
                         A_bound=self.A_bound,
+                        weighted=self.weighted,
                         **self.fit_kwargs)
                 if self.nonconvergence_cut and self.not_converged:
                     qnm_fit.copy_from_result(qnm_fit_result_temp)
@@ -793,13 +814,29 @@ class QNMFitVaryingStartingTime:
                             else:
                                 raise RuntimeError
                         else:
-                            qnm_fit.do_fit(jcf=_jcf)
+                            if skip_consect < skip_i  and self.double_skip:
+                                raise RuntimeError
+                            else:
+                                qnm_fit.do_fit(jcf=_jcf)
                     except RuntimeError:
-                        print(f"fit did not reach tolerance at t0 = {_t0}.")
+                        if skip_consect < skip_i:
+                            print(f"skipped t0 = {_t0}.")
+                        else:
+                            print(f"fit did not reach tolerance at t0 = {_t0}.")
                         qnm_fit.result = self.make_nan_result()
                         self.nonconvergence_indx.append(i)
                         self.not_converged = True
+                        if self.double_skip:
+                            if skip_consect >= skip_i:
+                                skip_consect = 0
+                                if skip_i == 0:
+                                    skip_i = 1
+                                else:
+                                    skip_i *= 2
+                            skip_consect += 1
                     else:
+                        skip_consect = 0
+                        skip_i = 0
                         if self.sequential_guess:
                             _params0 = qnm_fit.result.popt
                 self.result_full.fill_result(i, qnm_fit.result)
