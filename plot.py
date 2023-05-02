@@ -2,10 +2,13 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.ticker import (
     MultipleLocator, AutoMinorLocator, LogLocator, NullFormatter)
+from matplotlib.patches import Ellipse
 import numpy as np
 from QuasinormalMode import *
 from ModeSelection import *
 from bisect import bisect_right
+
+from adjustText import adjust_text
 
 from scipy.odr import Model, ODR, RealData
 
@@ -54,7 +57,9 @@ def plot_omega_free(
         color = None,
         line_alpha = 0.3,
         scatter_alpha = 0.5,
-        scatter_size = 1):
+        scatter_size = 1,
+        color_indicate = False,
+        color_indicate_list = []):
     omega_dict = results_full.omega_dict
     t0_arr = results_full.t0_arr
     if t0_min is not None:
@@ -74,6 +79,8 @@ def plot_omega_free(
     omega_i_list = list(omega_i_dict.values())
     length = len(omega_r_dict)
     for i in range(length):
+        if color_indicate:
+            color = f"C{color_indicate_list[i]}"
         if len(plot_indxs) == 0 or i in plot_indxs:
             if indicate_start:
                 ax.scatter(omega_r_list[i][t0_min_indx],
@@ -88,15 +95,28 @@ def plot_omega_free(
 def plot_predicted_qnms(
         ax,
         predicted_qnm_list,
+        predicted_qnm_list_retro = [],
+        ellipse_qnm_list = [],
+        ellipse_qnm_list_retro = [],
+        ellipse_x = 0.05,
+        ellipse_y = 0.05,
+        ellipse_edgecolor = 'gray',
+        ellipse_facecolor = 'lightgray',
+        ellipse_alpha = 0.5,
         fix_indx = [],
         label_offset=(
             0,
-            0.025),
+            0.),
         change_lim = True,
         facecolor="none",
         edgecolor="gray",
-        cut_at_0 = False):
-    ax.axvline(0, color='k', ls='--')
+        cut_at_0 = False,
+        pred_alpha = 1,
+        present_modes = [],
+        present_modes_retro = [],
+        edgecolor_present = 'k',
+        expand_points = (1.1, 1.7)):
+    ax.axvline(0, color='gray', ls='--')
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
     ax.set_xlim(max(xmin, -2), min(xmax, 2))
@@ -107,23 +127,66 @@ def plot_predicted_qnms(
             ax.set_ylim(0.05, max(ymax, -0.7))
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
-    for i, mode in enumerate(predicted_qnm_list):
-        if xmin < mode.omegar < xmax and ymax < mode.omegai < ymin:  # remember that y-axis is flipped
+    texts = []
+    circles = []
+    for i, mode in enumerate(predicted_qnm_list + predicted_qnm_list_retro):
+        if i >= len(predicted_qnm_list):
+            omegar = -mode.omegar
+            retro_string = r'$r$'
+            if mode.string() in present_modes_retro:
+                present = True
+            else:
+                present = False
+        else:
+            omegar = mode.omegar
+            retro_string = ''
+            if mode.string() in present_modes:
+                present = True
+            else:
+                present = False
+        if present:
+            edgecolor_adj = edgecolor_present
+        else:
+            edgecolor_adj = edgecolor
+        if xmin < omegar < xmax and ymax < mode.omegai < ymin:  # remember that y-axis is flipped
             if i in fix_indx:
-                ax.scatter(mode.omegar, mode.omegai, marker='o',
+                circle = ax.scatter(omegar, mode.omegai, marker='o',
                        facecolor='k', edgecolor='k')
             else:
-                ax.scatter(mode.omegar, mode.omegai, marker='o',
-                           facecolor=facecolor, edgecolor=edgecolor)
-            transform = ax.transData.transform((mode.omegar, mode.omegai))
+                circle = ax.scatter(omegar, mode.omegai, marker='o',
+                           facecolor=facecolor, edgecolor=edgecolor_adj, alpha = pred_alpha)
+            circles.append(circle)
+            transform = ax.transData.transform((omegar, mode.omegai))
             mode_ax_coord = ax.transAxes.inverted().transform(transform)
             label_ax_coord = mode_ax_coord + label_offset
-            ax.text(
-                *label_ax_coord,
-                mode.tex_string(),
-                color=edgecolor,
-                transform=ax.transAxes,
-                horizontalalignment="center")
+            text = ax.text(
+                        *label_ax_coord,
+                        retro_string + mode.tex_string(),
+                        color=edgecolor_adj,
+                        transform=ax.transAxes,
+                        horizontalalignment="center",
+                        verticalalignment="center",
+                        alpha = pred_alpha
+                            )
+            texts.append(text)
+    adjust_text(texts, expand_points=expand_points, ax = ax)
+    
+    ells = []
+    for i, mode in enumerate(predicted_qnm_list + predicted_qnm_list_retro):
+        if i >= len(predicted_qnm_list):
+            omegar = -mode.omegar
+        else:
+            omegar = mode.omegar
+        if xmin < omegar < xmax and ymax < mode.omegai < ymin:  # remember that y-axis is flipped
+            ells.append(Ellipse(xy = (omegar, mode.omegai),
+                     width = ellipse_x, height = ellipse_y,
+                     fill = True, 
+                     facecolor = ellipse_facecolor,
+                     edgecolor = ellipse_edgecolor,
+                     alpha = ellipse_alpha))
+    for e in ells:
+        ax.add_artist(e)
+        e.set_clip_box(ax.bbox)
 
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax)
@@ -131,8 +194,8 @@ def plot_predicted_qnms(
     ax.set_xlim(xmin, xmax)
     ax.axhspan(0, 1e2, color="gray", alpha=0.5)
 
-    ax.set_xlabel("$\\omega_r$")
-    ax.set_ylabel("$\\omega_i$")
+    ax.set_xlabel(r"$M \omega_r$")
+    ax.set_ylabel(r"$M \omega_i$")
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.yaxis.set_minor_locator(AutoMinorLocator())
 
@@ -200,7 +263,10 @@ def plot_M_a(
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.yaxis.set_minor_locator(AutoMinorLocator())
 
-def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True):
+def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True,
+                    legend = True, color_dict = {}, lw = 2, bold_dict = {}, lw_bold = 4, alpha_bold = 1,
+                    t_flat_start_dict = {}, flat_start_s = 20, flat_start_marker = 'o', plot_retro_pred = False,
+                    iota = None, af = None, phi = 0):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -211,26 +277,53 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-"
         fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
+                lmnx = fixed_modes[i].lmnx_retro
+                if fixed_mode_string in color_dict:
+                    color = color_dict[fixed_mode_string]
+                else:
+                    color = f"C{colori}"
                 if use_label:
                     label = fixed_mode_string_tex_list[i]
                 else:
                     label = None
                 ax.semilogy(t0_arr, np.abs(A_fix_dict[f"A_{fixed_mode_string}"]), 
-                            lw=2, label=label, c = f"C{colori}",
+                            lw=lw, label=label, c = color,
                             alpha = alpha, ls = ls)
+                if len(lmnx) == 1 and plot_retro_pred:
+                        l, m, n = lmnx[0]
+                        if l > 0:
+                            S_fac = S_retro_fac(iota, af, 
+                                                l, m, n, phi = phi)
+                            ax.semilogy(t0_arr, np.abs(A_fix_dict[f"A_{fixed_mode_string}"])*np.abs(S_fac), 
+                            lw=lw*0.7,c = color,
+                            alpha = alpha, ls = '--')
+                if fixed_mode_string in bold_dict:
+                    start_i, end_i = bold_dict[fixed_mode_string]
+                    ax.semilogy(t0_arr[start_i:end_i], 
+                                np.abs(A_fix_dict[f"A_{fixed_mode_string}"])[start_i:end_i], 
+                                lw=lw_bold, c = color,
+                                label = fixed_mode_string_tex_list[i],
+                                alpha = alpha_bold, ls = ls)
                 colori += 1
+                if fixed_mode_string in t_flat_start_dict:
+                    t_flat_start = t_flat_start_dict[fixed_mode_string]
+                    idx = np.argmin(np.abs(t0_arr - t_flat_start))
+                    ax.scatter(t0_arr[idx], np.abs(A_fix_dict[f"A_{fixed_mode_string}"])[idx],
+                               c = color, s = flat_start_s, marker = flat_start_marker)
     for A in list(A_free_dict.values()):
-        ax.semilogy(t0_arr, np.abs(A), lw=1, c = f"C{colori}", alpha = alpha, ls = ls)
+        ax.semilogy(t0_arr, np.abs(A), lw=lw, c = f"C{colori}", alpha = alpha, ls = ls)
         colori += 1
     if fixed_modes is not None and use_label:
-        ax.legend()
+        if legend:
+            ax.legend()
 
     ax.set_xlim(t0_arr[0], t0_arr[-1])
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
     ax.set_ylabel(r"$A$")
     
-def plot_amplitudes_unadj(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True):
+def plot_amplitudes_unadj(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True,
+                          legend = True):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -253,7 +346,8 @@ def plot_amplitudes_unadj(results_full, fixed_modes=None, ax=None, alpha = 1, ls
         ax.semilogy(t0_arr, np.abs(A), lw=1, c = f"C{colori}", alpha = alpha, ls = ls)
         colori += 1
     if fixed_modes is not None and use_label:
-        ax.legend()
+        if legend:
+            ax.legend()
 
     ax.set_xlim(t0_arr[0], t0_arr[-1])
     ax.xaxis.set_minor_locator(AutoMinorLocator())
@@ -261,7 +355,12 @@ def plot_amplitudes_unadj(results_full, fixed_modes=None, ax=None, alpha = 1, ls
     ax.set_ylabel(r"$A$")
 
 
-def plot_phases(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True, shift_phase = True):
+def plot_phases(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-",
+                 use_label = True, shift_phase = True,
+                legend = True, color_dict = {}, lw = 2, bold_dict = {}, 
+                lw_bold = 4, alpha_bold = 1,
+                t_flat_start_dict = {}, flat_start_s = 20, flat_start_marker = 'o',
+                plot_retro_pred = False, iota = None, af = None, phi = 0):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -274,27 +373,70 @@ def plot_phases(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", us
         fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
+            lmnx = fixed_modes[i].lmnx_retro
+            if fixed_mode_string in color_dict:
+                color = color_dict[fixed_mode_string]
+            else:
+                color = f"C{colori}"
             phase_shift = np.where(A_fix_dict[f"A_{fixed_mode_string}"] > 0, 0, np.pi)
             t_breaks, phi_breaks = phase_break_for_plot(t0_arr, phi_fix_dict[f"phi_{fixed_mode_string}"] + phase_shift)
+            if len(lmnx) == 1 and plot_retro_pred:
+                l, m, n = lmnx[0]
+                if l > 0:
+                    S_phase_diff = S_retro_phase_diff(iota, af, 
+                                        l, m, n, phi = phi)
+                    t_breaks_S, phi_breaks_S = phase_break_for_plot(t0_arr, 
+                                            -phi_fix_dict[f"phi_{fixed_mode_string}"] + phase_shift)
             for j, (t_break, phi_break) in enumerate(zip(t_breaks, phi_breaks)):
                 if use_label:
                     label = fixed_mode_string_tex_list[i]
                 else:
                     label = None
                 if j == 0:
-                    ax.plot(t_break, phi_break, lw=2,
-                            c=f"C{i}", label = label, alpha = alpha, ls = ls)
+                    ax.plot(t_break, phi_break, lw=lw,
+                            c=color, label = label, alpha = alpha, ls = ls)
                 else:
-                    ax.plot(t_break, phi_break, lw=2, c=f"C{i}", alpha = alpha, ls = ls)
+                    ax.plot(t_break, phi_break, lw=lw, c=color, alpha = alpha, ls = ls)
+            if len(lmnx) == 1 and plot_retro_pred:
+                if l > 0:
+                    for t_break_S, phi_break_S in zip(t_breaks_S, phi_breaks_S):
+                        ax.plot(t_break_S, phi_break_S, lw=lw*0.7, c=color, alpha = alpha, ls = "--")
+                
+
+            if fixed_mode_string in bold_dict:
+                start_i, end_i = bold_dict[fixed_mode_string]
+                t_breaks, phi_breaks = phase_break_for_plot(
+                                t0_arr[start_i:end_i], 
+                                phi_fix_dict[f"phi_{fixed_mode_string}"][start_i:end_i] + phase_shift[start_i:end_i])
+                for j, (t_break, phi_break) in enumerate(zip(t_breaks, phi_breaks)):
+                    if use_label:
+                        label = fixed_mode_string_tex_list[i]
+                    else:
+                        label = None
+                    if j == 0:
+                        ax.plot(t_break, phi_break, lw=lw_bold,
+                                c=color, label = label, alpha = alpha_bold, ls = ls)
+                    else:
+                        ax.plot(t_break, phi_break, lw=lw_bold, c=color, alpha = alpha_bold, ls = ls)
+            if fixed_mode_string in t_flat_start_dict:
+                t_flat_start = t_flat_start_dict[fixed_mode_string]
+                idx = np.argmin(np.abs(t0_arr - t_flat_start))
+                phi_flat_start = phi_fix_dict[f"phi_{fixed_mode_string}"][idx] + phase_shift[idx]
+                ax.scatter(t0_arr[idx], phi_flat_start%(2*np.pi),
+                            c = color, s = flat_start_s, marker = flat_start_marker)
+                
             colori += 1
     for i, phi in enumerate(list(phi_free_dict.values())):
         t_breaks, phi_breaks = phase_break_for_plot(t0_arr, phi)
         for t_break, phi_break in zip(t_breaks, phi_breaks):
-            ax.plot(t_break, phi_break, lw=1, c=f"C{colori + i}", ls = ls)
+            ax.plot(t_break, phi_break, lw=lw, c=f"C{colori + i}", ls = ls)
     ax.set_ylim(0, 2 * np.pi)
     if fixed_modes is not None and use_label:
-        ax.legend()
+        if legend:
+            ax.legend()
     ax.set_xlim(t0_arr[0], t0_arr[-1])
+    ax.set_yticks([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
+    ax.set_yticklabels([r"$0$", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"])
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.yaxis.set_minor_locator(AutoMinorLocator())
     ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
@@ -503,6 +645,86 @@ def mode_plot_3D(df, l, m, mode_string_pro, mode_string_retro, quantile_low = 0.
     cb_ax = fig.add_axes([0.93, 0.2, 0.02, 0.6])
     cbar = fig.colorbar(sc, cax=cb_ax)
     cb_ax.set_ylabel(r"$\log_{10} A$")
+
+def mode_plot_3D_eta(df, l, m, mode_string_pro, mode_string_retro, quantile_low = 0.01, quantile_hi = 0.99,
+                     adjust_eta = True, adjust_delta = False, plot_log = True, eta_cut = 0.2499,
+                     adjust_eta_poly = "1"):
+    if adjust_delta:
+        df_mode = df.loc[(((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
+                        ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))) & (df['eta'] < eta_cut)]
+    else:
+        df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
+              ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
+    xyz = df[["SXS_num", "chi_1_z", "chi_2_z", "eta"]].drop_duplicates()
+    df_missing = xyz[(~xyz["SXS_num"].isin(df_mode["SXS_num"]))]
+    
+    fig, axs = plt.subplots(2,2, figsize = (9, 7))
+    
+    A = df_mode["A_med"]
+    if adjust_eta:
+        A /= df_mode["eta"]
+    if adjust_delta:
+        A /= np.sqrt(1 - 4*df_mode["eta"])
+    x = df_mode["eta"]
+    eta_poly = eval(adjust_eta_poly)
+    A /= eta_poly
+
+    if plot_log:
+        A_plot = np.log10(A)
+    else:
+        A_plot = A
+
+    vmin = np.quantile(A_plot, quantile_low)
+    vmax = np.quantile(A_plot, quantile_hi)
+    
+    axs[1,1].scatter(df_mode["chi_1_z"], df_mode["chi_2_z"], c=A_plot, vmin = vmin, vmax = vmax)
+    axs[1,1].scatter(df_missing["chi_1_z"], df_missing["chi_2_z"], c = "gray", alpha = 0.1)
+    axs[1,1].set_xlabel(r"$\chi_1$")
+    axs[1,1].set_ylabel(r"$\chi_2$")
+    axs[1,0].scatter(df_mode["chi_1_z"], df_mode["eta"], c=A_plot, vmin = vmin, vmax = vmax)
+    axs[1,0].scatter(df_missing["chi_1_z"], df_missing["eta"], c = "gray", alpha = 0.1)
+    axs[1,0].set_xlabel(r"$\chi_1$")
+    axs[1,0].set_ylabel(r"$\eta$")
+    axs[1,0].invert_yaxis()
+    axs[0,1].scatter(df_mode["chi_2_z"], df_mode["eta"], c=A_plot, vmin = vmin, vmax = vmax)
+    axs[0,1].scatter(df_missing["chi_2_z"], df_missing["eta"], c = "gray", alpha = 0.1)
+    axs[0,1].set_xlabel(r"$\chi_2$")
+    axs[0,1].set_ylabel(r"$\eta$")
+    axs[0,1].invert_yaxis()
+    
+    axs[0,0].remove()
+
+    ax = fig.add_subplot(2,2,1,projection='3d')
+    sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["eta"], c = A_plot, vmin = vmin, vmax = vmax)
+    ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["eta"], c = "gray", alpha = 0.1)
+    sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["eta"], c = A_plot, vmin = vmin, vmax = vmax)
+    for i in range(len(sc.get_facecolors())):
+        ax.plot([df_mode["chi_1_z"].to_numpy()[i], df_mode["chi_1_z"].to_numpy()[i]], 
+                [df_mode["chi_2_z"].to_numpy()[i], df_mode["chi_2_z"].to_numpy()[i]], 
+                [0.25, df_mode["eta"].to_numpy()[i]], c = sc.get_facecolors()[i].tolist(), alpha = 0.5, lw = 1.5)
+    ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["eta"], c = "gray", alpha = 0.2)
+    for i in range(len(df_missing["chi_1_z"].to_numpy())):
+        ax.plot([df_missing["chi_1_z"].to_numpy()[i], df_missing["chi_1_z"].to_numpy()[i]], 
+                [df_missing["chi_2_z"].to_numpy()[i], df_missing["chi_2_z"].to_numpy()[i]], 
+                [0.25, df_missing["eta"].to_numpy()[i]], c = "gray", alpha = 0.2, lw = 1.5)
+    ax.set_xlabel(r"$\chi_1$", fontsize = 12, labelpad = -4)
+    ax.set_ylabel(r"$\chi_2$", fontsize = 12, labelpad = -4)
+    ax.set_zlabel(r"$\eta$", fontsize = 12, labelpad = -4)
+    ax.tick_params(axis = 'x', labelsize = 9, pad = -0.75)
+    ax.tick_params(axis = 'y', labelsize = 9, pad = -0.75)
+    ax.tick_params(axis = 'z', labelsize = 9, pad = -0.75)
+    ax.invert_zaxis()
+    
+    # fig.tight_layout()
+    fig.suptitle(f"{mode_string_pro} in lm = {l}{m}", fontsize = 24)
+    fig.subplots_adjust(right=0.9,wspace=0.25, hspace=0.3)
+    ax.set_position([0,0.45,0.55,0.55])
+    cb_ax = fig.add_axes([0.93, 0.2, 0.02, 0.6])
+    cbar = fig.colorbar(sc, cax=cb_ax)
+    if plot_log:
+        cb_ax.set_ylabel(r"$\log_{10} A$")
+    else:
+        cb_ax.set_ylabel(r"$A$")
 
 def linfunc(p, x):
     m, c= p

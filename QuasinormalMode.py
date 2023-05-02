@@ -1,6 +1,7 @@
 import qnm
 import jax.numpy as jnp
 import numpy as np
+import pykerr
 from utils import *
 import itertools
 
@@ -9,16 +10,27 @@ class mode_free:
     def __init__(self, lmnx, s = -2):
         self.spinseq_list = []
         self.spinseq_list_neg_a = []
+        lmnx_actual = []
+        self.retro_mode_fac_x = []
+        self.lmnx_retro = lmnx
         if lmnx != "constant":
             if isinstance(lmnx, str):
                 lmnx = str_to_lmnx(lmnx)
             for lmn in lmnx:
                 l, m, n = tuple(lmn)
+                if l < 0:
+                    l = -l
+                    self.retro_mode_fac_x.append(-1)
+                else:
+                    self.retro_mode_fac_x.append(1)
+                lmnx_actual.append([l, m, n])
                 if m == -99:
                     m = 0
                 self.spinseq_list.append(qnm.modes_cache(s=s, l=l, m=m, n=n))
                 self.spinseq_list_neg_a.append(qnm.modes_cache(s=s, l=l, m=-m, n=n))
-        self.lmnx = lmnx
+            self.lmnx = lmnx_actual
+        else:
+            self.lmnx = "constant"
         
     def fix_mode(self, M, a, retro = False):
         if a > 0.99:
@@ -36,10 +48,10 @@ class mode_free:
                 spinseq_list = self.spinseq_list_neg_a
             else:
                 spinseq_list = self.spinseq_list
-            for lmn, spinseq in zip(self.lmnx, spinseq_list):
+            for i, (lmn, spinseq) in enumerate(zip(self.lmnx, spinseq_list)):
                 l, m, n = tuple(lmn)
                 omega, _, _ = spinseq(a=np.abs(a))
-                self.omegar += jnpsign0(m) * retrofac * jnp.real(omega) / M
+                self.omegar += self.retro_mode_fac_x[i]*jnpsign0(m) * retrofac * jnp.real(omega) / M
                 self.omegai += jnp.imag(omega) / M
         self.omega = self.omegar + 1.j * self.omegai
         self.M = M
@@ -49,7 +61,7 @@ class mode_free:
         if self.lmnx == "constant":
             return "constant"
         _lmnstrings = []
-        for _lmn in self.lmnx:
+        for _lmn in self.lmnx_retro:
             _l, _m, _n = tuple(_lmn)
             _lmnstrings.append(f"{_l}.{_m}.{_n}")
         return 'x'.join(_lmnstrings)
@@ -57,10 +69,19 @@ class mode_free:
     def tex_string(self):
         if self.lmnx == "constant":
             return r"constant"
-        _string_raw = '$' + self.string() + '$'
+        lmnstrings = []
+        for lmn in self.lmnx_retro:
+            l, m, n = tuple(lmn)
+            if l < 0:
+                lmnstrings.append(f"r{-l}.{m}.{n}")
+            else:
+                lmnstrings.append(f"{l}.{m}.{n}")
+        lmnx_string = 'x'.join(lmnstrings)
+        _string_raw = '$' + lmnx_string + '$'
         _string = _string_raw.replace('-99', '-0')
         _tex_string = _string.replace('x', r" \! \times \! ")
         _tex_string = _tex_string.replace('-', r" \! - \! ")
+        _tex_string = _tex_string.replace('.', r"{,}")
         return _tex_string
 
     def is_overtone(self):
@@ -144,6 +165,8 @@ def lmnxs_to_qnms_free(lmnxs, **kwargs):
 
 
 def long_str_to_qnms(longstring, M, a, **kwargs):
+    if longstring == '':
+        return []
     lmnxs = long_str_to_lmnxs(longstring)
     return lmnxs_to_qnms(lmnxs, M, a, **kwargs)
 
@@ -442,3 +465,20 @@ def qnm_string_m_reverse(str):
             lmn[1] *= -1
     str_out = lmnx_to_string(lmnx)
     return str_out
+
+def S_retro_fac(iota, af, l, m, n, phi = 0.):
+    S = pykerr.spheroidal(iota, af, l, m, n, phi=phi)
+    S_n = pykerr.spheroidal(iota, af, l, -m, n, phi=phi)
+    return np.abs(S_n)/np.abs(S)
+
+def S_retro_fac_complex(iota, af, l, m, n, phi = 0.):
+    S = pykerr.spheroidal(iota, af, l, m, n, phi=phi)
+    S_n = pykerr.spheroidal(iota, af, l, -m, n, phi=phi)
+    return S_n/S
+
+def S_retro_phase_diff(iota, af, l, m, n, phi = 0.):
+    S = pykerr.spheroidal(iota, af, l, m, n, phi=phi)
+    S_n = pykerr.spheroidal(iota, af, l, -m, n, phi=phi)
+    if l % 2 != 0:
+        return np.angle(S_n) - np.angle(S) + np.pi
+    return np.angle(S_n) - np.angle(S)

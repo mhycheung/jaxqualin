@@ -19,8 +19,15 @@ def append_A_and_phis(mode_searcher_vary_N, df, **kwargs):
     else:
         t_peak_dom = t_peak_lm
     t_shift = t_peak_dom - t_peak_lm
-    fluc_least_indx_list = mode_searcher_vary_N.flatness_checkers[
-        best_run_indx].fluc_least_indx_list
+    best_flatness_checker = mode_searcher_vary_N.flatness_checkers[best_run_indx]
+    fluc_least_indx_list = best_flatness_checker.fluc_least_indx_list
+    flatness_length = best_flatness_checker.flatness_length
+    quantile_range = best_flatness_checker.quantile_range
+    med_min = best_flatness_checker.med_min
+    weight_1 = best_flatness_checker.weight_1
+    weight_2 = best_flatness_checker.weight_2
+    flatness_tol = best_flatness_checker.flatness_tol
+    t0_arr = best_flatness_checker.t0_arr
     found_modes = mode_searcher_vary_N.found_modes_final
     qnm_strings = qnms_to_string(found_modes)
     range_indx = mode_searcher_vary_N.flatness_checkers[best_run_indx].flatness_length
@@ -35,6 +42,17 @@ def append_A_and_phis(mode_searcher_vary_N, df, **kwargs):
         A_low = np.quantile(A_arr[start_indx:start_indx+range_indx], 0.05)
         phi_arr = mode_searcher_vary_N.fixed_fitters[best_run_indx].result_full.phi_dict["phi_" +
                                                                                          qnm_string] + found_modes[i].omegar*t_shift
+        flat_start_indx = start_of_flat_region(flatness_length, A_arr, phi_arr,
+                                          quantile_range = quantile_range, 
+                                          med_min = med_min, 
+                                          weight_1 = weight_1,
+                                          weight_2 = weight_2, 
+                                          fluc_tol = flatness_tol)
+
+        if np.isnan(flat_start_indx):
+            t_flat_start = np.nan
+        else:
+            t_flat_start = t0_arr[flat_start_indx]
         if A_med_pos < 0:
             phi_arr -= np.pi
         phi_med = np.quantile(phi_arr[start_indx:start_indx+range_indx], 0.5)
@@ -42,7 +60,7 @@ def append_A_and_phis(mode_searcher_vary_N, df, **kwargs):
         phi_low = np.quantile(phi_arr[start_indx:start_indx+range_indx], 0.05)
         kwargs.update(A_med=A_med, A_hi=A_hi, A_low=A_low,
                       phi_med=phi_med, phi_hi=phi_hi, phi_low=phi_low, mode_string=qnm_string,
-                      M_rem=M_rem, chi_rem=chi_rem)
+                      M_rem=M_rem, chi_rem=chi_rem, t_flat_start = t_flat_start)
         df_row = pd.Series(kwargs)
         df_row_frame = df_row.to_frame().T
         if "retro" in df_row_frame:
@@ -66,9 +84,11 @@ def append_A_and_phis_all_lm(mode_search_complete, df, **kwargs):
 
 
 def create_data_frame(SXS_num_list, df_save_prefix="default", **kwargs):
-    df = pd.DataFrame(columns=["SXS_num", "M_rem", "chi_rem",  "chi_1_z", "chi_2_z", "q", "l", "m", "retro", "mode_string",
+    df = pd.DataFrame(columns=["SXS_num", "M_rem", "chi_rem", 
+                               "chi_1_z", "chi_2_z", "q", "l", "m", 
+                               "retro", "mode_string",
                                "A_med", "A_hi", "A_low",
-                               "phi_med", "phi_hi", "phi_low"])
+                               "phi_med", "phi_hi", "phi_low", "t_flat_start"])
     df = df.astype({"retro": bool})
     for SXS_num in SXS_num_list:
         mode_search_complete = ModeSearchAllFreeVaryingNSXSAllRelevant(str(SXS_num),
@@ -82,8 +102,10 @@ def create_data_frame(SXS_num_list, df_save_prefix="default", **kwargs):
 
 
 def create_data_frame_eff(eff_num_list, batch_runname, l=0, m=0, df_save_prefix="eff_default", **kwargs):
-    df = pd.DataFrame(columns=["eff_num", "M_rem", "chi_rem",  "l", "m", "mode_string",
-                               "A_med", "A_hi", "A_low", "phi_med", "phi_hi", "phi_low"])
+    df = pd.DataFrame(columns=["eff_num", "M_rem", "chi_rem", 
+                               "l", "m", "mode_string",
+                               "A_med", "A_hi", "A_low", "phi_med",
+                               "phi_hi", "phi_low", "t_flat_start"])
 
     for eff_num in eff_num_list:
         mode_searcher = read_json_eff_mode_search(
@@ -116,3 +138,151 @@ def get_result(run_string_prefix, t0_arr, qnm_fixed_list, N_free, nonconvergence
         result = pickle.load(f)
 
     return result
+
+
+def linfunc(p, x):
+    m, c= p
+    return m * x + c 
+
+def linfunc2(p, x):
+    c = p
+    return 2*x + c 
+
+def is_quadratic(row):
+    mode_string = row['mode_string']
+    if mode_string == 'constant':
+        return False
+    lmnx = str_to_lmnx(mode_string)
+    if len(lmnx) == 2:
+        return True
+    else:
+        return False
+    
+def is_overtone(row):
+    mode_string = row['mode_string']
+    if mode_string == 'constant':
+        return False
+    lmnx = str_to_lmnx(mode_string)
+    for lmn in lmnx:
+        l, m, n = tuple(lmn)
+        if n > 0:
+            return True
+    return False
+
+def is_fundamental(row):
+    mode_string = row['mode_string']
+    if mode_string == 'constant':
+        return False
+    lmnx = str_to_lmnx(mode_string)
+    if len(lmnx) == 1 and lmnx[0][2] == 0:
+        return True
+    else:
+        return False
+
+    
+def harm_type(row):
+    l_harm = row['l']
+    m_harm = row['m']
+    mode_string = row['mode_string']
+    if mode_string == 'constant':
+        return 'constant'
+    lmnx = str_to_lmnx(mode_string)
+    l_sum, m_sum = lmnx_sum_lm(lmnx)
+    if l_sum == l_harm and abs(m_sum) == m_harm:
+        return 'basic'
+    elif l_sum != l_harm and abs(m_sum) == m_harm:
+        return 'mixing'
+    else:
+        return 'recoil'
+
+
+def is_retro(row):
+    retro = row['retro']
+    if retro:
+        retrofac = -1
+    else:
+        retrofac = 1
+    mode_string = row['mode_string']
+    if mode_string == 'constant':
+        return False
+    lmnx = str_to_lmnx(mode_string)
+    _, m_sum = lmnx_sum_lm(lmnx)
+    if m_sum*retrofac < 0:
+        return True
+    else:
+        return False
+
+
+def natural_m(row):
+    mode_string = row['mode_string']
+    if mode_string == 'constant':
+        return -1
+    lmnx = str_to_lmnx(mode_string)
+    _, m_sum = lmnx_sum_lm(lmnx)
+    return abs(m_sum)
+
+def natural_l(row):
+    mode_string = row['mode_string']
+    if mode_string == 'constant':
+        return -1
+    lmnx = str_to_lmnx(mode_string)
+    l_sum, _ = lmnx_sum_lm(lmnx)
+    return l_sum
+
+def sym_mass_ratio(row):
+    q = row['q']
+    return q/(1 + q)**2
+
+def classify_modes(df):
+    col_quad = df.apply(is_quadratic, axis = 1)
+    col_fund = df.apply(is_fundamental, axis = 1)
+    col_over = df.apply(is_overtone, axis = 1)
+    col_retro = df.apply(is_retro, axis = 1)
+    col_type = df.apply(harm_type, axis = 1)
+    col_nat_l = df.apply(natural_l, axis = 1)
+    col_nat_m = df.apply(natural_m, axis = 1)
+    col_eta = df.apply(sym_mass_ratio, axis = 1)
+    df = df.assign(eta=col_eta.values,
+                is_quadratic=col_quad.values,
+                is_fundamental=col_fund.values,
+                is_overtone=col_over.values,
+                is_retrograde=col_retro.values,
+                harm_type=col_type.values,
+                natural_l=col_nat_l.values,
+                natural_m=col_nat_m.values)
+    return df
+
+def screen_mode(df, l, m, mode_string_pro, mode_string_retro, greater = True, A_cut = 1):
+    df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
+                ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
+    if greater:
+        df_screen = df_mode[df_mode['A_med'] > A_cut]
+    else:
+        df_screen = df_mode[df_mode['A_med'] <= A_cut]
+
+    return df_screen
+
+def df_get_mode(df, l, m, mode_string_pro, include_retro = True):
+    mode_string_retro = qnm_string_m_reverse(mode_string_pro)
+    if include_retro:
+        df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
+                ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
+    else:
+        df_mode = df.loc[(df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro)]
+    return df_mode
+    
+
+def df_get_mode_3D(df, l, m, mode_string_pro, include_retro=True, eta = True):
+    df_mode = df_get_mode(df, l, m, mode_string_pro, include_retro = include_retro)
+    if eta:
+        return df_mode[['chi_1_z', 'chi_2_z', 'eta', 'A_med']]
+    else:
+        return df_mode[['chi_1_z', 'chi_2_z', 'q', 'A_med']]
+
+def NP_quantities(x):
+    chi_1, chi_2, q = tuple(x)
+    eta = q / (1 + q)**2
+    delta = np.sqrt(1 - 4*eta)
+    chi_p = (q*chi_1 + chi_2) /(1+q)
+    chi_m = (q*chi_1 - chi_2) /(1+q)
+    return q, eta, delta, chi_p, chi_m

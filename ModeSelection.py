@@ -564,7 +564,8 @@ def closest_free_mode_distance(result_full, mode, r_scale=1, i_scale=1):
 
 def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95, 
                                normalize_1_by = None, normalize_2_by = 2*np.pi, 
-                               med_min = 1e-3, weight_1 = 1, weight_2 = 1.5):
+                               med_min = 1e-3, weight_1 = 1, weight_2 = 1.5,
+                               return_median = False):
     if len(arr1) != len(arr2):
         raise Exception("The length of the two arrays do not match")
     nan_tol = 1 - quantile_range
@@ -608,8 +609,60 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95,
             fluc_least_indx = i
             # hi1_best, low1_best, med1_best, normalize1_best, fluc1_best, hi2_best, low2_best, med2_best, normalize2_best, fluc2_best = (hi1, low1, med1, normalize1, fluc1, hi2, low2, med2, normalize2, fluc2)
     # print(hi1_best, low1_best, med1_best, normalize1_best, fluc1_best, hi2_best, low2_best, med2_best, normalize2_best, fluc2_best)
+    if return_median:
+        return (fluc_least_indx, fluc_least,
+                 np.nanquantile(arr1[fluc_least_indx:fluc_least_indx+length], 0.5), 
+                 np.nanquantile(arr2[fluc_least_indx:fluc_least_indx+length], 0.5))
     return fluc_least_indx, fluc_least
-    
+
+
+def start_of_flat_region(length, arr1, arr2, quantile_range = 0.95, 
+                               normalize_1_by = None, normalize_2_by = 2*np.pi, 
+                               med_min = 1e-3, weight_1 = 1, weight_2 = 1.5,
+                               fluc_tol = 0.1):
+    if len(arr1) != len(arr2):
+        raise Exception("The length of the two arrays do not match")
+    nan_tol = 1 - quantile_range
+    total_length = len(arr1)
+    quantile_low = (1 - quantile_range)/2
+    quantile_hi = 1 - quantile_low
+    for i in range(total_length - length):
+        arr1_in_range = arr1[i:i+length]
+        arr2_in_range = arr2[i:i+length]
+        if length > 0:
+            arr1_nan_frac = np.sum(np.isnan(arr1_in_range))/length
+            arr2_nan_frac = np.sum(np.isnan(arr2_in_range))/length
+        else:
+            arr1_nan_frac = 1
+            arr2_nan_frac = 1
+        quantile_adj = min(arr1_nan_frac/2, nan_tol/2)
+        hi1 = np.nanquantile(arr1_in_range,min(1, quantile_hi+quantile_adj))
+        low1 = np.nanquantile(arr1_in_range,max(0, quantile_low-quantile_adj))
+        med1 = max(np.nanquantile(arr1_in_range, 0.5), med_min)
+        if normalize_1_by is None:
+            normalize1 = med1
+        else:
+            normalize1 = normalize_1_by
+        fluc1 = (hi1 - low1)/normalize1
+        
+        hi2 = np.nanquantile(arr2_in_range,min(1, quantile_hi+quantile_adj))
+        low2 = np.nanquantile(arr2_in_range,max(0, quantile_low-quantile_adj))
+        med2 = max(np.nanquantile(arr2_in_range, 0.5), med_min)
+        if normalize_2_by is None:
+            normalize2 = med2
+        else:
+            normalize2 = normalize_2_by
+        fluc2 = (hi2 - low2)/normalize2
+        
+        fluc = np.sqrt((fluc1*weight_1)**2 + (fluc2*weight_2)**2)
+        
+        if fluc < fluc_tol and arr1_nan_frac < nan_tol:
+            start_flat_indx = i
+            return start_flat_indx
+            # hi1_best, low1_best, med1_best, normalize1_best, fluc1_best, hi2_best, low2_best, med2_best, normalize2_best, fluc2_best = (hi1, low1, med1, normalize1, fluc1, hi2, low2, med2, normalize2, fluc2)
+    # print(hi1_best, low1_best, med1_best, normalize1_best, fluc1_best, hi2_best, low2_best, med2_best, normalize2_best, fluc2_best)
+    return np.nan
+
 
 def eff_mode_search(inject_params, runname, retro = False, load_pickle = True, delay = True,
                      **kwargs):

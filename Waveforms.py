@@ -63,6 +63,16 @@ def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1 = 120):
         retro = True
     return h, Mf, af, Level, retro
 
+def get_M_a_SXS(SXSnum, res=0):
+    catalog = sxs.catalog.Catalog.load()
+    metaloadname = catalog.select(
+        f"SXS:BBH:{SXSnum}/Lev./metadata.json")[-1 + res]
+    metadata = sxs.load(metaloadname)
+    Mf = metadata['remnant_mass']
+    a_arr = metadata['remnant_dimensionless_spin']
+    af = np.linalg.norm(a_arr)
+    return Mf, af
+
 
 def get_SXS_waveform_dict(SXSnum, res=0, N_ext=2):
     catalog = sxs.catalog.Catalog.load()
@@ -398,8 +408,8 @@ def mismatch_dphi_dt(dphi_dt, t1, h1, t2, h2, tnum = 2000):
     h2_shift = h2*np.exp(1.j*dphi)
     return compute_mismatch(t1, h1, t2_shift, h2_shift, tnum = tnum)
 
-def mismatch_min_phase(t1, h1, t2, h2, tnum = 2000):
-    res = minimize(mismatch_dphi_dt, x0 = [0, 0], args=(t1, h1, t2, h2),
+def mismatch_min_phase(t1, h1, t2, h2, guess = [0, 0], tnum = 2000):
+    res = minimize(mismatch_dphi_dt, x0 = guess, args=(t1, h1, t2, h2),
                    method = 'Nelder-Mead', tol = 1e-13)
     return res
 
@@ -411,6 +421,7 @@ def estimate_resolution_mismatch(SXS_num, l, m, t0s = np.linspace(0, 50, num = 5
 
     mismatches = []
     res = None
+    guess = [0, 0]
     for t0 in t0s:
         t_hi_adj, h_hi_adj_r, h_hi_adj_i = h_hi.postmerger(t0)
         t_low_adj, h_low_adj_r, h_low_adj_i = h_low.postmerger(t0 - 5)
@@ -420,7 +431,8 @@ def estimate_resolution_mismatch(SXS_num, l, m, t0s = np.linspace(0, 50, num = 5
             res = mismatch_min_phase(t_hi_adj[:-remove_end-1],
                                     h_hi_adj[:-remove_end-1], 
                                     t_low_adj, 
-                                    h_low_adj)
+                                    h_low_adj,
+                                    guess = guess)
             mismatches.append(res.fun)
             dphi = res.x[0]
             dt = res.x[1]
