@@ -869,7 +869,7 @@ class QNMFitVaryingStartingTime:
         self.jcf = jcf
         self.fit_kwargs = fit_kwargs
         self.initial_num = initial_num
-        self.random_initial = (random_initial and not self.var_M_a)
+        self.random_initial = (random_initial and not self.var_M_a and self.N_free != 0)
         self.initial_dict = initial_dict
         self.A_guess_relative = A_guess_relative
         self.set_seed = set_seed
