@@ -11,6 +11,14 @@ from numpy.random import default_rng
 from scipy.optimize import minimize
 rng = default_rng(seed=1234)
 
+import h5py
+import json
+
+import os
+
+ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+
+_CCE_radext_list = [292, 261, 250, 236, 274, 273, 270, 305, 270, 235, 222, 223, 237]
 
 class waveform:
 
@@ -63,6 +71,25 @@ def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1 = 120):
         retro = True
     return h, Mf, af, Level, retro
 
+def get_waveform_CCE(CCEnum, l, m, Lev = 5, t1 = 120):
+    dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
+    metapath = os.path.join(ROOT_PATH, f"CCE_waveforms/{CCEnum}/Lev{Lev}/metadata.json")
+    radext = _CCE_radext_list[int(CCEnum) - 1]
+    filepath = os.path.join(dir, f"{CCEnum}_hdict_radext_{radext}_Lev_{Lev}.h")
+    h5file = h5py.File(filepath)
+    keys = list(h5file['hdict'].keys())
+    hdict = {}
+    for key in keys:
+        hdict[key] = h5file['hdict'][key][()]
+    retro = False
+    with open(metapath) as f:
+        metadata = json.load(f)
+    Mf = metadata['remnant_mass']
+    af = np.linalg.norm(metadata['remnant_dimensionless_spin'])
+    h_time, h_r, h_i = tuple(hdict[f"{l},{m}"])
+    h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t1=t1)
+    return h, Mf, af, Lev, retro
+
 def get_M_a_SXS(SXSnum, res=0):
     catalog = sxs.catalog.Catalog.load()
     metaloadname = catalog.select(
@@ -101,6 +128,22 @@ def get_SXS_waveform_dict(SXSnum, res=0, N_ext=2):
         retro = True
     return Mf, af, Level, hdict, retro
 
+def get_CCE_waveform_dict(CCEnum, Lev = 5):
+    dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
+    metapath = os.path.join(ROOT_PATH, f"CCE_waveforms/{CCEnum}/Lev{Lev}/metadata.json")
+    radext = _CCE_radext_list[int(CCEnum) - 1]
+    filepath = os.path.join(dir, f"{CCEnum}_hdict_radext_{radext}_Lev_{Lev}.h")
+    h5file = h5py.File(filepath)
+    keys = list(h5file['hdict'].keys())
+    hdict = {}
+    for key in keys:
+        hdict[key] = h5file['hdict'][key][()]
+    retro = False
+    with open(metapath) as f:
+        metadata = json.load(f)
+    Mf = metadata['remnant_mass']
+    af = np.linalg.norm(metadata['remnant_dimensionless_spin'])
+    return Mf, af, Lev, hdict, retro
 
 def waveformabsmax(time, hr, hi, startcut=500):
     startindx = bisect_left(time, startcut)
@@ -148,9 +191,13 @@ def get_relevant_lm_waveforms_SXS(
         includem0=True,
         t1 = 120,
         res=0,
-        N_ext=2):
-    Mf, af, Level, hdict, retro = get_SXS_waveform_dict(SXSnum, res=res, N_ext=N_ext)
-    if (int(SXSnum) < 305) and (not force_early_sim):
+        N_ext=2,
+        CCE = False):
+    if CCE:
+        Mf, af, Level, hdict, retro = get_CCE_waveform_dict(SXSnum)
+    else:
+        Mf, af, Level, hdict, retro = get_SXS_waveform_dict(SXSnum, res=res, N_ext=N_ext)
+    if (int(SXSnum) < 305) and (not force_early_sim) and (not CCE):
         tol_force = tol
     relevant_lm_list = getdommodes(
         hdict, tol=tol, prec=prec, includem0=includem0, tol_force = tol_force)
@@ -162,7 +209,6 @@ def get_relevant_lm_waveforms_SXS(
         h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t1=t1)
         waveform_dict[f"{l}.{m}"] = h
     return waveform_dict, retro
-
 
 def lm_string_list_to_tuple(lm_string_list):
     tuple_list = []

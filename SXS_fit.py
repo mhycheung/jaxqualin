@@ -21,8 +21,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('SXS_num')
 parser.add_argument('setting_name')
 parser.add_argument('plot_name')
-parser.add_argument("-l", "--load-pickle", dest = "load_pickle", help="do not load pickle",
+parser.add_argument("-l", "--load-pickle", dest = "load_pickle", help="load pickle",
                     action='store_true')
+parser.add_argument("-ml", "--mode-searcher-load-pickle", dest = "mode_searcher_load_pickle", help="load pickle for mode searcher",
+                    action='store_true')
+parser.add_argument("-cce", dest = "CCE", help="use CCE", action = 'store_true')
 
 args = parser.parse_args()
 
@@ -30,6 +33,8 @@ SXS_num = args.SXS_num
 setting_name = args.setting_name
 plot_name = args.plot_name
 load_pickle = args.load_pickle
+mode_searcher_load_pickle = args.mode_searcher_load_pickle
+CCE = args.CCE
 
 config_file_path = os.path.join(CONFIG_PATH, f"{setting_name}.ini")
 config = configparser.ConfigParser()
@@ -48,11 +53,13 @@ for key in mode_searcher_kwargs:
     mode_searcher_kwargs[key] = eval(mode_searcher_kwargs[key])
 
 kwargs.update(flatness_checker_kwargs = flatness_checker_kwargs,
-               mode_searcher_kwargs = mode_searcher_kwargs)
+               mode_searcher_kwargs = mode_searcher_kwargs,
+               CCE = CCE)
     
 mode_search_complete = ModeSearchAllFreeVaryingNSXSAllRelevant(
                                                     SXS_num, 
                                                     load_pickle = load_pickle, 
+                                                    mode_searcher_load_pickle = mode_searcher_load_pickle,
                                                     postfix_string = setting_name,
                                                     pickle_in_scratch = True,
                                                     **kwargs

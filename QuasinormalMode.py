@@ -16,6 +16,7 @@ class mode_free:
         if lmnx != "constant":
             if isinstance(lmnx, str):
                 lmnx = str_to_lmnx(lmnx)
+                self.lmnx_retro = str_to_lmnx(self.lmnx_retro)
             for lmn in lmnx:
                 l, m, n = tuple(lmn)
                 if l < 0:
@@ -60,11 +61,11 @@ class mode_free:
     def string(self):
         if self.lmnx == "constant":
             return "constant"
-        _lmnstrings = []
-        for _lmn in self.lmnx_retro:
-            _l, _m, _n = tuple(_lmn)
-            _lmnstrings.append(f"{_l}.{_m}.{_n}")
-        return 'x'.join(_lmnstrings)
+        lmnstrings = []
+        for lmn in self.lmnx_retro:
+            l, m, n = tuple(lmn)
+            lmnstrings.append(f"{l}.{m}.{n}")
+        return 'x'.join(lmnstrings)
 
     def tex_string(self):
         if self.lmnx == "constant":
@@ -114,7 +115,25 @@ class mode(mode_free):
         self.a = a
         self.retro = retro
 
-
+def tex_string_physical_notation(mode):
+    if mode.lmnx == "constant":
+        return r"constant"
+    lmnstrings = []
+    for lmn in mode.lmnx_retro:
+        l, m, n = tuple(lmn)
+        if l < 0:
+            lmnstrings.append(f"{-l}.{-m}.{n}")
+        elif m < 0:
+            lmnstrings.append(f"r{l}.{-m}.{n}")
+        else:
+            lmnstrings.append(f"{l}.{m}.{n}")
+    lmnx_string = 'x'.join(lmnstrings)
+    _string_raw = '$' + lmnx_string + '$'
+    _string = _string_raw.replace('99', '0')
+    _tex_string = _string.replace('x', r" \! \times \! ")
+    _tex_string = _tex_string.replace('-', r" \! - \! ")
+    _tex_string = _tex_string.replace('.', r"{,}")
+    return _tex_string
 
 def str_to_lmnx(lmnxstring):
     if lmnxstring == "constant":
@@ -190,6 +209,13 @@ def qnms_to_tex_string(qnms):
     return string_list
 
 
+def qnms_to_tex_string_physical_notation(qnms):
+    string_list = []
+    for qnm in qnms:
+        string_list.append(tex_string_physical_notation(qnm))
+    return string_list
+
+
 def qnms_to_lmnxs(qnms):
     lmnxs_list = []
     for qnm in qnms:
@@ -234,7 +260,7 @@ def fix_modes(qnms_free_list, M, a):
 
 
 def potential_modes(l, m, M, a, relevant_lm_list, retro = False, recoil_n_max = 0,
-                    return_lmnx = False):
+                    return_lmnx = False, include_r220 = True, include_constant = True):
     potential_lmnx_list = []
     potential_lmnx_list.extend(overtone_modes(l, m, retro = retro))
     potential_lmnx_list.extend(spheroidal_mixing_modes(l, m, retro = retro))
@@ -257,7 +283,10 @@ def potential_modes(l, m, M, a, relevant_lm_list, retro = False, recoil_n_max = 
                 potential_lmnx_list.append(lmnx_pos)
     
     potential_mode_strings = lmnxs_to_string(potential_lmnx_list)
-    potential_mode_strings.append("constant")
+    if include_constant:
+        potential_mode_strings.append("constant")
+    if include_r220:
+        potential_mode_strings.append("-2.2.0")
 
     if return_lmnx:
         return potential_mode_strings

@@ -115,7 +115,8 @@ def plot_predicted_qnms(
         present_modes = [],
         present_modes_retro = [],
         edgecolor_present = 'k',
-        expand_points = (1.1, 1.7)):
+        expand_points = (1.1, 1.7),
+        physical_notation = True):
     ax.axvline(0, color='gray', ls='--')
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
@@ -159,9 +160,13 @@ def plot_predicted_qnms(
             transform = ax.transData.transform((omegar, mode.omegai))
             mode_ax_coord = ax.transAxes.inverted().transform(transform)
             label_ax_coord = mode_ax_coord + label_offset
+            if physical_notation:
+                tex_string = tex_string_physical_notation(mode)
+            else:
+                tex_string = mode.tex_string()
             text = ax.text(
                         *label_ax_coord,
-                        retro_string + mode.tex_string(),
+                        retro_string + tex_string,
                         color=edgecolor_adj,
                         transform=ax.transAxes,
                         horizontalalignment="center",
@@ -179,7 +184,7 @@ def plot_predicted_qnms(
             omegar = mode.omegar
         if xmin < omegar < xmax and ymax < mode.omegai < ymin:  # remember that y-axis is flipped
             ells.append(Ellipse(xy = (omegar, mode.omegai),
-                     width = ellipse_x, height = ellipse_y,
+                     width = 2*ellipse_x, height = 2*ellipse_y,
                      fill = True, 
                      facecolor = ellipse_facecolor,
                      edgecolor = ellipse_edgecolor,
@@ -266,7 +271,7 @@ def plot_M_a(
 def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True,
                     legend = True, color_dict = {}, lw = 2, bold_dict = {}, lw_bold = 4, alpha_bold = 1,
                     t_flat_start_dict = {}, flat_start_s = 20, flat_start_marker = 'o', plot_retro_pred = False,
-                    iota = None, af = None, phi = 0):
+                    iota = None, af = None, phi = 0, A_fac = 1, physical_notation = True):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -274,7 +279,10 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-"
     A_free_dict = results_full.A_free_dict
     t0_arr = results_full.t0_arr
     if fixed_modes is not None:
-        fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
+        if physical_notation:
+            fixed_mode_string_tex_list = qnms_to_tex_string_physical_notation(fixed_modes)
+        else:
+            fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
                 lmnx = fixed_modes[i].lmnx_retro
@@ -286,7 +294,7 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-"
                     label = fixed_mode_string_tex_list[i]
                 else:
                     label = None
-                ax.semilogy(t0_arr, np.abs(A_fix_dict[f"A_{fixed_mode_string}"]), 
+                ax.semilogy(t0_arr, A_fac*np.abs(A_fix_dict[f"A_{fixed_mode_string}"]), 
                             lw=lw, label=label, c = color,
                             alpha = alpha, ls = ls)
                 if len(lmnx) == 1 and plot_retro_pred:
@@ -294,13 +302,13 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-"
                         if l > 0:
                             S_fac = S_retro_fac(iota, af, 
                                                 l, m, n, phi = phi)
-                            ax.semilogy(t0_arr, np.abs(A_fix_dict[f"A_{fixed_mode_string}"])*np.abs(S_fac), 
+                            ax.semilogy(t0_arr, A_fac*np.abs(A_fix_dict[f"A_{fixed_mode_string}"])*np.abs(S_fac), 
                             lw=lw*0.7,c = color,
                             alpha = alpha, ls = '--')
                 if fixed_mode_string in bold_dict:
                     start_i, end_i = bold_dict[fixed_mode_string]
                     ax.semilogy(t0_arr[start_i:end_i], 
-                                np.abs(A_fix_dict[f"A_{fixed_mode_string}"])[start_i:end_i], 
+                                A_fac*np.abs(A_fix_dict[f"A_{fixed_mode_string}"])[start_i:end_i], 
                                 lw=lw_bold, c = color,
                                 label = fixed_mode_string_tex_list[i],
                                 alpha = alpha_bold, ls = ls)
@@ -308,10 +316,10 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-"
                 if fixed_mode_string in t_flat_start_dict:
                     t_flat_start = t_flat_start_dict[fixed_mode_string]
                     idx = np.argmin(np.abs(t0_arr - t_flat_start))
-                    ax.scatter(t0_arr[idx], np.abs(A_fix_dict[f"A_{fixed_mode_string}"])[idx],
+                    ax.scatter(t0_arr[idx], A_fac*np.abs(A_fix_dict[f"A_{fixed_mode_string}"])[idx],
                                c = color, s = flat_start_s, marker = flat_start_marker)
     for A in list(A_free_dict.values()):
-        ax.semilogy(t0_arr, np.abs(A), lw=lw, c = f"C{colori}", alpha = alpha, ls = ls)
+        ax.semilogy(t0_arr, A_fac*np.abs(A), lw=lw, c = f"C{colori}", alpha = alpha, ls = ls)
         colori += 1
     if fixed_modes is not None and use_label:
         if legend:
@@ -323,7 +331,7 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-"
     ax.set_ylabel(r"$A$")
     
 def plot_amplitudes_unadj(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True,
-                          legend = True):
+                          legend = True, physical_notation = True):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -331,7 +339,10 @@ def plot_amplitudes_unadj(results_full, fixed_modes=None, ax=None, alpha = 1, ls
     A_free_dict = results_full.A_free_dict
     t0_arr = results_full.t0_arr
     if fixed_modes is not None:
-        fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
+        if physical_notation:
+            fixed_mode_string_tex_list = qnms_to_tex_string_physical_notation(fixed_modes)
+        else:
+            fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
                 if use_label:
@@ -360,7 +371,8 @@ def plot_phases(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-",
                 legend = True, color_dict = {}, lw = 2, bold_dict = {}, 
                 lw_bold = 4, alpha_bold = 1,
                 t_flat_start_dict = {}, flat_start_s = 20, flat_start_marker = 'o',
-                plot_retro_pred = False, iota = None, af = None, phi = 0):
+                plot_retro_pred = False, iota = None, af = None, phi = 0,
+                physical_notation = True):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -370,7 +382,10 @@ def plot_phases(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-",
     A_free_dict = results_full.A_free_dict
     t0_arr = results_full.t0_arr
     if fixed_modes is not None:
-        fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
+        if physical_notation:
+            fixed_mode_string_tex_list = qnms_to_tex_string_physical_notation(fixed_modes)
+        else:
+            fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
             lmnx = fixed_modes[i].lmnx_retro
@@ -835,3 +850,25 @@ def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
 
     if return_sc:
         return sc
+
+def plot_mode_vs_mode_amplitude_quad_ratio(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
+                                l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
+                                fig = None, ax = None, colorbar = True, return_sc = False):
+    df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) | 
+              ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
+    df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
+              ((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_retro_2)& (df["retro"] == True))]
+    df_merged = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2"))
+    xerr_low = df_merged["A_med_2"]-df_merged["A_low_2"]
+    xerr_hi = df_merged["A_hi_2"]-df_merged["A_med_2"]
+    yerr_low = df_merged["A_med_1"]-df_merged["A_low_1"]
+    yerr_hi = df_merged["A_hi_1"]-df_merged["A_med_1"]
+    xs = df_merged["A_med_2"]*df_merged["M_rem_1"]
+    ys = df_merged["A_med_1"]*df_merged["M_rem_1"]
+    chis = df_merged["chi_rem_1"]
+    ratio = ys/xs**2
+    ratio_err = ratio*np.sqrt((yerr_low/ys)**2+(2*xerr_low/xs)**2)
+    
+    if ax == None:
+        fig, ax = plt.subplots(figsize = (8,5))
+    ax.errorbar(chis, ratio, yerr = ratio_err, fmt = "o")

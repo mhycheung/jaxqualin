@@ -30,6 +30,7 @@ class IterativeFlatnessChecker:
                   "confusion_tol": 0.03, "quantile_range": 0.95,
                   "med_min" : 1e-3,
                   "weight_1": 1.0, "weight_2": 1.5,
+                  "CCE" : False
                   }
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
@@ -42,6 +43,7 @@ class IterativeFlatnessChecker:
         self.med_min = self.kwargs["med_min"]
         self.weight_1 = self.kwargs["weight_1"]
         self.weight_2 = self.kwargs["weight_2"]
+        self.CCE = self.kwargs["CCE"]
         
         self.retro = self.kwargs["retro"]
         self.load_pickle = self.kwargs["load_pickle"]
@@ -62,6 +64,11 @@ class IterativeFlatnessChecker:
         i = 0
         _discard_mode = True
         _more_than_one_mode = True
+        if self.CCE:
+            skip_i_init = 10
+        else:
+            skip_i_init = 1
+
         while _discard_mode and _more_than_one_mode:
             self.fitter_list.append(QNMFitVaryingStartingTime(
                     self.h,
@@ -69,7 +76,8 @@ class IterativeFlatnessChecker:
                     0,
                     _current_modes,
                     run_string_prefix=self.run_string_prefix,
-                    load_pickle = self.load_pickle))
+                    load_pickle = self.load_pickle,
+                    skip_i_init = skip_i_init))
             _current_modes_string = qnms_to_string(_current_modes)
             _fund_mode_indx = _current_modes_string.index(_fund_mode_string)
             _fitter = self.fitter_list[i]
@@ -78,9 +86,25 @@ class IterativeFlatnessChecker:
             _fluc_least_indx_list = []
             _fluc_least_list = []
             _fluc_least_indx_list = []
+            result_full = _fitter.result_full
+            _popt_full = result_full.popt_full
+
+            collapsed = np.full(_popt_full.shape[1], False)
+
+            if self.CCE:
+                collapse_n = 10
+            else:
+                collapse_n = 1
+
+            for kk in range(_popt_full.shape[1]-collapse_n):
+                diff = _popt_full[:,kk+collapse_n] - _popt_full[:,kk] 
+                collapsed[kk+collapse_n] = np.all(np.abs(diff) < 1e-15)
+
             for j in range(len(_current_modes)):
-                _A_fix_j_arr = np.abs(list(_fitter.result_full.A_fix_dict["A_" + _current_modes_string[j]]))
-                _phi_fix_j_arr = list(_fitter.result_full.phi_fix_dict["phi_" + _current_modes_string[j]])
+                _A_fix_j_arr = np.array(np.abs(list(_fitter.result_full.A_fix_dict["A_" + _current_modes_string[j]])))
+                _A_fix_j_arr = np.where(collapsed, np.nan, _A_fix_j_arr)
+                _phi_fix_j_arr = np.array(list(_fitter.result_full.phi_fix_dict["phi_" + _current_modes_string[j]]))
+                _phi_fix_j_arr = np.where(collapsed, np.nan, _phi_fix_j_arr)
                 _fluc_least_indx, _fluc_least = flattest_region_quadrature(
                     self.flatness_length,
                     _A_fix_j_arr, _phi_fix_j_arr, 
@@ -105,11 +129,15 @@ class IterativeFlatnessChecker:
             worst_l, worst_m = worst_mode.sum_lm()
             sacrifice_mode = False
             sacrifice_fluc = 0
-            if worst_mode.is_overtone() and worst_l == self.l and worst_m == self.m:
+            # if worst_mode.is_overtone() and worst_l == self.l and worst_m == self.m:
+            if worst_l == self.l and np.abs(worst_m) == np.abs(self.m):
                 for jj in bad_mode_indx_list:
                     if jj == _worst_mode_indx:
                         continue
                     bad_mode = _current_modes[jj]
+                    bad_mode_l, bad_mode_m = bad_mode.sum_lm()
+                    if bad_mode_l == self.l and np.abs(bad_mode_m) == np.abs(self.m):
+                        continue
                     if np.abs(bad_mode.omega - worst_mode.omega) < self.confusion_tol:
                         sacrifice_mode = True
                         if _fluc_least_list[jj] > sacrifice_fluc:
@@ -119,7 +147,7 @@ class IterativeFlatnessChecker:
             if _discard_mode:
                 if sacrifice_mode:
                     print(f"Although the {_current_modes[_worst_mode_indx].string()} mode fluctuates the most, "
-                           "the {_current_modes[sacrifice_mode_indx].string()} mode is sacrificed instead.")
+                           f"the {_current_modes[sacrifice_mode_indx].string()} mode is sacrificed instead.")
                     del _current_modes[sacrifice_mode_indx]
                 else:
                     print(f"discarding {_current_modes[_worst_mode_indx].string()} mode because it failed flatness test.")
@@ -138,7 +166,8 @@ class ModeSelectorAllFree:
             omega_r_tol=0.05,
             omega_i_tol=0.05,
             t_tol=10,
-            fraction_tol=0.95):
+            fraction_tol=0.95,
+            N_max = 10):
         self.result_full = result_full
         self.potential_mode_list = potential_mode_list
         self.omega_r_tol = omega_r_tol
@@ -147,8 +176,10 @@ class ModeSelectorAllFree:
         self.fraction_tol = fraction_tol
         self.passed_mode_list = []
         self.passed_mode_indx = []
+        self.N_max = N_max
 
     def select_modes(self):
+        t_approach_duration_list = []
         for i, _mode in enumerate(self.potential_mode_list):
             min_distance = closest_free_mode_distance(self.result_full, _mode,
                                                       r_scale=self.omega_r_tol,
@@ -156,9 +187,17 @@ class ModeSelectorAllFree:
             _start_indx, _end_indx = max_consecutive_trues(
                 min_distance < 1, tol=self.fraction_tol)
             _t0_arr = self.result_full.t0_arr
-            if _t0_arr[_end_indx] - _t0_arr[_start_indx] > self.t_tol:
+            t_approach_duration = _t0_arr[_end_indx] - _t0_arr[_start_indx]
+            if t_approach_duration > self.t_tol:
                 self.passed_mode_list.append(_mode)
                 self.passed_mode_indx.append(i)
+                t_approach_duration_list.append(t_approach_duration)
+        while len(self.passed_mode_list) > self.N_max:
+            del_indx = t_approach_duration_list.index(min(t_approach_duration_list))
+            del self.passed_mode_list[del_indx]
+            del self.passed_mode_indx[del_indx]
+            del t_approach_duration_list[del_indx]
+
 
     def do_selection(self):
         self.select_modes()
@@ -243,7 +282,7 @@ class ModeSearchAllFreeLM:
             self.full_fit.do_fits()
             self.mode_selector = ModeSelectorAllFree(
                 self.full_fit.result_full, self.potential_modes, omega_r_tol = self.omega_r_tol,
-                omega_i_tol=self.omega_i_tol, t_tol=self.t_tol, fraction_tol=self.fraction_tol)
+                omega_i_tol=self.omega_i_tol, t_tol=self.t_tol, fraction_tol=self.fraction_tol, N_max = _N)
             self.mode_selector.do_selection()
             print(qnms_to_string(self.mode_selector.passed_mode_list))
             _jump_mode_indx = []
@@ -341,7 +380,8 @@ class ModeSearchAllFreeVaryingN:
         self.t0_arr = t0_arr
         kwargs = {'run_string_prefix' : 'Default',
                   'load_pickle' : True,
-                  'N_list' : [5, 6, 7, 8, 9, 10]}
+                  'N_list' : [5, 6, 7, 8, 9, 10],
+                  'CCE' : False}
         kwargs.update(kwargs_in)
         self.N_list = kwargs['N_list']
         self.kwargs = kwargs
@@ -352,6 +392,7 @@ class ModeSearchAllFreeVaryingN:
         self.found_modes_final = []
         self.run_string_prefix = kwargs["run_string_prefix"]
         self.load_pickle = self.kwargs["load_pickle"]
+        self.CCE = self.kwargs["CCE"]
 
     def init_searchers(self):
         for _N_init in self.N_list:
@@ -369,6 +410,10 @@ class ModeSearchAllFreeVaryingN:
     def do_mode_searches(self):
         self.fixed_fitters = []
         self.flatness_checkers = []
+        if self.CCE:
+            skip_i_init = 10
+        else:
+            skip_i_init = 1
         for i, _mode_searcher in enumerate(self.mode_searchers):
             _mode_searcher.do_mode_search()
             self.flatness_checkers.append(IterativeFlatnessChecker(self.h, self.t0_arr, self.M, self.a, self.l, self.m,
@@ -383,7 +428,8 @@ class ModeSearchAllFreeVaryingN:
                     0,
                     qnm_fixed_list=_flatness_checker.found_modes_screened,
                     run_string_prefix=self.run_string_prefix,
-                    load_pickle = self.load_pickle))
+                    load_pickle = self.load_pickle,
+                    skip_i_init = skip_i_init))
             self.fixed_fitters[i].do_fits()
             if len(_mode_searcher.found_modes) >= len(self.found_modes_final):
                 self.best_run_indx = i
@@ -411,10 +457,12 @@ class ModeSearchAllFreeVaryingNSXS:
                   'postfix_string' : '',
                   'pickle_in_scratch' : False,
                   'set_seed_SXS' : True,
-                  'default_seed' : 1234}
+                  'default_seed' : 1234,
+                  'CCE' : False}
         kwargs.update(kwargs_in)
         self.N_list = kwargs['N_list']
         self.postfix_string = kwargs['postfix_string']
+        self.CCE = kwargs['CCE']
         self.kwargs = kwargs
         self.get_waveform()
         self.N_list_string = '_'.join(list(map(str, self.N_list)))
@@ -453,12 +501,16 @@ class ModeSearchAllFreeVaryingNSXS:
         self.pickle_save()
 
     def get_waveform(self):
-        _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum)
+        _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum, CCE = self.CCE)
         self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
             _relevant_modes_dict)
         peaktime_dom = list(_relevant_modes_dict.values())[0].peaktime
-        self.h, self.M, self.a, self.Lev, _retro = get_waveform_SXS(
-            self.SXSnum, self.l, self.m)
+        if self.CCE:
+            self.h, self.M, self.a, self.Lev, _retro = get_waveform_CCE(
+                self.SXSnum, self.l, self.m)
+        else:
+            self.h, self.M, self.a, self.Lev, _retro = get_waveform_SXS(
+                self.SXSnum, self.l, self.m)
         self.h.update_peaktime(peaktime_dom)
 
     def pickle_save(self):
@@ -485,20 +537,24 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
         self.SXSnum = SXSnum
         self.t0_arr = t0_arr
         kwargs = {'load_pickle' : True,
+                  'mode_searcher_load_pickle' : True,
                   'N_list' : [5, 6, 7, 8, 9, 10],
-                  'postfix_string' : ''}
+                  'postfix_string' : '',
+                  'CCE' : False}
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
         self.load_pickle = kwargs['load_pickle']
+        self.mode_searcher_load_pickle = kwargs['mode_searcher_load_pickle']
         self.N_list = kwargs['N_list']
         self.postfix_string = kwargs['postfix_string']
+        self.CCE = kwargs['CCE']
         self.get_relevant_lm_list()
         self.get_relevant_lm_mode_searcher_varying_N()
 
     def do_all_searches(self):
         for _i, _searcher in enumerate(
                 self.relevant_lm_mode_searcher_varying_N):
-            if _searcher.pickle_exists() and self.load_pickle:
+            if _searcher.pickle_exists() and self.load_pickle and self.mode_searcher_load_pickle:
                 _file_path = _searcher.file_path
                 with open(_file_path, "rb") as f:
                     self.relevant_lm_mode_searcher_varying_N[_i] = pickle.load(
@@ -510,7 +566,7 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
                 )
 
     def get_relevant_lm_list(self):
-        _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum)
+        _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum, CCE = self.CCE)
         self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
             _relevant_modes_dict)
 
@@ -518,7 +574,10 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
         self.relevant_lm_mode_searcher_varying_N = []
         for _lm in self.relevant_lm_list:
             _l, _m = _lm
-            _run_string_prefix = f"SXS{self.SXSnum}_lm_{_l}.{_m}"
+            if self.CCE:
+                _run_string_prefix = f"CCE{self.SXSnum}_lm_{_l}.{_m}"
+            else:
+                _run_string_prefix = f"SXS{self.SXSnum}_lm_{_l}.{_m}"
             # if self.postfix_string != '':
             #     _run_string_prefix += self.postfix_string
             self.relevant_lm_mode_searcher_varying_N. append(

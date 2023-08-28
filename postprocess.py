@@ -90,15 +90,20 @@ def create_data_frame(SXS_num_list, df_save_prefix="default", **kwargs):
                                "A_med", "A_hi", "A_low",
                                "phi_med", "phi_hi", "phi_low", "t_flat_start"])
     df = df.astype({"retro": bool})
+    failed_list = []
     for SXS_num in SXS_num_list:
-        mode_search_complete = ModeSearchAllFreeVaryingNSXSAllRelevant(str(SXS_num),
-                                                                       load_pickle=True,
-                                                                       **kwargs
-                                                                       )
-        mode_search_complete.do_all_searches()
-        df = append_A_and_phis_all_lm(mode_search_complete, df)
+        try:
+            mode_search_complete = ModeSearchAllFreeVaryingNSXSAllRelevant(str(SXS_num),
+                                                                        load_pickle=True,
+                                                                        **kwargs
+                                                                        )
+            mode_search_complete.do_all_searches()
+            df = append_A_and_phis_all_lm(mode_search_complete, df)
+        except:
+            failed_list.append(SXS_num)
     file_path = os.path.join(DF_SAVE_PATH, f"{df_save_prefix}.csv")
     df.to_csv(file_path)
+    print("failed runs: ", failed_list)
 
 
 def create_data_frame_eff(eff_num_list, batch_runname, l=0, m=0, df_save_prefix="eff_default", **kwargs):
@@ -233,6 +238,19 @@ def sym_mass_ratio(row):
     q = row['q']
     return q/(1 + q)**2
 
+def chi_p(row):
+    q = row['q']
+    chi_1 = row['chi_1_z']
+    chi_2 = row['chi_2_z']
+    return (q*chi_1 + chi_2) /(1+q)
+
+def chi_m(row):
+    q = row['q']
+    chi_1 = row['chi_1_z']
+    chi_2 = row['chi_2_z']
+    return (q*chi_1 - chi_2) /(1+q)
+
+
 def classify_modes(df):
     col_quad = df.apply(is_quadratic, axis = 1)
     col_fund = df.apply(is_fundamental, axis = 1)
@@ -242,7 +260,11 @@ def classify_modes(df):
     col_nat_l = df.apply(natural_l, axis = 1)
     col_nat_m = df.apply(natural_m, axis = 1)
     col_eta = df.apply(sym_mass_ratio, axis = 1)
+    col_chi_p = df.apply(chi_p, axis = 1)
+    col_chi_m = df.apply(chi_m, axis = 1)
     df = df.assign(eta=col_eta.values,
+                chi_p=col_chi_p.values,
+                chi_m=col_chi_m.values,
                 is_quadratic=col_quad.values,
                 is_fundamental=col_fund.values,
                 is_overtone=col_over.values,
@@ -272,12 +294,25 @@ def df_get_mode(df, l, m, mode_string_pro, include_retro = True):
     return df_mode
     
 
-def df_get_mode_3D(df, l, m, mode_string_pro, include_retro=True, eta = True):
+def df_get_mode_3D(df, l, m, mode_string_pro, include_retro=True, eta = True, PN_quantities = True, SXS_screen = [], chi_low = 0., chi_hi = 1.):
     df_mode = df_get_mode(df, l, m, mode_string_pro, include_retro = include_retro)
-    if eta:
-        return df_mode[['chi_1_z', 'chi_2_z', 'eta', 'A_med']]
+    df_mode = df_mode[~df_mode['SXS_num'].isin(SXS_screen)]
+    df_mode = df_mode[df_mode['chi_rem'] >= chi_low]
+    df_mode = df_mode[df_mode['chi_rem'] <= chi_hi]
+    if PN_quantities:
+        return df_mode[['SXS_num', 'chi_p', 'chi_m', 'eta', 'A_med']]
+    elif eta:
+        return df_mode[['SXS_num', 'chi_1_z', 'chi_2_z', 'eta', 'A_med']]
     else:
-        return df_mode[['chi_1_z', 'chi_2_z', 'q', 'A_med']]
+        return df_mode[['SXS_num', 'chi_1_z', 'chi_2_z', 'q', 'A_med']]
+
+def df_get_mode_3D_full(df, l, m, mode_string_pro, include_retro=True, SXS_screen = [], chi_low = 0., chi_hi = 1.):
+    df_mode = df_get_mode(df, l, m, mode_string_pro, include_retro = include_retro)
+    df_mode = df_mode[~df_mode['SXS_num'].isin(SXS_screen)]
+    df_mode = df_mode[df_mode['chi_rem'] >= chi_low]
+    df_mode = df_mode[df_mode['chi_rem'] <= chi_hi]
+
+    return df_mode[['SXS_num', 'chi_p', 'chi_m', 'eta', 'chi_1_z', 'chi_2_z', 'q', 'A_med', 'A_low', 'A_hi', 'phi_med', 'phi_med_adj', 'phi_low', 'phi_hi', 'chi_rem', 't_flat_start']]
 
 def NP_quantities(x):
     chi_1, chi_2, q = tuple(x)

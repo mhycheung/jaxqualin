@@ -15,7 +15,8 @@ from jax.config import config
 config.update("jax_enable_x64", True)
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-FIT_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/fits")
+SCRATCH_PATH = "/expanse/lustre/scratch/mcheung1/temp_project/Ringdown/jaxqualin/"
+FIT_SAVE_PATH = os.path.join(SCRATCH_PATH, "pickle/fits")
 
 
 def qnm_fit_func_mirror_fixed(
@@ -831,7 +832,8 @@ class QNMFitVaryingStartingTime:
             include_mirror = False,
             iota = None,
             psi = None,
-            mirror_ignore_phase = True):
+            mirror_ignore_phase = True,
+            skip_i_init = 1):
         self.h = h
         if A_guess_relative:
             A_rel = np.abs(h.h[0])
@@ -887,6 +889,8 @@ class QNMFitVaryingStartingTime:
             self.mirror_ratio_list = self.get_mirror_ratio_list()
         else:
             self.mirror_ratio_list = None
+
+        self.skip_i_init = skip_i_init
 
     def get_mirror_ratio_list(self):
         self.mirror_ratio_list = []
@@ -1093,7 +1097,7 @@ class QNMFitVaryingStartingTime:
                             if skip_consect >= skip_i:
                                 skip_consect = 0
                                 if skip_i == 0:
-                                    skip_i = 1
+                                    skip_i = self.skip_i_init
                                 else:
                                     skip_i *= 2
                             skip_consect += 1
