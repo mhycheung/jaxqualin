@@ -32,6 +32,27 @@ class mode_free:
             self.lmnx = lmnx_actual
         else:
             self.lmnx = "constant"
+
+    def init_lmnx_retro(self):
+        lmnx = self.lmnx
+        self.lmnx_retro = lmnx
+        self.retro_mode_fac_x = []
+        lmnx_actual = []
+        if lmnx != "constant":
+            if isinstance(lmnx, str):
+                lmnx = str_to_lmnx(lmnx)
+                self.lmnx_retro = str_to_lmnx(self.lmnx_retro)
+            for lmn in lmnx:
+                l, m, n = tuple(lmn)
+                if l < 0:
+                    l = -l
+                    self.retro_mode_fac_x.append(-1)
+                else:
+                    self.retro_mode_fac_x.append(1)
+                lmnx_actual.append([l, m, n])
+                if m == -99:
+                    m = 0
+            self.lmnx = lmnx_actual
         
     def fix_mode(self, M, a, retro = False):
         if a > 0.99:
@@ -62,6 +83,8 @@ class mode_free:
         if self.lmnx == "constant":
             return "constant"
         lmnstrings = []
+        if not hasattr(self, 'lmnx_retro'):
+            self.init_lmnx_retro()
         for lmn in self.lmnx_retro:
             l, m, n = tuple(lmn)
             lmnstrings.append(f"{l}.{m}.{n}")
@@ -119,7 +142,11 @@ def tex_string_physical_notation(mode):
     if mode.lmnx == "constant":
         return r"constant"
     lmnstrings = []
-    for lmn in mode.lmnx_retro:
+    if hasattr(mode, 'lmnx_retro'):
+        lmnx = mode.lmnx_retro
+    else:
+        lmnx = mode.lmnx
+    for lmn in lmnx:
         l, m, n = tuple(lmn)
         if l < 0:
             lmnstrings.append(f"{-l}.{-m}.{n}")
