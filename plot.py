@@ -11,6 +11,7 @@ from bisect import bisect_right
 from adjustText import adjust_text
 
 from scipy.odr import Model, ODR, RealData
+from scipy.optimize import curve_fit
 
 import os
 
@@ -752,64 +753,218 @@ def linfunc1(p, x):
 def linfunc2(p, x):
     c = p
     return 2*x + c 
-    
-def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
-                                l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
-                                fig = None, ax = None, colorbar = True, return_sc = False):
-    df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) | 
-              ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
-    df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
-              ((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_retro_2)& (df["retro"] == True))]
-    df_merged = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2"))
-    xerr_low = df_merged["A_med_2"]-df_merged["A_low_2"]
-    xerr_hi = df_merged["A_hi_2"]-df_merged["A_med_2"]
-    yerr_low = df_merged["A_med_1"]-df_merged["A_low_1"]
-    yerr_hi = df_merged["A_hi_1"]-df_merged["A_med_1"]
-    xs = df_merged["A_med_2"]*df_merged["M_rem_1"]
-    ys = df_merged["A_med_1"]*df_merged["M_rem_1"]
-    
-    if fit_type == "linear":
-        fitfunc = linfunc1
+
+def linfunc3(p, x):
+    m = p
+    return m * x
+
+def adjust_phase_for_fit(xs, ys):
+    xs_2pi = xs % (2*np.pi)
+    ys_2pi = ys % (2*np.pi)
+    ys_adj_1 = np.where(ys_2pi < (xs_2pi + np.pi), ys_2pi, ys_2pi - 2*np.pi)
+    ys_adj_2 = np.where(ys_adj_1 > (xs_2pi - np.pi), ys_adj_1, ys_adj_1 + 2*np.pi)
+    return xs_2pi, ys_adj_2
+
+def plot_mode_vs_lin_mode_ampltiude(df, l_quad, m_quad, mode_string_pro_quad, mode_string_retro_quad, l1, m1, mode_string_pro_1, mode_string_retro_1,
+                                    l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
+                                    colorbar = True,
+                                    return_sc = False, ax = None,
+                                    fit = False,
+                                    skip_num = []):
+    df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) |
+                ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
+    df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) |
+                ((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_retro_2)& (df["retro"] == True))]
+    df_quad = df.loc[((df["l"] == l_quad) & (df["m"] == m_quad) & (df["mode_string"] == mode_string_pro_quad) & (df["retro"] == False)) |
+                ((df["l"] == l_quad) & (df["m"] == m_quad) & (df["mode_string"] == mode_string_retro_quad)& (df["retro"] == True))]
+    df_merged_lin = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2"))
+    df_merged = df_merged_lin.merge(df_quad, on = "SXS_num", how = "inner")
+    df_merged = df_merged.loc[~df_merged["SXS_num"].isin(skip_num)]
+    df_merged.reset_index(drop = True, inplace = True)
+    xerr = np.sqrt((df_merged["A_hi_1"]-df_merged["A_low_1"])**2 + (df_merged["A_hi_2"]-df_merged["A_low_2"])**2)
+    yerr = df_merged["A_hi"] - df_merged["A_low"]
+    errxlogs = xerr/(df_merged["A_med_1"]*df_merged["A_med_2"])/np.log(10)
+    errylogs = yerr/df_merged["A_med"]/np.log(10)
+    xs = df_merged["A_med_1"]*df_merged["A_med_2"]*df_merged["M_rem_1"]**2
+    ys = df_merged["A_med"]*df_merged["M_rem_1"]
+    if fit:
+        fitfunc = linfunc3
         beta0 = [0.]
-    if fit_type == "quadratic":
-        fitfunc = linfunc2
-        beta0 = [0.]
-    if fit_type == "agnostic":
-        fitfunc = linfunc
-        beta0 = [1., 0.]
-    lin_model = Model(fitfunc)
-    errxlogs = (xerr_hi+xerr_low)/xs/np.log(10)
-    errylogs = (yerr_hi+yerr_low)/ys/np.log(10)
-    data = RealData(np.log10(xs), np.log10(ys), 
-                    sx=errxlogs, sy=errylogs)
-    odr = ODR(data, lin_model, beta0=beta0)
-    out = odr.run()
-    
+        lin_model = Model(fitfunc)
+        data = RealData(xs, ys, 
+                        sx=xerr, sy=yerr)
+        odr = ODR(data, lin_model, beta0=beta0)
+        out = odr.run()
     if ax == None:
         fig, ax = plt.subplots(figsize = (8,5))
     sc = ax.scatter(xs, ys, c = df_merged["chi_rem_1"], cmap = "cividis")
     plt.draw()
     for i in range(len(sc.get_facecolors())):
-        ax.errorbar(xs[i], ys[i], xerr = ([xerr_low.to_numpy()[i]], [xerr_hi.to_numpy()[i]]),
-                 yerr = ([yerr_low.to_numpy()[i]], [yerr_hi.to_numpy()[i]]), ecolor = sc.get_facecolors()[i].tolist(),
+        ax.errorbar(xs[i], ys[i], xerr = xerr.to_numpy()[i],
+                 yerr = yerr.to_numpy()[i], ecolor = sc.get_facecolors()[i].tolist(),
                      fmt = "None")
     if colorbar:
         cb = fig.colorbar(sc, ax = ax)
         cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
-    xsfit = np.linspace(*ax.get_xlim(), num = 100)
-    ysfit = fitfunc(out.beta, np.log10(xsfit))
-    # ax.loglog(xsfit, 10**ysfit, c = "k", ls = ":")
-    xlabel_string = r"$A_{{{}}}$".format(mode_string_pro_2)
-    ylabel_string = r"$A_{{{}}}$".format(mode_string_pro_1)
+
+    x_lim = ax.get_xlim()
+
+    if fit:
+        xsfit = np.linspace(*x_lim, num = 100)
+        ax.plot(xsfit, fitfunc(out.beta, xsfit), c = "k", ls = "--")
+    xlabel_string = r"$A_{{{}}} \times A_{{{}}}$".format(mode_string_pro_1, mode_string_pro_2)
+    ylabel_string = r"$A_{{{}}}$".format(mode_string_pro_quad)
+    ax.set_xlabel(xlabel_string.replace('x', r" \times "))
+    ax.set_ylabel(ylabel_string.replace('x', r" \times "))
+
+    ax.set_xlim(*x_lim)
+
+    if return_sc:
+        return sc, out.beta
+    else:
+        return out.beta
+
+def plot_mode_vs_lin_mode_phase(df, l_quad, m_quad, mode_string_pro_quad, mode_string_retro_quad, l1, m1, mode_string_pro_1, mode_string_retro_1,
+                                l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
+                                colorbar = True,
+                                return_sc = False, ax = None,
+                                fit_fac = 1, fit = False,
+                                skip_num = []):
+    df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) |
+                ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
+    df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) |
+                ((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_retro_2)& (df["retro"] == True))]
+    df_quad = df.loc[((df["l"] == l_quad) & (df["m"] == m_quad) & (df["mode_string"] == mode_string_pro_quad) & (df["retro"] == False)) |
+                ((df["l"] == l_quad) & (df["m"] == m_quad) & (df["mode_string"] == mode_string_retro_quad)& (df["retro"] == True))]
+    df_merged_lin = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2"))
+    df_merged = df_merged_lin.merge(df_quad, on = "SXS_num", how = "inner")
+    df_merged = df_merged.loc[~df_merged["SXS_num"].isin(skip_num)]
+    df_merged.reset_index(drop = True, inplace = True)
+    xerr = np.sqrt((df_merged["phi_hi_1"]-df_merged["phi_low_1"])**2 + (df_merged["phi_hi_2"]-df_merged["phi_low_2"])**2)
+    yerr = df_merged["phi_hi"] - df_merged["phi_low"]
+    xs = df_merged["phi_med_1"] + df_merged["phi_med_2"]
+    ys = df_merged["phi_med"]
+    if fit:
+        fitfunc = linfunc1
+        beta0 = [0.]
+        lin_model = Model(fitfunc)
+        xs_adj, ys_adj = adjust_phase_for_fit(xs, ys)
+        data = RealData(xs_adj, ys_adj, 
+                        sx=xerr, sy=yerr)
+        odr = ODR(data, lin_model, beta0=beta0)
+        out = odr.run() 
+
+    if ax == None:
+        fig, ax = plt.subplots(figsize = (8,5))
+    sc = ax.scatter(fit_fac*xs%(2*np.pi), ys%(2*np.pi), c = df_merged["chi_rem_1"], cmap = "cividis")
+    plt.draw()
+    for i in range(len(sc.get_facecolors())):
+        ax.errorbar(fit_fac*xs[i]%(2*np.pi), ys[i]%(2*np.pi), xerr = xerr.to_numpy()[i],
+                 yerr = yerr.to_numpy()[i], ecolor = sc.get_facecolors()[i].tolist(),
+                     fmt = "None")
+    if colorbar:
+        cb = fig.colorbar(sc)
+        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+    ax.set_xlim(0, 2*np.pi)
+    ax.set_ylim(0, 2*np.pi)
+    ax.set_xticks([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
+    ax.set_xticklabels(["0", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"])
+    ax.set_yticks([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
+    ax.set_yticklabels(["0", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"])
+
+    x_lim = ax.get_xlim()
+
+    if fit:
+        xsfit = np.linspace(*x_lim, num = 100)
+        ysfit = fitfunc(out.beta, xsfit)
+        ax.plot(xsfit, ysfit, c = "k", ls = "--")
+        ax.plot(xsfit, ysfit + 2*np.pi, c = "k", ls = "--")
+        ax.plot(xsfit, ysfit - 2*np.pi, c = "k", ls = "--")
+    # ax.plot(xsfit, ysfit, c = "k", ls = ":")
+    xlabel_string = r"$\phi_{{{}}} + \phi_{{{}}}$".format(mode_string_pro_1, mode_string_pro_2)
+    ylabel_string = r"$\phi_{{{}}}$".format(mode_string_pro_quad)
     ax.set_xlabel(xlabel_string.replace('x', r" \times "))
     ax.set_ylabel(ylabel_string.replace('x', r" \times "))
 
     if return_sc:
         return sc
     
+def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
+                                l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
+                                fig = None, ax = None, colorbar = True, return_sc = False,
+                                fit = False,
+                                skip_num = []):
+    df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) | 
+              ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
+    df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
+              ((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_retro_2)& (df["retro"] == True))]
+    df_merged_raw = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2"))
+    df_merged = df_merged_raw[~df_merged_raw["SXS_num"].isin(skip_num)]
+    df_merged.reset_index(drop=True, inplace = True)
+    xerr_low = df_merged["A_med_2"]-df_merged["A_low_2"]
+    xerr_hi = df_merged["A_hi_2"]-df_merged["A_med_2"]
+    yerr_low = df_merged["A_med_1"]-df_merged["A_low_1"]
+    yerr_hi = df_merged["A_hi_1"]-df_merged["A_med_1"]
+    xerr = xerr_low + xerr_hi
+    yerr = yerr_low + yerr_hi
+    xs = df_merged["A_med_2"]
+    ys = df_merged["A_med_1"]
+    
+    if fit:
+        if fit_type == "linear":
+            fitfunc = linfunc1
+            beta0 = [0.]
+        if fit_type == "quadratic":
+            fitfunc = linfunc2
+            beta0 = [0.]
+        if fit_type == "agnostic":
+            fitfunc = linfunc
+            beta0 = [1., 0.]
+        lin_model = Model(fitfunc)
+        errxlogs = (xerr)/xs/np.log(10)
+        errylogs = (yerr)/ys/np.log(10)
+        data = RealData(np.log10(xs), np.log10(ys), 
+                        sx=errxlogs, sy=errylogs)
+        odr = ODR(data, lin_model, beta0=beta0)
+        out = odr.run()
+    
+    if ax == None:
+        fig, ax = plt.subplots(figsize = (8,5))
+    sc = ax.scatter(xs, ys, c = df_merged["chi_rem_1"], cmap = "cividis")
+    plt.draw()
+    xerr_max = 0
+    for i in range(len(sc.get_facecolors())):
+        ax.errorbar(xs[i], ys[i], xerr = xerr[i],
+                 yerr = yerr[i], ecolor = sc.get_facecolors()[i].tolist(),
+                     fmt = "None")
+    #     if xerr.to_numpy()[i] > xerr_max:
+    #         xerr_max_SXS_num = df_merged["SXS_num"].to_numpy()[i]
+    #         xerr_max = xerr.to_numpy()[i]
+    # print(xerr_max_SXS_num, xerr_max)
+    if colorbar:
+        cb = fig.colorbar(sc, ax = ax)
+        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+    x_lim = ax.get_xlim()
+    if fit:
+        xsfit = np.linspace(*x_lim, num = 100)
+        ysfit = fitfunc(out.beta, np.log10(xsfit))
+        ax.loglog(xsfit, 10**ysfit, c = "k", ls = "--")
+    xlabel_string = r"$A_{{{}}}$".format(mode_string_pro_2)
+    ylabel_string = r"$A_{{{}}}$".format(mode_string_pro_1)
+    ax.set_xlabel(xlabel_string.replace('x', r" \times "))
+    ax.set_ylabel(ylabel_string.replace('x', r" \times "))
+
+    ax.set_xlim(*x_lim)
+
+    if return_sc:
+        return sc, out.beta
+    else:
+        return out.beta
+    
 def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
                                 l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "quadratic",
-                                fig = None, ax = None, colorbar = True, return_sc = False):
+                                fig = None, ax = None, colorbar = True, return_sc = False, fit = False,
+                                skip_num = []):
     if fit_type == "quadratic":
         fit_fac = 2
     elif fit_type == "linear":
@@ -820,26 +975,55 @@ def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
               ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
               ((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_retro_2)& (df["retro"] == True))]
-    df_merged = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2"))    
+    df_merged = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2")) 
+    df_merged = df_merged.loc[~df_merged["SXS_num"].isin(skip_num)]  
+    df_merged.reset_index(drop=True, inplace = True) 
     xerr_low = df_merged["phi_med_2"]-df_merged["phi_low_2"]
     xerr_hi = df_merged["phi_hi_2"]-df_merged["phi_med_2"]
     yerr_low = df_merged["phi_med_1"]-df_merged["phi_low_1"]
     yerr_hi = df_merged["phi_hi_1"]-df_merged["phi_med_1"]
+    xerr = xerr_low + xerr_hi
+    yerr = yerr_low + yerr_hi
     xs = df_merged["phi_med_2"]
     ys = df_merged["phi_med_1"]
+
+    if fit:
+        fitfunc = linfunc1
+        beta0 = [0.]
+        lin_model = Model(fitfunc)
+        xs_adj, ys_adj = adjust_phase_for_fit(fit_fac*xs, ys)
+        data = RealData(xs_adj, ys_adj, 
+                        sx=xerr_low + xerr_hi, sy=yerr_low + yerr_hi)
+        odr = ODR(data, lin_model, beta0=beta0)
+        out = odr.run()
+
     if ax == None:
         fig, ax = plt.subplots(figsize = (8,5))
     sc = ax.scatter(fit_fac*xs%(2*np.pi), ys%(2*np.pi), c = df_merged["chi_rem_1"], cmap = "cividis")
     plt.draw()
     for i in range(len(sc.get_facecolors())):
-        ax.errorbar(fit_fac*xs[i]%(2*np.pi), ys[i]%(2*np.pi), xerr = ([xerr_low.to_numpy()[i]], [xerr_hi.to_numpy()[i]]),
-                 yerr = ([yerr_low.to_numpy()[i]], [yerr_hi.to_numpy()[i]]), ecolor = sc.get_facecolors()[i].tolist(),
+        ax.errorbar(fit_fac*xs[i]%(2*np.pi), ys[i]%(2*np.pi), xerr = xerr.to_numpy()[i],
+                 yerr = yerr.to_numpy()[i], ecolor = sc.get_facecolors()[i].tolist(),
                      fmt = "None")
     if colorbar:
         cb = fig.colorbar(sc)
         cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+
+    x_lim = ax.get_xlim()
+
+    if fit:
+        xsfit = np.linspace(*x_lim, num = 100)
+        ysfit = fitfunc(out.beta, xsfit)
+        ax.plot(xsfit, ysfit, c = "k", ls = "--")
+        ax.plot(xsfit, ysfit + 2*np.pi, c = "k", ls = "--")
+        ax.plot(xsfit, ysfit - 2*np.pi, c = "k", ls = "--")
+
     ax.set_xlim(0, 2*np.pi)
     ax.set_ylim(0, 2*np.pi)
+    ax.set_xticks([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
+    ax.set_xticklabels(["0", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"])
+    ax.set_yticks([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
+    ax.set_yticklabels(["0", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"])
     xsfit = np.linspace(0, 2*np.pi, num = 100)
     ysfit = xsfit
     # ax.plot(xsfit, ysfit, c = "k", ls = ":")
@@ -851,24 +1035,91 @@ def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
     if return_sc:
         return sc
 
+def plot_mode_vs_lin_mode_ratio(df, l_quad, m_quad, mode_string_pro_quad, mode_string_retro_quad, l1, m1, mode_string_pro_1, mode_string_retro_1,
+                                    l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
+                                    colorbar = True,
+                                    return_sc = False, fig = None, ax = None,
+                                    fit = False,
+                                    skip_num = []):
+    df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) |
+                ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
+    df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) |
+                ((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_retro_2)& (df["retro"] == True))]
+    df_quad = df.loc[((df["l"] == l_quad) & (df["m"] == m_quad) & (df["mode_string"] == mode_string_pro_quad) & (df["retro"] == False)) |
+                ((df["l"] == l_quad) & (df["m"] == m_quad) & (df["mode_string"] == mode_string_retro_quad)& (df["retro"] == True))]
+    df_merged_lin = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2"))
+    df_merged = df_merged_lin.merge(df_quad, on = "SXS_num", how = "inner")
+    df_merged = df_merged.loc[~df_merged["SXS_num"].isin(skip_num)]
+    df_merged.reset_index(drop=True, inplace = True)
+    xerr = np.sqrt((df_merged["A_hi_1"]-df_merged["A_low_1"])**2 + (df_merged["A_hi_2"]-df_merged["A_low_2"])**2)
+    yerr = df_merged["A_hi"] - df_merged["A_low"]
+    errxlogs = xerr/(df_merged["A_med_1"]*df_merged["A_med_2"])/np.log(10)
+    errylogs = yerr/df_merged["A_med"]/np.log(10)
+    xs = df_merged["A_med_1"]*df_merged["A_med_2"]*df_merged["M_rem_1"]**2
+    ys = df_merged["A_med"]*df_merged["M_rem_1"]
+    chis = df_merged["chi_rem_1"]
+    ratio = ys/xs
+    ratio_err = ratio*np.sqrt((yerr/ys)**2+(xerr/xs)**2)
+    
+    if ax == None:
+        fig, ax = plt.subplots(figsize = (8,5))
+    if ax == None:
+        fig, ax = plt.subplots(figsize = (8,5))
+    sc = ax.scatter(chis, ratio, c = chis, cmap = "cividis")
+    plt.draw()
+    for i in range(len(sc.get_facecolors())):
+        ax.errorbar(chis[i], ratio[i],
+                 yerr = ratio_err.to_numpy()[i], ecolor = sc.get_facecolors()[i].tolist(),
+                     fmt = "None")
+    if colorbar:
+        cb = fig.colorbar(sc, ax = ax)
+        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+
+def lin_func_scipy(x, m, c):
+    return m*x + c
+
 def plot_mode_vs_mode_amplitude_quad_ratio(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
                                 l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
-                                fig = None, ax = None, colorbar = True, return_sc = False):
+                                fig = None, ax = None, colorbar = True, return_sc = False, fit = False,
+                                skip_num = []):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) | 
               ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
               ((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_retro_2)& (df["retro"] == True))]
     df_merged = df_1.merge(df_2, on = "SXS_num", how = "inner", suffixes = ("_1", "_2"))
+    df_merged = df_merged.loc[~df_merged["SXS_num"].isin(skip_num)]
+    df_merged.reset_index(drop=True, inplace = True)
     xerr_low = df_merged["A_med_2"]-df_merged["A_low_2"]
     xerr_hi = df_merged["A_hi_2"]-df_merged["A_med_2"]
     yerr_low = df_merged["A_med_1"]-df_merged["A_low_1"]
     yerr_hi = df_merged["A_hi_1"]-df_merged["A_med_1"]
-    xs = df_merged["A_med_2"]*df_merged["M_rem_1"]
-    ys = df_merged["A_med_1"]*df_merged["M_rem_1"]
+    xerr = xerr_low + xerr_hi
+    yerr = yerr_low + yerr_hi
+    xs = df_merged["A_med_2"]
+    ys = df_merged["A_med_1"]
     chis = df_merged["chi_rem_1"]
     ratio = ys/xs**2
-    ratio_err = ratio*np.sqrt((yerr_low/ys)**2+(2*xerr_low/xs)**2)
+    ratio_err = ratio*np.sqrt((yerr/ys)**2+(2*xerr/xs)**2)
     
     if ax == None:
         fig, ax = plt.subplots(figsize = (8,5))
-    ax.errorbar(chis, ratio, yerr = ratio_err, fmt = "o")
+    sc = ax.scatter(chis, ratio, c = chis, cmap = "cividis")
+    plt.draw()
+    for i in range(len(sc.get_facecolors())):
+        ax.errorbar(chis[i], ratio[i],
+                 yerr = ratio_err.to_numpy()[i], ecolor = sc.get_facecolors()[i].tolist(),
+                     fmt = "None")
+    if colorbar:
+        cb = fig.colorbar(sc, ax = ax)
+        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+
+    x_lim = ax.get_xlim()
+
+    if fit:
+        fitfunc = lin_func_scipy
+        out = curve_fit(fitfunc, chis, ratio, sigma = ratio_err, absolute_sigma = True)
+        xsfit = np.linspace(*x_lim, num = 100)
+        ysfit = fitfunc(xsfit, *out[0])
+        ax.plot(xsfit, ysfit, c = "gray", ls = ":")
+
+    ax.set_xlim(*x_lim)

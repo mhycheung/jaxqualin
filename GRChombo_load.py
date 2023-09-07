@@ -46,41 +46,6 @@ def read_data(gamma, l, radius = 1200, box = 4096, base = 960, gamma_scale = Fal
     Psi = np.array(Psi) + 0.j
     return waveform(time, Psi, l = l, m = 0)
 
-def estimate_mass(Psi, qnm_free_list, 
-                  run_string_prefix,
-                  tstart = 30,
-                  tend = 50,
-                  one_t = False,
-                  gamma = None,
-                  gamma_scale = False,
-                  qnm_fixed_list = [],
-                  t0_arr = np.linspace(0, 100, num = 51),
-                  load_pickle = True):
-                  
-    qnm_fitter = QNMFitVaryingStartingTime(Psi,
-                t0_arr,
-                qnm_fixed_list = qnm_fixed_list,
-                qnm_free_list = qnm_free_list,
-                Schwarzschild = True,
-                run_string_prefix=run_string_prefix,
-                var_M_a = True,
-                load_pickle=load_pickle)
-    
-    qnm_fitter.do_fits()
-    
-    M = qnm_fitter.result_full.Ma_dict["M"]
-    tstartindx = bisect_left(t0_arr, tstart)
-    tendindx = bisect_left(t0_arr, tend)
-    if one_t:
-        M_mean = M[tstartindx]
-        M_std = 0
-    else:
-        M_win = M[tstartindx:tendindx]
-        M_mean = np.mean(M_win)
-        M_std = np.std(M_win)
-    
-    return M_mean, M_std
-
 def estimate_mass_gamma_l(gamma, l,
                           tstart = 30,
                           tend = 50,
@@ -94,7 +59,7 @@ def estimate_mass_gamma_l(gamma, l,
     else:
         run_string_prefix = f"GRChombo_gamma_{gamma}_l_{l}"
 
-    M_mean, M_std = estimate_mass(Psi, qnm_free_list, 
+    M_mean, M_std = estimate_mass_and_spin(Psi, qnm_free_list, 
                       run_string_prefix,
                       tstart = tstart,
                       tend = tend,
@@ -102,6 +67,7 @@ def estimate_mass_gamma_l(gamma, l,
                       gamma = gamma,
                       gamma_scale = gamma_scale,
                       qnm_fixed_list = [],
+                      Schwarzschild = True,
                       t0_arr = t0_arr)
     
     return M_mean, M_std

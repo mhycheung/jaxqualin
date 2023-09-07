@@ -10,6 +10,7 @@ import os
 import pickle
 from copy import copy
 import random
+from bisect import bisect_left, bisect_right
 
 from jax.config import config
 config.update("jax_enable_x64", True)
@@ -1193,3 +1194,50 @@ def effective_ringdown_for_fit_2(t_comp, A_fund, phi_fund, omega_fund, t_match, 
         t_comp[N:], A_fund, phi_fund, omega_fund, t_match, *fit_params, part="imag")
     h_comp = np.concatenate((h_real, h_imag))
     return h_comp
+
+def estimate_mass_and_spin(Psi, qnm_free_list, 
+                run_string_prefix,
+                tstart = 30,
+                tend = 50,
+                one_t = False,
+                gamma = None,
+                gamma_scale = False,
+                Schwarzschild = False,
+                qnm_fixed_list = [],
+                t0_arr = np.linspace(0, 100, num = 51),
+                load_pickle = True):
+                  
+    qnm_fitter = QNMFitVaryingStartingTime(Psi,
+                t0_arr,
+                qnm_fixed_list = qnm_fixed_list,
+                qnm_free_list = qnm_free_list,
+                Schwarzschild = Schwarzschild,
+                run_string_prefix=run_string_prefix,
+                var_M_a = True,
+                load_pickle=load_pickle)
+    
+    qnm_fitter.do_fits()
+    
+    M = qnm_fitter.result_full.Ma_dict["M"]
+    tstartindx = bisect_left(t0_arr, tstart)
+    tendindx = bisect_left(t0_arr, tend)
+    if one_t:
+        M_mean = M[tstartindx]
+        M_std = 0
+    else:
+        M_win = M[tstartindx:tendindx]
+        M_mean = np.mean(M_win)
+        M_std = np.std(M_win)
+
+    if not Schwarzschild:
+        a = qnm_fitter.result_full.Ma_dict["a"]
+        if one_t:
+            a_mean = a[tstartindx]
+            a_std = 0
+        else:
+            a_win = a[tstartindx:tendindx]
+            a_mean = np.mean(a_win)
+            a_std = np.std(a_win)
+        return M_mean, M_std, a_mean, a_std
+    
+    return M_mean, M_std
