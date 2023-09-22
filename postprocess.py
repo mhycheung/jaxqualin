@@ -250,6 +250,14 @@ def chi_m(row):
     chi_2 = row['chi_2_z']
     return (q*chi_1 - chi_2) /(1+q)
 
+def chi_rem_retro(row):
+    chi_rem = row['chi_rem']
+    retro = row['retro']
+    if retro:
+        return -chi_rem
+    else:
+        return chi_rem
+
 
 def classify_modes(df):
     col_quad = df.apply(is_quadratic, axis = 1)
@@ -262,6 +270,7 @@ def classify_modes(df):
     col_eta = df.apply(sym_mass_ratio, axis = 1)
     col_chi_p = df.apply(chi_p, axis = 1)
     col_chi_m = df.apply(chi_m, axis = 1)
+    col_chi_rem_retro = df.apply(chi_rem_retro, axis = 1)
     df = df.assign(eta=col_eta.values,
                 chi_p=col_chi_p.values,
                 chi_m=col_chi_m.values,
@@ -271,7 +280,8 @@ def classify_modes(df):
                 is_retrograde=col_retro.values,
                 harm_type=col_type.values,
                 natural_l=col_nat_l.values,
-                natural_m=col_nat_m.values)
+                natural_m=col_nat_m.values,
+                chi_rem_retro=col_chi_rem_retro.values)
     return df
 
 def screen_mode(df, l, m, mode_string_pro, mode_string_retro, greater = True, A_cut = 1):
@@ -321,3 +331,20 @@ def NP_quantities(x):
     chi_p = (q*chi_1 + chi_2) /(1+q)
     chi_m = (q*chi_1 - chi_2) /(1+q)
     return q, eta, delta, chi_p, chi_m
+
+def get_df_for_mode(df, l, m, mode_string_pro):
+    mode_string_retro = qnm_string_m_reverse(mode_string_pro)
+    df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
+                ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
+    return df_mode
+
+def get_df_for_coexisting_modes(df, mode_tuple_list):
+    for i, mode_tuple in enumerate(mode_tuple_list):
+        l, m, mode_string_pro = mode_tuple
+        df_mode = get_df_for_mode(df, l, m, mode_string_pro)
+        df_mode = df_mode.rename(columns={c: c+f'_{i+1}' for c in df.columns if c != 'SXS_num'})
+        if i == 0:
+            df_coexist = df_mode
+        if i == 1:
+            df_coexist = df_coexist.merge(df_mode, on = "SXS_num", how = "inner")
+    return df_coexist

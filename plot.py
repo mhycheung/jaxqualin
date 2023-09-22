@@ -770,7 +770,8 @@ def plot_mode_vs_lin_mode_ampltiude(df, l_quad, m_quad, mode_string_pro_quad, mo
                                     colorbar = True,
                                     return_sc = False, ax = None,
                                     fit = False,
-                                    skip_num = []):
+                                    skip_num = [],
+                                    norm = None):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) |
                 ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) |
@@ -797,7 +798,7 @@ def plot_mode_vs_lin_mode_ampltiude(df, l_quad, m_quad, mode_string_pro_quad, mo
         out = odr.run()
     if ax == None:
         fig, ax = plt.subplots(figsize = (8,5))
-    sc = ax.scatter(xs, ys, c = df_merged["chi_rem_1"], cmap = "cividis")
+    sc = ax.scatter(xs, ys, c = df_merged["chi_rem_1"], cmap = "cividis", norm = norm)
     plt.draw()
     for i in range(len(sc.get_facecolors())):
         ax.errorbar(xs[i], ys[i], xerr = xerr.to_numpy()[i],
@@ -829,7 +830,8 @@ def plot_mode_vs_lin_mode_phase(df, l_quad, m_quad, mode_string_pro_quad, mode_s
                                 colorbar = True,
                                 return_sc = False, ax = None,
                                 fit_fac = 1, fit = False,
-                                skip_num = []):
+                                skip_num = [],
+                                norm = None):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) |
                 ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) |
@@ -856,7 +858,8 @@ def plot_mode_vs_lin_mode_phase(df, l_quad, m_quad, mode_string_pro_quad, mode_s
 
     if ax == None:
         fig, ax = plt.subplots(figsize = (8,5))
-    sc = ax.scatter(fit_fac*xs%(2*np.pi), ys%(2*np.pi), c = df_merged["chi_rem_1"], cmap = "cividis")
+    sc = ax.scatter(fit_fac*xs%(2*np.pi), ys%(2*np.pi), c = df_merged["chi_rem_1"], 
+                    cmap = "cividis", norm = norm)
     plt.draw()
     for i in range(len(sc.get_facecolors())):
         ax.errorbar(fit_fac*xs[i]%(2*np.pi), ys[i]%(2*np.pi), xerr = xerr.to_numpy()[i],
@@ -887,13 +890,16 @@ def plot_mode_vs_lin_mode_phase(df, l_quad, m_quad, mode_string_pro_quad, mode_s
     ax.set_ylabel(ylabel_string.replace('x', r" \times "))
 
     if return_sc:
-        return sc
+        return sc, out.beta
+    else:
+        return out.beta
     
 def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
                                 l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
                                 fig = None, ax = None, colorbar = True, return_sc = False,
                                 fit = False,
-                                skip_num = []):
+                                skip_num = [],
+                                norm = None):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) | 
               ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
@@ -930,7 +936,7 @@ def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro
     
     if ax == None:
         fig, ax = plt.subplots(figsize = (8,5))
-    sc = ax.scatter(xs, ys, c = df_merged["chi_rem_1"], cmap = "cividis")
+    sc = ax.scatter(xs, ys, c = df_merged["chi_rem_1"], cmap = "cividis", norm = norm)
     plt.draw()
     xerr_max = 0
     for i in range(len(sc.get_facecolors())):
@@ -964,7 +970,7 @@ def plot_mode_vs_mode_amplitude(df, l1, m1, mode_string_pro_1, mode_string_retro
 def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
                                 l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "quadratic",
                                 fig = None, ax = None, colorbar = True, return_sc = False, fit = False,
-                                skip_num = []):
+                                skip_num = [], norm = None):
     if fit_type == "quadratic":
         fit_fac = 2
     elif fit_type == "linear":
@@ -999,7 +1005,8 @@ def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
 
     if ax == None:
         fig, ax = plt.subplots(figsize = (8,5))
-    sc = ax.scatter(fit_fac*xs%(2*np.pi), ys%(2*np.pi), c = df_merged["chi_rem_1"], cmap = "cividis")
+    sc = ax.scatter(fit_fac*xs%(2*np.pi), ys%(2*np.pi), c = df_merged["chi_rem_1"], 
+                    cmap = "cividis", norm = norm)
     plt.draw()
     for i in range(len(sc.get_facecolors())):
         ax.errorbar(fit_fac*xs[i]%(2*np.pi), ys[i]%(2*np.pi), xerr = xerr.to_numpy()[i],
@@ -1033,14 +1040,18 @@ def plot_mode_vs_mode_phase(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
     ax.set_ylabel(ylabel_string.replace('x', r" \times "))
 
     if return_sc:
-        return sc
+        return sc, out.beta
+    else:
+        return out.beta
 
 def plot_mode_vs_lin_mode_ratio(df, l_quad, m_quad, mode_string_pro_quad, mode_string_retro_quad, l1, m1, mode_string_pro_1, mode_string_retro_1,
                                     l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
                                     colorbar = True,
                                     return_sc = False, fig = None, ax = None,
                                     fit = False,
-                                    skip_num = []):
+                                    skip_num = [],
+                                    norm = None,
+                                    eta_color = True):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) |
                 ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) |
@@ -1058,6 +1069,7 @@ def plot_mode_vs_lin_mode_ratio(df, l_quad, m_quad, mode_string_pro_quad, mode_s
     xs = df_merged["A_med_1"]*df_merged["A_med_2"]*df_merged["M_rem_1"]**2
     ys = df_merged["A_med"]*df_merged["M_rem_1"]
     chis = df_merged["chi_rem_1"]
+    etas = df_merged["eta_1"]
     ratio = ys/xs
     ratio_err = ratio*np.sqrt((yerr/ys)**2+(xerr/xs)**2)
     
@@ -1065,7 +1077,10 @@ def plot_mode_vs_lin_mode_ratio(df, l_quad, m_quad, mode_string_pro_quad, mode_s
         fig, ax = plt.subplots(figsize = (8,5))
     if ax == None:
         fig, ax = plt.subplots(figsize = (8,5))
-    sc = ax.scatter(chis, ratio, c = chis, cmap = "cividis")
+    if eta_color:
+        sc = ax.scatter(chis, ratio, c = etas)
+    else:
+        sc = ax.scatter(chis, ratio, c = chis, cmap = "cividis", norm = norm)
     plt.draw()
     for i in range(len(sc.get_facecolors())):
         ax.errorbar(chis[i], ratio[i],
@@ -1073,7 +1088,24 @@ def plot_mode_vs_lin_mode_ratio(df, l_quad, m_quad, mode_string_pro_quad, mode_s
                      fmt = "None")
     if colorbar:
         cb = fig.colorbar(sc, ax = ax)
-        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+        if eta_color:
+            cb.ax.set_ylabel(r"$\eta$")
+        else:
+            cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+
+    x_lim = ax.get_xlim()
+
+    if fit:
+        fitfunc = lin_func_scipy
+        out = curve_fit(fitfunc, chis, ratio, sigma = ratio_err, absolute_sigma = True)
+        xsfit = np.linspace(*x_lim, num = 100)
+        ysfit = fitfunc(xsfit, *out[0])
+        ax.plot(xsfit, ysfit, c = "gray", ls = ":")
+    
+        ax.set_xlim(*x_lim)
+
+        return out
+    return
 
 def lin_func_scipy(x, m, c):
     return m*x + c
@@ -1081,7 +1113,7 @@ def lin_func_scipy(x, m, c):
 def plot_mode_vs_mode_amplitude_quad_ratio(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
                                 l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
                                 fig = None, ax = None, colorbar = True, return_sc = False, fit = False,
-                                skip_num = []):
+                                skip_num = [], norm = None, eta_color = True):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) | 
               ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
@@ -1098,12 +1130,17 @@ def plot_mode_vs_mode_amplitude_quad_ratio(df, l1, m1, mode_string_pro_1, mode_s
     xs = df_merged["A_med_2"]
     ys = df_merged["A_med_1"]
     chis = df_merged["chi_rem_1"]
+    etas = df_merged["eta_1"]
     ratio = ys/xs**2
     ratio_err = ratio*np.sqrt((yerr/ys)**2+(2*xerr/xs)**2)
     
     if ax == None:
         fig, ax = plt.subplots(figsize = (8,5))
-    sc = ax.scatter(chis, ratio, c = chis, cmap = "cividis")
+
+    if eta_color:
+        sc = ax.scatter(chis, ratio, c = etas)
+    else:
+        sc = ax.scatter(chis, ratio, c = chis, cmap = "cividis", norm = norm)
     plt.draw()
     for i in range(len(sc.get_facecolors())):
         ax.errorbar(chis[i], ratio[i],
@@ -1111,7 +1148,10 @@ def plot_mode_vs_mode_amplitude_quad_ratio(df, l1, m1, mode_string_pro_1, mode_s
                      fmt = "None")
     if colorbar:
         cb = fig.colorbar(sc, ax = ax)
-        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+        if eta_color:
+            cb.ax.set_ylabel(r"$\eta$")
+        else:
+            cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
 
     x_lim = ax.get_xlim()
 
@@ -1122,4 +1162,7 @@ def plot_mode_vs_mode_amplitude_quad_ratio(df, l1, m1, mode_string_pro_1, mode_s
         ysfit = fitfunc(xsfit, *out[0])
         ax.plot(xsfit, ysfit, c = "gray", ls = ":")
 
-    ax.set_xlim(*x_lim)
+        ax.set_xlim(*x_lim)
+
+        return out
+    return
