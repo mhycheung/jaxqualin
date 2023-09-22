@@ -11,7 +11,7 @@ ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 SCRATCH_PATH = "/expanse/lustre/scratch/mcheung1/temp_project/Ringdown/jaxqualin/"
 MODE_SEARCHERS_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/mode_searchers")
 MODE_SEARCHERS_SAVE_PATH_SCRATCH = os.path.join(SCRATCH_PATH, "pickle/mode_searchers")
-JSON_SAVE_PATH = os.path.join(ROOT_PATH, "json")
+SETTING_PATH = os.path.join(ROOT_PATH, "json")
 
 
 class IterativeFlatnessChecker:
@@ -51,10 +51,7 @@ class IterativeFlatnessChecker:
         
     def do_iterative_flatness_check(self):
         if self.retro:
-            if self.m == 0:
-                _fund_mode_string = f"{self.l}.-99.0"
-            else:
-                _fund_mode_string = f"{self.l}.-{self.m}.0"
+            _fund_mode_string = f"-{self.l}.{self.m}.0"
         else:
             _fund_mode_string = f"{self.l}.{self.m}.0"
         _current_modes = self.found_modes
@@ -455,7 +452,7 @@ class ModeSearchAllFreeVaryingNSXS:
         kwargs = {'load_pickle' : True,
                   'N_list' : [5, 6, 7, 8, 9, 10],
                   'postfix_string' : '',
-                  'pickle_in_scratch' : False,
+                  'mode_searchers_save_path' : MODE_SEARCHERS_SAVE_PATH,
                   'set_seed_SXS' : True,
                   'default_seed' : 1234,
                   'CCE' : False}
@@ -467,10 +464,7 @@ class ModeSearchAllFreeVaryingNSXS:
         self.get_waveform()
         self.N_list_string = '_'.join(list(map(str, self.N_list)))
         self.run_string = f"SXS{self.SXSnum}_lm_{self.l}.{self.m}_N_{self.N_list_string}"
-        if kwargs["pickle_in_scratch"]:
-            save_path = MODE_SEARCHERS_SAVE_PATH_SCRATCH
-        else:
-            save_path = MODE_SEARCHERS_SAVE_PATH
+        save_path = self.kwargs["mode_searchers_save_path"]
         if self.postfix_string == '':
             self.file_path = os.path.join(save_path,
                                            f"ModeSearcher_{self.run_string}.pickle")
@@ -746,9 +740,10 @@ def eff_mode_search(inject_params, runname, retro = False, load_pickle = True, d
 #                         retro = retro, load_pickle = load_pickle)
 #         mode_searcher_list.append(mode_searcher)
 
-def read_json_eff_mode_search(i, batch_runname, retro = False, load_pickle = True, delay = True, **kwargs):
+def read_json_eff_mode_search(i, batch_runname, retro = False, load_pickle = True, delay = True, 
+                              setting_path = SETTING_PATH, **kwargs):
     
-    with open(f"{JSON_SAVE_PATH}/{batch_runname}.json", 'r') as f:
+    with open(f"{setting_path}/{batch_runname}.json", 'r') as f:
         inject_params_full = json.load(f)
     
     runname = f"{batch_runname}_{i:03d}"
@@ -758,9 +753,9 @@ def read_json_eff_mode_search(i, batch_runname, retro = False, load_pickle = Tru
     
     return mode_searcher
 
-def read_json_for_param_dict(i, batch_runname):
+def read_json_for_param_dict(i, batch_runname, setting_path = SETTING_PATH):
     
-    with open(f"{JSON_SAVE_PATH}/{batch_runname}.json", 'r') as f:
+    with open(f"{setting_path}/{batch_runname}.json", 'r') as f:
         inject_params_full = json.load(f)
     
     runname = f"{batch_runname}_{i:03d}"
