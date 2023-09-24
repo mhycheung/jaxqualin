@@ -7,6 +7,6 @@ pandas==1.5.1
 PyCBC==2.0.6
 pykerr==0.1.0
 qnm==0.4.3
-scipy==1.5.2
+scipy==1.9.3
 sxs==2022.4.5
 tqdm==4.61.1
