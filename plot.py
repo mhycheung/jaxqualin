@@ -117,16 +117,22 @@ def plot_predicted_qnms(
         present_modes_retro = [],
         edgecolor_present = 'k',
         expand_points = (1.1, 1.7),
-        physical_notation = True):
+        physical_notation = False,
+        xminmin = -2,
+        xmaxmax = 2,
+        yminmin = 0.05,
+        ymaxmax = -0.7,
+        positive_y_alpha = 0.5,
+        ):
     ax.axvline(0, color='gray', ls='--')
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
-    ax.set_xlim(max(xmin, -2), min(xmax, 2))
+    ax.set_xlim(max(xmin, xminmin), min(xmax, xmaxmax))
     if change_lim:
         if cut_at_0:
-            ax.set_ylim(0, max(ymax, -0.7))
+            ax.set_ylim(0, max(ymax, ymaxmax))
         else:
-            ax.set_ylim(0.05, max(ymax, -0.7))
+            ax.set_ylim(yminmin, max(ymax, ymaxmax))
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
     texts = []
@@ -198,7 +204,7 @@ def plot_predicted_qnms(
     ax.set_ylim(ymin, ymax)
     xmin, xmax = ax.get_xlim()
     ax.set_xlim(xmin, xmax)
-    ax.axhspan(0, 1e2, color="gray", alpha=0.5)
+    ax.axhspan(0, 1e2, color="gray", alpha=positive_y_alpha)
 
     ax.set_xlabel(r"$M \omega_r$")
     ax.set_ylabel(r"$M \omega_i$")
@@ -1113,7 +1119,8 @@ def lin_func_scipy(x, m, c):
 def plot_mode_vs_mode_amplitude_quad_ratio(df, l1, m1, mode_string_pro_1, mode_string_retro_1,
                                 l2, m2, mode_string_pro_2, mode_string_retro_2, fit_type = "agnostic",
                                 fig = None, ax = None, colorbar = True, return_sc = False, fit = False,
-                                skip_num = [], norm = None, eta_color = True):
+                                skip_num = [], norm = None, color_string = "eta", label_SXS = False,
+                                outlier_tol = 0.4):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) | 
               ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1)& (df["retro"] == True))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) | 
@@ -1131,14 +1138,20 @@ def plot_mode_vs_mode_amplitude_quad_ratio(df, l1, m1, mode_string_pro_1, mode_s
     ys = df_merged["A_med_1"]
     chis = df_merged["chi_rem_1"]
     etas = df_merged["eta_1"]
+    chi_ps = df_merged["chi_p_1"]
+    chi_ms = df_merged["chi_m_1"]
     ratio = ys/xs**2
     ratio_err = ratio*np.sqrt((yerr/ys)**2+(2*xerr/xs)**2)
     
     if ax == None:
         fig, ax = plt.subplots(figsize = (8,5))
 
-    if eta_color:
+    if color_string == "eta":
         sc = ax.scatter(chis, ratio, c = etas)
+    elif color_string == "chi_p":
+        sc = ax.scatter(chis, ratio, c = chi_ps)
+    elif color_string == "chi_m":
+        sc = ax.scatter(chis, ratio, c = chi_ms)
     else:
         sc = ax.scatter(chis, ratio, c = chis, cmap = "cividis", norm = norm)
     plt.draw()
@@ -1146,10 +1159,16 @@ def plot_mode_vs_mode_amplitude_quad_ratio(df, l1, m1, mode_string_pro_1, mode_s
         ax.errorbar(chis[i], ratio[i],
                  yerr = ratio_err.to_numpy()[i], ecolor = sc.get_facecolors()[i].tolist(),
                      fmt = "None")
+        if label_SXS:
+            ax.text(chis[i], ratio[i], df_merged["SXS_num"].to_numpy()[i], fontsize = 8)
     if colorbar:
         cb = fig.colorbar(sc, ax = ax)
-        if eta_color:
+        if color_string == "eta":
             cb.ax.set_ylabel(r"$\eta$")
+        elif color_string == "chi_p":
+            cb.ax.set_ylabel(r"$\chi_+$")
+        elif color_string == "chi_m":
+            cb.ax.set_ylabel(r"$\chi_-$")
         else:
             cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
 
@@ -1164,5 +1183,85 @@ def plot_mode_vs_mode_amplitude_quad_ratio(df, l1, m1, mode_string_pro_1, mode_s
 
         ax.set_xlim(*x_lim)
 
-        return out
+        preds = fitfunc(chis, *out[0])
+        outlier_indxs = np.where(np.abs(ratio - preds)/preds > outlier_tol)[0]
+        outlier_SXS_nums = df_merged["SXS_num"].to_numpy()[outlier_indxs]
+
+        return out, outlier_SXS_nums
     return
+
+def visualize_outliers_n_modes(df, l, m, outlier_SXS_nums, ax = None):
+    df_lm = df.loc[(df["l"] == l) & (df["m"] == m)]
+    counts = df_lm['SXS_num'].value_counts()
+    counts_outliers = counts.loc[outlier_SXS_nums]
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.hist(counts, bins = 20)
+    ax.hist(counts_outliers, bins = 20)
+
+def visualize_outliers_individual_modes(df, l, m, outlier_SXS_nums, ax = None):
+    df_lm = df.loc[(df["l"] == l) & (df["m"] == m)]
+    if ax is None:
+        fig, ax = plt.subplots()
+    for _, row in df_lm.iterrows():
+        if row["SXS_num"] in outlier_SXS_nums:
+            c = 'r'
+            s = 10
+            alpha = 1 
+        else:
+            c = 'C0'
+            s = 5
+            alpha = 0.3
+        ax.scatter(row["SXS_num"], row["mode_string"], c = c, s = s, alpha = alpha)
+
+def plot_mode_searcher_results(mode_searcher, axs = None):
+    if axs is None:
+        fig, axs = plt.subplots(1, 3, figsize = (18, 5))
+    
+    present_mode_strings = qnms_to_string(mode_searcher.found_modes_final)
+    mode_searcher_vary_N = mode_searcher.mode_searcher_vary_N
+    best_run_indx = mode_searcher_vary_N.best_run_indx
+    best_N = mode_searcher_vary_N.N_list[best_run_indx]
+    best_mode_searcher = mode_searcher_vary_N.mode_searchers[best_run_indx]
+    potential_modes_list = best_mode_searcher.potential_modes_full
+    best_N_free_result = mode_searcher_vary_N.mode_searchers[best_run_indx].full_fit.result_full
+
+    best_flatness_checker = mode_searcher_vary_N.flatness_checkers[best_run_indx]
+    best_fitter_list = best_flatness_checker.fitter_list
+    best_fluc_least_indx_list = best_flatness_checker.fluc_least_indx_list
+    best_start_flat_indx_list = best_flatness_checker.start_flat_indx_list
+
+    plot_omega_free(best_N_free_result, ax = axs[0])
+    plot_predicted_qnms(axs[0], potential_modes_list,
+                        present_modes = present_mode_strings)
+
+    axs[0].text(0.95, 0.03, f'$N_f = {best_N}$',
+            transform = axs[0].transAxes, fontsize = 18, ha = 'right', va = 'bottom')
+
+    result = best_fitter_list[-1].result_full
+
+    bold_dict = {}
+    t_start_dict = {}
+    for start_flat_indx, fluc_least_indx, found_mode_string in zip(best_start_flat_indx_list, best_fluc_least_indx_list, present_mode_strings):
+        bold_dict[found_mode_string] = (fluc_least_indx, fluc_least_indx + 100)
+        t_start_dict[found_mode_string] = result.t0_arr[start_flat_indx]
+
+    for key in t_start_dict:
+        t_start_dict[key] += 0.5      
+
+    for qnm in result.qnm_fixed_list:
+        if not hasattr(qnm, 'lmnx_retro'):
+            qnm.init_lmnx_retro()
+            
+    plot_amplitudes(result, fixed_modes = result.qnm_fixed_list, ax = axs[1], use_label = False, 
+                    legend = True, bold_dict = bold_dict, alpha = 0.3,
+                    t_flat_start_dict = t_start_dict, flat_start_s = 30)
+    plot_phases(result, fixed_modes = result.qnm_fixed_list, ax = axs[2], legend = False, bold_dict = bold_dict, 
+                alpha = 0.3, t_flat_start_dict = t_start_dict, flat_start_s = 30)
+
+    axs[1].legend(fontsize = 9)  
+
+
+
+        
+    
