@@ -211,11 +211,10 @@ def is_retro(row):
     if mode_string == 'constant':
         return False
     lmnx = str_to_lmnx(mode_string)
-    _, m_sum = lmnx_sum_lm(lmnx)
-    if m_sum*retrofac < 0:
-        return True
-    else:
-        return False
+    for lmn in lmnx:
+        if lmn[0] < 0:
+            return True
+    return False
 
 
 def natural_m(row):
@@ -295,7 +294,7 @@ def screen_mode(df, l, m, mode_string_pro, mode_string_retro, greater = True, A_
     return df_screen
 
 def df_get_mode(df, l, m, mode_string_pro, include_retro = True):
-    mode_string_retro = qnm_string_m_reverse(mode_string_pro)
+    mode_string_retro = qnm_string_l_reverse(mode_string_pro)
     if include_retro:
         df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
                 ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
@@ -333,7 +332,7 @@ def NP_quantities(x):
     return q, eta, delta, chi_p, chi_m
 
 def get_df_for_mode(df, l, m, mode_string_pro):
-    mode_string_retro = qnm_string_m_reverse(mode_string_pro)
+    mode_string_retro = qnm_string_l_reverse(mode_string_pro)
     df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
                 ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
     return df_mode

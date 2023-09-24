@@ -5,7 +5,7 @@ import scipy
 from scipy.optimize import curve_fit
 from utils import *
 from QuasinormalMode import *
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import os
 import pickle
 from copy import copy
@@ -15,9 +15,10 @@ from bisect import bisect_left, bisect_right
 from jax.config import config
 config.update("jax_enable_x64", True)
 
-ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-SCRATCH_PATH = "/expanse/lustre/scratch/mcheung1/temp_project/Ringdown/jaxqualin/"
-FIT_SAVE_PATH = os.path.join(SCRATCH_PATH, "pickle/fits")
+# ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+# SCRATCH_PATH = "/expanse/lustre/scratch/mcheung1/temp_project/Ringdown/jaxqualin/"
+# FIT_SAVE_PATH = os.path.join(SCRATCH_PATH, "pickle/fits")
+FIT_SAVE_PATH = os.path.join(os.getcwd(), ".jaxqualin_cache/fits")
 
 
 def qnm_fit_func_mirror_fixed(
@@ -336,6 +337,8 @@ class QNMFit:
             weighted = False,
             include_mirror = False,
             mirror_ratio_list = None,
+            guess_fixed = [1, 1],
+            guess_free = [1, 1, 1, -1],
             **fit_kwargs):
         self.h = h
         self.t0 = t0
@@ -355,6 +358,8 @@ class QNMFit:
         if self.include_mirror and mirror_ratio_list is None:
             raise ValueError("Mirror ratio list is not provided.")
         self.mirror_ratio_list = mirror_ratio_list
+        self.guess_fixed = guess_fixed
+        self.guess_free = guess_free
 
     def make_weights(self, hr, hi):
         habs = np.abs(hr + 1.j*hi)
@@ -372,15 +377,11 @@ class QNMFit:
         self._time_interweave = interweave(self.time, self.time)
         if not hasattr(self.params0, "__iter__"):
             self.params0 = jnp.array(
-                [1, 1] * self.N_fix + [1, 1, 1, -1] * self.N_free)
+                self.guess_fixed * self.N_fix + self.guess_free * self.N_free)
         upper_bound = [self.A_bound, np.inf] * self.N_fix + \
             ([self.A_bound] + 3 * [np.inf]) * self.N_free
         lower_bound = [-self.A_bound, -np.inf] * self.N_fix + \
             ([-self.A_bound] + 3 * [-np.inf]) * self.N_free
-        # upper_bound = [self.A_bound, np.inf] * self.N_fix + \
-        #     [self.A_bound, np.pi, np.inf, np.inf] * self.N_free
-        # lower_bound = [-self.A_bound, -np.inf] * self.N_fix + \
-        #     [-self.A_bound, 0, -np.inf, -np.inf] * self.N_free
         bounds = (np.array(lower_bound), np.array(upper_bound))
         if self.include_mirror:
             self.popt, self.pcov, self.res, _, _ = jcf.curve_fit(
@@ -391,7 +392,6 @@ class QNMFit:
                 method="trf", sigma = sigma, **self.fit_kwargs, timeit = True)
         else:
             self.popt, self.pcov, self.res, _, _ = jcf.curve_fit(
-                # self.popt, self.pcov = scipy.optimize.curve_fit(
                 lambda t, *params: qnm_fit_func_wrapper_complex(
                     t, self.qnm_fixed_list, self.N_free, params, Schwarzschild=self.Schwarzschild), np.array(
                     self._time_interweave), np.array(
@@ -463,6 +463,10 @@ class QNMFitVarMa:
             include_mirror = False,
             iota = None,
             psi = None,
+            guess_fixed = [1, 1],
+            guess_free = [1, 1],
+            guess_M_a = [1, 0.5],
+            a_bound = 0.99,
             **fit_kwargs):
         self.h = h
         self.t0 = t0
@@ -481,6 +485,10 @@ class QNMFitVarMa:
         if self.include_mirror:
             self.iota = iota
             self.psi = psi
+        self.guess_fixed = guess_fixed
+        self.guess_free = guess_free
+        self.guess_M_a = guess_M_a
+        self.a_bound = a_bound
 
     def do_fit(self, jcf=CurveFit(), return_jcf=False):
         self.time, self.hr, self.hi = self.h.postmerger(self.t0)
@@ -489,7 +497,7 @@ class QNMFitVarMa:
         if self.Schwarzschild:
             if not hasattr(self.params0, "__iter__"):
                 self.params0 = np.array(
-                    [1, 1] * self.N_fix + [1, 1] * self.N_free + [1])
+                    self.guess_fixed * self.N_fix + self.guess_free * self.N_free + self.guess_M_a[:1])
             if self.include_mirror:
                 fit_func = lambda t, *params: qnm_fit_func_wrapper_varMa_mirror(
                     t, self.qnm_fixed_list, self.qnm_free_list, self.iota, self.psi,
@@ -515,11 +523,11 @@ class QNMFitVarMa:
         else:
             if not hasattr(self.params0, "__iter__"):
                 self.params0 = np.array(
-                    [1, 1] * self.N_fix + [1, 1] * self.N_free + [1, 0.5])
+                    self.guess_fixed * self.N_fix + self.guess_free * self.N_free + self.guess_M_a)
             lower_bound = [-np.inf] * \
-                (2 * self.N_fix + 2 * self.N_free + 1) + [-0.99]
+                (2 * self.N_fix + 2 * self.N_free + 1) + [-self.a_bound]
             upper_bound = [np.inf] * \
-                (2 * self.N_fix + 2 * self.N_free + 1) + [0.99]
+                (2 * self.N_fix + 2 * self.N_free + 1) + [self.a_bound]
             bounds = (np.array(lower_bound), np.array(upper_bound))
             if self.include_mirror:
                 fit_func = lambda t, *params: qnm_fit_func_wrapper_complex_varMa_mirror(
@@ -598,7 +606,9 @@ class QNMFitVaryingStartingTimeResult:
             include_mirror = False,
             mirror_ratio_list = None,
             iota = None,
-            psi = None
+            psi = None,
+            fit_save_prefix = FIT_SAVE_PATH,
+            save_result = True
             ):
         self.t0_arr = t0_arr
         self.qnm_fixed_list = qnm_fixed_list
@@ -625,20 +635,21 @@ class QNMFitVaryingStartingTimeResult:
         if nonconvergence_cut:
             self.run_string += "_nc"
         self.nonconvergence_indx = nonconvergence_indx
+        self.fit_save_prefix = fit_save_prefix
         self.file_path = os.path.join(
-            FIT_SAVE_PATH, f"{self.run_string}_result.pickle")
+            self.fit_save_prefix, f"{self.run_string}_result.pickle")
         self.initila_guess_results = []
         self.include_mirror = include_mirror
         if self.include_mirror:
             self.mirror_ratio_list = mirror_ratio_list
             self.iota = iota
             self.psi = psi
+        self.save_results = save_result
 
     def fill_result(self, i, result):
         self._popt_full[:, i] = result.popt
         self._mismatch_arr[i] = result.mismatch
         self.cost_arr[i] = result.cost
-        # self.grad_arr[i] = result.grad
         self.nfev_arr[i] = result.nfev
         self.status_arr[i] = result.status
 
@@ -675,9 +686,12 @@ class QNMFitVaryingStartingTimeResult:
         self.omega_dict = {"real": self.omega_r_dict,
                            "imag": self.omega_i_dict}
         self.result_processed = True
-        self.pickle_save()
+        if self.save_results:
+            self.pickle_save()
 
     def pickle_save(self):
+        if not os.path.exists(self.fit_save_prefix):
+            os.makedirs(self.fit_save_prefix, exist_ok=True)
         with open(self.file_path, "wb") as f:
             pickle.dump(self, f)
 
@@ -722,7 +736,9 @@ class QNMFitVaryingStartingTimeResultVarMa:
             include_mirror = False,
             nonconvergence_indx=[],
             iota = None,
-            psi = None):
+            psi = None,
+            fit_save_prefix = FIT_SAVE_PATH,
+            save_results = True):
         self.t0_arr = t0_arr
         self.qnm_fixed_list = qnm_fixed_list
         self.qnm_free_list = qnm_free_list
@@ -749,12 +765,14 @@ class QNMFitVaryingStartingTimeResultVarMa:
         if nonconvergence_cut:
             self.run_string += "_nc"
         self.nonconvergence_indx = nonconvergence_indx
+        self.fit_save_prefix = fit_save_prefix
         self.file_path = os.path.join(
-            FIT_SAVE_PATH, f"{self.run_string}_result.pickle")
+            self.fit_save_prefix, f"{self.run_string}_result.pickle")
         self.include_mirror = include_mirror
         if self.include_mirror:
             self.iota = iota
             self.psi = psi
+        self.save_results = save_results
 
     def fill_result(self, i, result):
         self._popt_full[:, i] = result.popt
@@ -792,9 +810,12 @@ class QNMFitVaryingStartingTimeResultVarMa:
             **self.phi_free_dict,
             **self.Ma_dict}
         self.result_processed = True
-        self.pickle_save()
+        if save_results:
+            self.pickle_save()
 
     def pickle_save(self):
+        if not os.path.exists(self.fit_save_prefix):
+            os.makedirs(self.fit_save_prefix, exist_ok=True)
         with open(self.file_path, "wb") as f:
             pickle.dump(self, f)
 
@@ -819,6 +840,7 @@ class QNMFitVaryingStartingTime:
             max_nfev=200000,
             sequential_guess=True,
             load_pickle=True,
+            fit_save_prefix = FIT_SAVE_PATH,
             nonconvergence_cut=False,
             A_bound=np.inf,
             jcf=None,
@@ -834,7 +856,8 @@ class QNMFitVaryingStartingTime:
             iota = None,
             psi = None,
             mirror_ignore_phase = True,
-            skip_i_init = 1):
+            skip_i_init = 1,
+            save_results = True):
         self.h = h
         if A_guess_relative:
             A_rel = np.abs(h.h[0])
@@ -865,6 +888,7 @@ class QNMFitVaryingStartingTime:
         self.sequential_guess = sequential_guess
         self.run_string_prefix = run_string_prefix
         self.load_pickle = load_pickle
+        self.fit_save_prefix = fit_save_prefix
         self.retro = retro
         self.Schwarzschild = Schwarzschild
         self.nonconvergence_cut = nonconvergence_cut
@@ -892,6 +916,7 @@ class QNMFitVaryingStartingTime:
             self.mirror_ratio_list = None
 
         self.skip_i_init = skip_i_init
+        self.save_results = save_results
 
     def get_mirror_ratio_list(self):
         self.mirror_ratio_list = []
@@ -920,7 +945,8 @@ class QNMFitVaryingStartingTime:
         else:
             _jcf = CurveFit(flength=2 * len(self._time_longest))
         qnm_fit_list = []
-        for j, guess in tqdm(enumerate(guess_list)):
+        desc = f"Runname: {self.run_string_prefix}, making initial guesses for N_free = {self.N_free}. Status"
+        for j, guess in tqdm(enumerate(guess_list), desc = desc, total = len(guess_list)):
             qnm_fit = QNMFit(
                         self.h,
                         self.t0_arr[0],
@@ -1004,7 +1030,9 @@ class QNMFitVaryingStartingTime:
                 nonconvergence_cut=self.nonconvergence_cut,
                 include_mirror=self.include_mirror,
                 iota = self.iota,
-                psi = self.psi)
+                psi = self.psi,
+                fit_save_prefix = self.fit_save_prefix,
+                save_results = self.save_results)
         else:
             self.result_full = QNMFitVaryingStartingTimeResult(
                 self.t0_arr,
@@ -1016,7 +1044,9 @@ class QNMFitVaryingStartingTime:
                 include_mirror = self.include_mirror,
                 mirror_ratio_list = self.mirror_ratio_list,
                 iota = self.iota,
-                psi = self.psi)
+                psi = self.psi,
+                fit_save_prefix = self.fit_save_prefix,
+                save_result = self.save_results)
         loaded_results = False
         if self.result_full.pickle_exists() and self.load_pickle:
             try:
@@ -1024,7 +1054,7 @@ class QNMFitVaryingStartingTime:
                 with open(_file_path, "rb") as f:
                     self.result_full = pickle.load(f)
                 print(
-                    f"reloaded fit {self.result_full.run_string} from an old run.")
+                    f"Loaded fit {self.result_full.run_string} from an old run.")
                 loaded_results = True
             except EOFError:
                 print("EOFError when loading pickle for fit. Doing new fit now...")
@@ -1044,7 +1074,19 @@ class QNMFitVaryingStartingTime:
                         self.result_full.fill_initial_guess(i, fit_result)
                     initial_converged = True
             _params0 = self.params0
-            for i, _t0 in tqdm(enumerate(self.t0_arr)):
+            if self.N_free == 0:
+                desc = f"Runname: {self.run_string_prefix}, fitting with the following modes: "
+                mode_string_list = qnms_to_string(self.qnm_fixed_list)
+                desc += ', '.join(mode_string_list)
+                desc += ". Status"
+            elif len(self.qnm_fixed_list) == 0:
+                desc = f"Runname: {self.run_string_prefix}, fitting for N_free = {self.N_free}. Status"
+            else:
+                desc = f"Runname: {self.run_string_prefix}, fitting with the following modes: "
+                mode_string_list = qnms_to_string(self.qnm_fixed_list)
+                desc += ', '.join(mode_string_list)
+                desc += f"and N_free = {self.N_free}. Status"
+            for i, _t0 in tqdm(enumerate(self.t0_arr), desc = desc, total = len(self.t0_arr)):
                 if self.var_M_a:
                     qnm_fit = QNMFitVarMa(
                         self.h,
@@ -1205,7 +1247,8 @@ def estimate_mass_and_spin(Psi, qnm_free_list,
                 Schwarzschild = False,
                 qnm_fixed_list = [],
                 t0_arr = np.linspace(0, 100, num = 51),
-                load_pickle = True):
+                load_pickle = True,
+                fit_save_prefix = FIT_SAVE_PATH):
                   
     qnm_fitter = QNMFitVaryingStartingTime(Psi,
                 t0_arr,
@@ -1214,7 +1257,8 @@ def estimate_mass_and_spin(Psi, qnm_free_list,
                 Schwarzschild = Schwarzschild,
                 run_string_prefix=run_string_prefix,
                 var_M_a = True,
-                load_pickle=load_pickle)
+                load_pickle=load_pickle,
+                fit_save_prefix = fit_save_prefix)
     
     qnm_fitter.do_fits()
     

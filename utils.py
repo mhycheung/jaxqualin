@@ -1,5 +1,6 @@
 import jax.numpy as jnp
 import numpy as np
+import pickle
 
 # https://stackoverflow.com/questions/5347065/interweaving-two-numpy-arrays/5347492#5347492
 
@@ -49,3 +50,8 @@ def get_m(m):
         return 0
     else:
         return m
+
+def load_pickle_file(path):
+    with open(path, 'rb') as f:
+        data = pickle.load(f)
+    return data
