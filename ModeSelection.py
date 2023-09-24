@@ -32,7 +32,8 @@ class IterativeFlatnessChecker:
                   "confusion_tol": 0.03, "quantile_range": 0.95,
                   "med_min" : 1e-3,
                   "weight_1": 1.0, "weight_2": 1.5,
-                  "CCE" : False
+                  "CCE" : False,
+                  "fit_save_prefix" : FIT_SAVE_PATH
                   }
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
@@ -46,7 +47,8 @@ class IterativeFlatnessChecker:
         self.weight_1 = self.kwargs["weight_1"]
         self.weight_2 = self.kwargs["weight_2"]
         self.CCE = self.kwargs["CCE"]
-        
+        self.fit_save_prefix = self.kwargs["fit_save_prefix"]
+
         self.retro = self.kwargs["retro"]
         self.load_pickle = self.kwargs["load_pickle"]
         
@@ -77,15 +79,15 @@ class IterativeFlatnessChecker:
                     _current_modes,
                     run_string_prefix=self.run_string_prefix,
                     load_pickle = self.load_pickle,
-                    skip_i_init = skip_i_init))
+                    skip_i_init = skip_i_init,
+                    fit_save_prefix = self.fit_save_prefix))
             _current_modes_string = qnms_to_string(_current_modes)
             _fund_mode_indx = _current_modes_string.index(_fund_mode_string)
             _fitter = self.fitter_list[i]
             _fitter.do_fits()
             _fluc_least_list = []
             _fluc_least_indx_list = []
-            _fluc_least_list = []
-            _fluc_least_indx_list = []
+            start_flat_indx_list = []
             result_full = _fitter.result_full
             _popt_full = result_full.popt_full
 
@@ -105,14 +107,16 @@ class IterativeFlatnessChecker:
                 _A_fix_j_arr = np.where(collapsed, np.nan, _A_fix_j_arr)
                 _phi_fix_j_arr = np.array(list(_fitter.result_full.phi_fix_dict["phi_" + _current_modes_string[j]]))
                 _phi_fix_j_arr = np.where(collapsed, np.nan, _phi_fix_j_arr)
-                _fluc_least_indx, _fluc_least = flattest_region_quadrature(
+                _fluc_least_indx, _fluc_least, start_flat_indx = flattest_region_quadrature(
                     self.flatness_length,
                     _A_fix_j_arr, _phi_fix_j_arr, 
                     quantile_range = self.quantile_range,
                     med_min = self.med_min,
+                    fluc_tol = self.flatness_tol,
                     weight_1 = self.weight_1, weight_2 = self.weight_2)
                 _fluc_least_list.append(_fluc_least)
                 _fluc_least_indx_list.append(_fluc_least_indx)
+                start_flat_indx_list.append(start_flat_indx)
             if len(_current_modes) <= 1:
                 break
             _fluc_least_list_no_fund = _fluc_least_list.copy()
@@ -155,6 +159,7 @@ class IterativeFlatnessChecker:
             _more_than_one_mode = len(_current_modes)>1
             i += 1
         self.fluc_least_indx_list = _fluc_least_indx_list
+        self.start_flat_indx_list = start_flat_indx_list
         self.found_modes_screened = _current_modes
 
 
@@ -233,7 +238,7 @@ class ModeSearchAllFreeLM:
                   "omega_r_tol" : 0.05, "omega_i_tol" : 0.05,
                   "t_tol" : 10, "fraction_tol" : 0.95, 'fit_kwargs' : {}, 
                   "initial_num" : 1, "random_initial" : False, "initial_dict" : {},
-                  "A_guess_relative" : True, "set_seed" : 1234}
+                  "A_guess_relative" : True, "set_seed" : 1234, 'fit_save_prefix': FIT_SAVE_PATH}
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
         self.retro = self.kwargs["retro"]
@@ -259,6 +264,7 @@ class ModeSearchAllFreeLM:
         self.initial_dict = self.kwargs["initial_dict"]
         self.A_guess_relative = self.kwargs["A_guess_relative"]
         self.set_seed = self.kwargs["set_seed"]
+        self.fit_save_prefix = self.kwargs["fit_save_prefix"]
 
     def mode_search_all_free(self):
         _N = self.N_init
@@ -278,7 +284,8 @@ class ModeSearchAllFreeLM:
                 random_initial = self.random_initial,
                 initial_dict = self.initial_dict,
                 A_guess_relative = self.A_guess_relative,
-                set_seed = self.set_seed)
+                set_seed = self.set_seed,
+                fit_save_prefix = self.fit_save_prefix)
             self.full_fit.do_fits()
             self.mode_selector = ModeSelectorAllFree(
                 self.full_fit.result_full, self.potential_modes, omega_r_tol = self.omega_r_tol,
@@ -512,6 +519,8 @@ class ModeSearchAllFreeVaryingNSXS:
             **kwargs)
         self.mode_searcher_vary_N.do_mode_searches()
         self.found_modes_final = self.mode_searcher_vary_N.found_modes_final
+        print(f"Runname: {self.run_string}, final list of modes: ")
+        print(', '.join(qnms_to_string(self.found_modes_final)))
 
     def do_mode_search_varying_N(self):
         self.mode_search_varying_N_sxs()
@@ -575,13 +584,13 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
     def do_all_searches(self):
         for _i, _searcher in enumerate(
                 self.relevant_lm_mode_searcher_varying_N):
-            if _searcher.pickle_exists() and self.load_pickle and self.mode_searcher_load_pickle:
+            if _searcher.pickle_exists() and self.mode_searcher_load_pickle:
                 _file_path = _searcher.file_path
                 with open(_file_path, "rb") as f:
                     self.relevant_lm_mode_searcher_varying_N[_i] = pickle.load(
                         f)
                 print(
-                    f"reloaded lm = {self.relevant_lm_list[_i][0]}.{self.relevant_lm_list[_i][1]} from an old run.")
+                    f"Loaded lm = {self.relevant_lm_list[_i][0]}.{self.relevant_lm_list[_i][1]} from an old run.")
             else:
                 self.relevant_lm_mode_searcher_varying_N[_i].do_mode_search_varying_N(
                 )
@@ -645,6 +654,7 @@ def closest_free_mode_distance(result_full, mode, r_scale=1, i_scale=1):
 def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95, 
                                normalize_1_by = None, normalize_2_by = 2*np.pi, 
                                med_min = 1e-3, weight_1 = 1, weight_2 = 1.5,
+                               fluc_tol = 0.1,
                                return_median = False):
     if len(arr1) != len(arr2):
         raise Exception("The length of the two arrays do not match")
@@ -654,6 +664,7 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95,
     quantile_hi = 1 - quantile_low
     fluc_least = np.inf
     fluc_least_indx = 0
+    start_flat_indx = -1
     for i in range(total_length - length):
         arr1_in_range = arr1[i:i+length]
         arr2_in_range = arr2[i:i+length]
@@ -683,7 +694,10 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95,
         fluc2 = (hi2 - low2)/normalize2
         
         fluc = np.sqrt((fluc1*weight_1)**2 + (fluc2*weight_2)**2)
-        
+
+        if fluc < fluc_tol and arr1_nan_frac < nan_tol and start_flat_indx < 0:
+            start_flat_indx = i
+
         if fluc < fluc_least and arr1_nan_frac < nan_tol:
             fluc_least = fluc
             fluc_least_indx = i
@@ -693,7 +707,7 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range = 0.95,
         return (fluc_least_indx, fluc_least,
                  np.nanquantile(arr1[fluc_least_indx:fluc_least_indx+length], 0.5), 
                  np.nanquantile(arr2[fluc_least_indx:fluc_least_indx+length], 0.5))
-    return fluc_least_indx, fluc_least
+    return fluc_least_indx, fluc_least, start_flat_indx
 
 
 def start_of_flat_region(length, arr1, arr2, quantile_range = 0.95, 

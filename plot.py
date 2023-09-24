@@ -117,7 +117,7 @@ def plot_predicted_qnms(
         present_modes_retro = [],
         edgecolor_present = 'k',
         expand_points = (1.1, 1.7),
-        physical_notation = True,
+        physical_notation = False,
         xminmin = -2,
         xmaxmax = 2,
         yminmin = 0.05,
@@ -1213,6 +1213,55 @@ def visualize_outliers_individual_modes(df, l, m, outlier_SXS_nums, ax = None):
             s = 5
             alpha = 0.3
         ax.scatter(row["SXS_num"], row["mode_string"], c = c, s = s, alpha = alpha)
+
+def plot_mode_searcher_results(mode_searcher, axs = None):
+    if axs is None:
+        fig, axs = plt.subplots(1, 3, figsize = (18, 5))
+    
+    present_mode_strings = qnms_to_string(mode_searcher.found_modes_final)
+    mode_searcher_vary_N = mode_searcher.mode_searcher_vary_N
+    best_run_indx = mode_searcher_vary_N.best_run_indx
+    best_N = mode_searcher_vary_N.N_list[best_run_indx]
+    best_mode_searcher = mode_searcher_vary_N.mode_searchers[best_run_indx]
+    potential_modes_list = best_mode_searcher.potential_modes_full
+    best_N_free_result = mode_searcher_vary_N.mode_searchers[best_run_indx].full_fit.result_full
+
+    best_flatness_checker = mode_searcher_vary_N.flatness_checkers[best_run_indx]
+    best_fitter_list = best_flatness_checker.fitter_list
+    best_fluc_least_indx_list = best_flatness_checker.fluc_least_indx_list
+    best_start_flat_indx_list = best_flatness_checker.start_flat_indx_list
+
+    plot_omega_free(best_N_free_result, ax = axs[0])
+    plot_predicted_qnms(axs[0], potential_modes_list,
+                        present_modes = present_mode_strings)
+
+    axs[0].text(0.95, 0.03, f'$N_f = {best_N}$',
+            transform = axs[0].transAxes, fontsize = 18, ha = 'right', va = 'bottom')
+
+    result = best_fitter_list[-1].result_full
+
+    bold_dict = {}
+    t_start_dict = {}
+    for start_flat_indx, fluc_least_indx, found_mode_string in zip(best_start_flat_indx_list, best_fluc_least_indx_list, present_mode_strings):
+        bold_dict[found_mode_string] = (fluc_least_indx, fluc_least_indx + 100)
+        t_start_dict[found_mode_string] = result.t0_arr[start_flat_indx]
+
+    for key in t_start_dict:
+        t_start_dict[key] += 0.5      
+
+    for qnm in result.qnm_fixed_list:
+        if not hasattr(qnm, 'lmnx_retro'):
+            qnm.init_lmnx_retro()
+            
+    plot_amplitudes(result, fixed_modes = result.qnm_fixed_list, ax = axs[1], use_label = False, 
+                    legend = True, bold_dict = bold_dict, alpha = 0.3,
+                    t_flat_start_dict = t_start_dict, flat_start_s = 30)
+    plot_phases(result, fixed_modes = result.qnm_fixed_list, ax = axs[2], legend = False, bold_dict = bold_dict, 
+                alpha = 0.3, t_flat_start_dict = t_start_dict, flat_start_s = 30)
+
+    axs[1].legend(fontsize = 9)  
+
+
 
         
     
