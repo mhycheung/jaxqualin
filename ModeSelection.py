@@ -7,11 +7,13 @@ import pickle
 import json
 import os
 
-ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-SCRATCH_PATH = "/expanse/lustre/scratch/mcheung1/temp_project/Ringdown/jaxqualin/"
-MODE_SEARCHERS_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/mode_searchers")
-MODE_SEARCHERS_SAVE_PATH_SCRATCH = os.path.join(SCRATCH_PATH, "pickle/mode_searchers")
-SETTING_PATH = os.path.join(ROOT_PATH, "json")
+# ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+# SCRATCH_PATH = "/expanse/lustre/scratch/mcheung1/temp_project/Ringdown/jaxqualin/"
+# MODE_SEARCHERS_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/mode_searchers")
+# MODE_SEARCHERS_SAVE_PATH_SCRATCH = os.path.join(SCRATCH_PATH, "pickle/mode_searchers")
+# SETTING_PATH = os.path.join(ROOT_PATH, "json")
+SETTING_PATH = os.getcwd()
+MODE_SEARCHERS_SAVE_PATH = os.path.join(os.getcwd(), ".jaxqualin_cache/mode_searchers")
 
 
 class IterativeFlatnessChecker:
@@ -50,6 +52,7 @@ class IterativeFlatnessChecker:
         
         
     def do_iterative_flatness_check(self):
+
         if self.retro:
             _fund_mode_string = f"-{self.l}.{self.m}.0"
         else:
@@ -281,7 +284,7 @@ class ModeSearchAllFreeLM:
                 self.full_fit.result_full, self.potential_modes, omega_r_tol = self.omega_r_tol,
                 omega_i_tol=self.omega_i_tol, t_tol=self.t_tol, fraction_tol=self.fraction_tol, N_max = _N)
             self.mode_selector.do_selection()
-            print(qnms_to_string(self.mode_selector.passed_mode_list))
+            # print(qnms_to_string(self.mode_selector.passed_mode_list))
             _jump_mode_indx = []
             for j in range(len(self.mode_selector.passed_mode_list)):
                 if not lower_overtone_present(
@@ -293,13 +296,15 @@ class ModeSearchAllFreeLM:
                                             self.mode_selector.passed_mode_list[j], 
                                             self.mode_selector.passed_mode_list + self.found_modes):
                     _jump_mode_indx.append(j)
-            print(list(set(_jump_mode_indx)))
+            # print(list(set(_jump_mode_indx)))
             for k in sorted(list(set(_jump_mode_indx)), reverse=True):
                 del self.mode_selector.passed_mode_list[k]
             if len(self.mode_selector.passed_mode_list) == 0:
                 break
             self.found_modes.extend(self.mode_selector.passed_mode_list)
-            print(qnms_to_string(self.mode_selector.passed_mode_list))
+            print_string = f"Runname: {self.run_string_prefix}, N_free = {_N}, potential modes: "
+            print_string += ', '.join(qnms_to_string(self.mode_selector.passed_mode_list))
+            print(print_string)
             for j in sorted(self.mode_selector.passed_mode_indx, reverse=True):
                 del self.potential_modes[j]
 
@@ -307,51 +312,51 @@ class ModeSearchAllFreeLM:
         self.mode_search_all_free()
 
 
-class ModeSearchAllFreeLMSXS:
-    def __init__(
-            self,
-            SXSnum,
-            l,
-            m,
-            N_init=5,
-            N_step=3,
-            iterations=2,
-            **kwargs):
-        self.SXSnum = SXSnum
-        self.l = l
-        self.m = m
-        self.N_init = N_init
-        self.N_step = N_step
-        self.iterations = iterations
-        self.get_waveform()
-        self.kwargs = kwargs
+# class ModeSearchAllFreeLMSXS:
+#     def __init__(
+#             self,
+#             SXSnum,
+#             l,
+#             m,
+#             N_init=5,
+#             N_step=3,
+#             iterations=2,
+#             **kwargs):
+#         self.SXSnum = SXSnum
+#         self.l = l
+#         self.m = m
+#         self.N_init = N_init
+#         self.N_step = N_step
+#         self.iterations = iterations
+#         self.get_waveform()
+#         self.kwargs = kwargs
 
-    def mode_search_all_free_sxs(self):
-        self.mode_searcher = ModeSearchAllFreeLM(
-            self.h,
-            self.M,
-            self.a,
-            self.relevant_lm_list,
-            N_init=self.N_init,
-            N_step=self.N_step,
-            iterations=self.iterations,
-            retro = self.retro,
-            set_seed = int(self.SXSnum),
-            **self.kwargs)
-        self.mode_searcher.do_mode_search()
-        self.found_modes = self.mode_searcher.found_modes
+#     def mode_search_all_free_sxs(self):
+#         self.mode_searcher = ModeSearchAllFreeLM(
+#             self.h,
+#             self.M,
+#             self.a,
+#             self.relevant_lm_list,
+#             N_init=self.N_init,
+#             N_step=self.N_step,
+#             iterations=self.iterations,
+#             retro = self.retro,
+#             set_seed = int(self.SXSnum),
+#             **self.kwargs)
+#         self.mode_searcher.do_mode_search()
+#         self.found_modes = self.mode_searcher.found_modes
 
-    def do_mode_search(self):
-        self.mode_search_all_free_sxs()
+#     def do_mode_search(self):
+#         self.mode_search_all_free_sxs()
 
-    def get_waveform(self):
-        _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum)
-        self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
-            _relevant_modes_dict)
-        peaktime_dom = list(_relevant_modes_dict.values())[0].peaktime
-        self.h, self.M, self.a, self.Lev, _retro = get_waveform_SXS(
-            self.SXSnum, self.l, self.m)
-        self.h.update_peaktime(peaktime_dom)
+#     def get_waveform(self):
+#         _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum)
+#         self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
+#             _relevant_modes_dict)
+#         peaktime_dom = list(_relevant_modes_dict.values())[0].peaktime
+#         self.h, self.M, self.a, self.Lev, _retro = get_waveform_SXS(
+#             self.SXSnum, self.l, self.m)
+#         self.h.update_peaktime(peaktime_dom)
 
 
 class ModeSearchAllFreeVaryingN:
@@ -416,21 +421,25 @@ class ModeSearchAllFreeVaryingN:
             self.flatness_checkers.append(IterativeFlatnessChecker(self.h, self.t0_arr, self.M, self.a, self.l, self.m,
             _mode_searcher.found_modes, **self.flatness_checker_kwargs, **self.kwargs))
             _flatness_checker = self.flatness_checkers[i]
+            print(f'Performing amplitude and phase flatness check for N_free = {self.N_list[i]}')
             _flatness_checker.do_iterative_flatness_check()
             _flatness_checker.found_modes_screened
-            self.fixed_fitters.append(
-                QNMFitVaryingStartingTime(
-                    self.h,
-                    self.t0_arr,
-                    0,
-                    qnm_fixed_list=_flatness_checker.found_modes_screened,
-                    run_string_prefix=self.run_string_prefix,
-                    load_pickle = self.load_pickle,
-                    skip_i_init = skip_i_init))
-            self.fixed_fitters[i].do_fits()
+            # self.fixed_fitters.append(
+            #     QNMFitVaryingStartingTime(
+            #         self.h,
+            #         self.t0_arr,
+            #         0,
+            #         qnm_fixed_list=_flatness_checker.found_modes_screened,
+            #         run_string_prefix=self.run_string_prefix,
+            #         load_pickle = self.load_pickle,
+            #         skip_i_init = skip_i_init))
+            # self.fixed_fitters[i].do_fits()
+            self.fixed_fitters.append(_flatness_checker.fitter_list[-1])
             if len(_mode_searcher.found_modes) >= len(self.found_modes_final):
                 self.best_run_indx = i
                 self.found_modes_final = _mode_searcher.found_modes
+            print(f"Runname: {self.run_string_prefix}, N_free = {self.N_list[i]}, found the following {len(_mode_searcher.found_modes)} modes: ")
+            print(', '.join(qnms_to_string(_mode_searcher.found_modes)))
 
 
 class ModeSearchAllFreeVaryingNSXS:
@@ -450,17 +459,27 @@ class ModeSearchAllFreeVaryingNSXS:
         self.m = m
         self.t0_arr = t0_arr
         kwargs = {'load_pickle' : True,
+                  'mode_searcher_load_pickle' : True,
+                  'save_mode_searcher': True,
                   'N_list' : [5, 6, 7, 8, 9, 10],
                   'postfix_string' : '',
                   'mode_searchers_save_path' : MODE_SEARCHERS_SAVE_PATH,
                   'set_seed_SXS' : True,
                   'default_seed' : 1234,
-                  'CCE' : False}
+                  'CCE' : False,
+                  'relevant_lm_list' : []}
         kwargs.update(kwargs_in)
         self.N_list = kwargs['N_list']
         self.postfix_string = kwargs['postfix_string']
         self.CCE = kwargs['CCE']
         self.kwargs = kwargs
+
+        if len(self.kwargs['relevant_lm_list']) == 0:
+            self.relevant_lm_list_override = True
+            self.relevant_lm_list = self.kwargs['relevant_lm_list']
+        else:
+            self.relevant_lm_list_override = False
+
         self.get_waveform()
         self.N_list_string = '_'.join(list(map(str, self.N_list)))
         self.run_string = f"SXS{self.SXSnum}_lm_{self.l}.{self.m}_N_{self.N_list_string}"
@@ -472,12 +491,16 @@ class ModeSearchAllFreeVaryingNSXS:
             self.file_path = os.path.join(save_path,
                                            f"ModeSearcher_{self.run_string}_{self.postfix_string}.pickle")
         self.load_pickle = self.kwargs["load_pickle"]
+        self.mode_searcher_load_pickle = self.kwargs["mode_searcher_load_pickle"]
         if self.kwargs['set_seed_SXS']:
             self.set_seed = int(self.SXSnum)
         else:
             self.set_seed = self.kwargs['default_seed']
+        self.save_mode_searcher = self.kwargs['save_mode_searcher']
 
     def mode_search_varying_N_sxs(self):
+        kwargs = self.kwargs.copy()
+        kwargs.pop('relevant_lm_list')
         self.mode_searcher_vary_N = ModeSearchAllFreeVaryingN(
             self.h,
             self.M,
@@ -486,18 +509,20 @@ class ModeSearchAllFreeVaryingNSXS:
             t0_arr=self.t0_arr,
             retro = self.retro,
             set_seed = self.set_seed,
-            **self.kwargs)
+            **kwargs)
         self.mode_searcher_vary_N.do_mode_searches()
         self.found_modes_final = self.mode_searcher_vary_N.found_modes_final
 
     def do_mode_search_varying_N(self):
         self.mode_search_varying_N_sxs()
-        self.pickle_save()
+        if self.save_mode_searcher:
+            self.pickle_save()
 
     def get_waveform(self):
         _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum, CCE = self.CCE)
-        self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
-            _relevant_modes_dict)
+        if not self.relevant_lm_list_override:
+            self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
+                _relevant_modes_dict)
         peaktime_dom = list(_relevant_modes_dict.values())[0].peaktime
         if self.CCE:
             self.h, self.M, self.a, self.Lev, _retro = get_waveform_CCE(
@@ -508,11 +533,13 @@ class ModeSearchAllFreeVaryingNSXS:
         self.h.update_peaktime(peaktime_dom)
 
     def pickle_save(self):
+        if not os.path.exists(os.path.dirname(self.file_path)):
+            os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
         with open(self.file_path, "wb") as f:
             pickle.dump(self, f)
 
     def pickle_exists(self):
-        if self.load_pickle:
+        if self.mode_searcher_load_pickle:
             return os.path.exists(self.file_path)
         else:
             return False

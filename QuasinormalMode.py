@@ -203,12 +203,16 @@ def lmnxs_to_qnms_free(lmnxs, **kwargs):
         qnms.append(mode_free(lmnx, **kwargs))
     return qnms
 
-
 def long_str_to_qnms(longstring, M, a, **kwargs):
     if longstring == '':
         return []
     lmnxs = long_str_to_lmnxs(longstring)
     return lmnxs_to_qnms(lmnxs, M, a, **kwargs)
+
+
+def mode_list(mode_list, M, a, **kwargs):
+    long_str = '_'.join(mode_list)
+    return long_str_to_qnms(long_str, M, a, **kwargs)
 
 
 def long_str_to_qnms_free(longstring, **kwargs):
@@ -479,6 +483,15 @@ def qnm_string_m_reverse(str):
             lmn[1] = -99
         else:
             lmn[1] *= -1
+    str_out = lmnx_to_string(lmnx)
+    return str_out
+
+def qnm_string_l_reverse(str):
+    if str == 'constant':
+        return 'constant'
+    lmnx = str_to_lmnx(str)
+    for lmn in lmnx:
+        lmn[0] *= -1
     str_out = lmnx_to_string(lmnx)
     return str_out
 
