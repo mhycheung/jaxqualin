@@ -3,8 +3,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
+dynamic = [
+  "version"
+]
 name = "jaxqualin_mhycheung"
-version = "0.0.0"
 authors = [
   { name="Mark Ho-Yeuk Cheung", email="hcheung5@jhu.edu" },
 ]
