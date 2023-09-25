@@ -45,7 +45,7 @@ jobs:
       run: |
         python -m build
         python -m twine upload dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TWINE_TEST_TOKEN }}
-          TWINE_REPOSITORY: testpypi
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TWINE_TEST_TOKEN }}
+        TWINE_REPOSITORY: testpypi
