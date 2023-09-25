@@ -34,6 +34,9 @@ dependencies = [
   "tqdm==4.61.1",
 ]
 
+[tool.hatch.version]
+path = "jaxqualin/__init__.py"
+
 [project.urls]
 "Homepage" = "https://github.com/mhycheung/Jaxqualin"
 "Bug Tracker" = "https://github.com/mhycheung/Jaxqualin/issues"
