@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
-from Waveforms import *
-from QuasinormalMode import *
-from ModeSelection import *
+
+from .waveforms import *
+from .qnmode import *
+from .selection import *
+
 import os
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))

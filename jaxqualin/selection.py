@@ -1,7 +1,8 @@
-from utils import *
-from QuasinormalMode import *
-from Fit import *
-from Waveforms import *
+from .utils import *
+from .qnmode import *
+from .fit import *
+from .waveforms import *
+
 import numpy as np
 import pickle
 import json

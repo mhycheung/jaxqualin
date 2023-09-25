@@ -2,8 +2,10 @@ import sxs
 import jax.numpy as jnp
 import numpy as np
 from bisect import bisect_left, bisect_right
-from QuasinormalMode import *
-from utils import *
+
+from .qnmode import *
+from .utils import *
+
 from scipy.interpolate import griddata
 from scipy.stats import loguniform, uniform
 from pycbc.waveform.waveform_modes import sum_modes

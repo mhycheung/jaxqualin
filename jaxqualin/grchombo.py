@@ -1,8 +1,8 @@
-from Waveforms import *
+from .waveforms import *
 import glob
 import re
-from bisect import bisect_right
-from Fit import *
+from .bisect import bisect_right
+from .fit import *
 import csv
 
 GRChombo_root = "/home/mark/dev/GR_Chombo_QNM/"

@@ -4,12 +4,12 @@ from matplotlib.ticker import (
     MultipleLocator, AutoMinorLocator, LogLocator, NullFormatter)
 from matplotlib.patches import Ellipse
 import numpy as np
-from QuasinormalMode import *
-from ModeSelection import *
+
+from .qnmode import *
+from .selection import *
+
 from bisect import bisect_right
-
 from adjustText import adjust_text
-
 from scipy.odr import Model, ODR, RealData
 from scipy.optimize import curve_fit
 
