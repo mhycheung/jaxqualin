@@ -26,6 +26,17 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: "3.8"
+    - name: Dynamic versioning with date and time
+      run: |
+        git config --global user.name 'autobump'
+        git config --global user.email 'autobump@jaxqualin.dev'
+        VERSION=$(date +"%Y.%m.%d.%H%M")
+        echo "__version__ = \"$VERSION\"" > jaxqualin/__about__.py
+        git add jaxqualin/__about__.py
+        git commit -m "Dynamic versioning: $VERSION"
+        git tag $VERSION
+        git push
+        git push --tags
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip

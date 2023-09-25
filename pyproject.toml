@@ -35,7 +35,7 @@ dependencies = [
 ]
 
 [tool.hatch.version]
-path = "jaxqualin/__init__.py"
+path = "jaxqualin/__about__.py"
 
 [project.urls]
 "Homepage" = "https://github.com/mhycheung/Jaxqualin"
