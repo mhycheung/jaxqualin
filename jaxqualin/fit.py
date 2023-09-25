@@ -3,8 +3,10 @@ import jax.numpy as jnp
 from jaxfit import CurveFit
 import scipy
 from scipy.optimize import curve_fit
-from utils import *
-from QuasinormalMode import *
+
+from .utils import *
+from .qnmode import *
+
 from tqdm.auto import tqdm
 import os
 import pickle
