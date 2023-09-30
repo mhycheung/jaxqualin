@@ -1,0 +1,14 @@
+site_name: jaxqualin
+site_url: https://example.com/
+
+nav:
+  - Home: index.md
+  - Examples:
+    - Fitting the ringdown: notebooks/fit_testing.ipynb
+    - Mode search: notebooks/mode_selection_testing.ipynb
+
+plugins:
+  - search
+  - mkdocs-jupyter:
+      ignore_h1_titles: True
+  
