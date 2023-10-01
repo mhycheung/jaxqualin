@@ -295,7 +295,7 @@ def screen_mode(df, l, m, mode_string_pro, mode_string_retro, greater = True, A_
 
     return df_screen
 
-def df_get_mode(df, l, m, mode_string_pro, include_retro = True):
+def df_get_mode(df, l, m, mode_string_pro, include_retro = False):
     mode_string_retro = qnm_string_l_reverse(mode_string_pro)
     if include_retro:
         df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
@@ -349,3 +349,52 @@ def get_df_for_coexisting_modes(df, mode_tuple_list):
         if i == 1:
             df_coexist = df_coexist.merge(df_mode, on = "SXS_num", how = "inner")
     return df_coexist
+
+def mode_string_change_notation(mode_string):
+    if mode_string == 'constant':
+        return mode_string
+    lmns = mode_string.split('x')
+    strings = []
+    for lmn in lmns:
+        lmn_tuple = list(map(int, lmn.split('.')))
+        l, m, n = lmn_tuple
+        if l < 0:
+            l = -l
+            if m < 0:
+                l = -l
+                m = m
+            else:
+                m = -m
+        elif m < 0:
+            l = -l
+            m = -m
+        n = lmn_tuple[2]
+        string = f"{l}.{m}.{n}"
+        strings.append(string)
+    return 'x'.join(strings)
+
+def mode_string_retro_to_pro(mode_string):
+    if mode_string == 'constant':
+        return mode_string
+    lmns = mode_string.split('x')
+    strings = []
+    for lmn in lmns:
+        lmn_tuple = list(map(int, lmn.split('.')))
+        l, m, n = lmn_tuple
+        l = -l
+        string = f"{l}.{m}.{n}"
+        strings.append(string)
+    return 'x'.join(strings)
+
+def change_retro_to_pro(row):
+    retro = row['retro']
+    if retro:
+        mode_string = mode_string_retro_to_pro(row['mode_string'])
+    else:
+        mode_string = row['mode_string']
+    return mode_string
+
+def df_change_retro_to_pro(df):
+    col_mode_string = df.apply(change_retro_to_pro, axis=1)
+    df = df.assign(mode_string=col_mode_string)
+    return df
