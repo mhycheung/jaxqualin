@@ -1,42 +1,25 @@
 site_name: jaxqualin
 
-<<<<<<< HEAD
 theme: mkdocs    # This theme is mandatory for now, see below
 
+nav:
+  - Home: index.md
+  - Examples:
+    - Fitting the ringdown: notebooks/fit_testing.ipynb
+    - Mode search: notebooks/mode_selection_testing.ipynb
+  - Results: paper-results.md
+
 plugins:
-  # - gallery:
-  #     examples_dirs: docs/examples          # path to your example scripts
-  #     gallery_dirs: docs/generated/gallery  # where to save generated gallery
-  #     # ... (other options)
-  - search  # make sure the search plugin is still enabled
+  - search
+  - mkdocs-jupyter:
+      ignore_h1_titles: True
 
 markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.snippets
 
-# extra_javascript:
-#   - javascripts/katex.js 
-#   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.js  
-#   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/contrib/auto-render.min.js
-
-# extra_css:
-#   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.css
-
 extra_javascript:
   - docs/javascripts/mathjax.js
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
-=======
-nav:
-  - Home: index.md
-  - Examples:
-    - Fitting the ringdown: notebooks/fit_testing.ipynb
-    - Mode search: notebooks/mode_selection_testing.ipynb
-
-plugins:
-  - search
-  - mkdocs-jupyter:
-      ignore_h1_titles: True
-  
->>>>>>> examples
