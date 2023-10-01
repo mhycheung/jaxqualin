@@ -1,5 +1,6 @@
 site_name: jaxqualin
 
+<<<<<<< HEAD
 theme: mkdocs    # This theme is mandatory for now, see below
 
 plugins:
@@ -26,3 +27,16 @@ extra_javascript:
   - docs/javascripts/mathjax.js
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+=======
+nav:
+  - Home: index.md
+  - Examples:
+    - Fitting the ringdown: notebooks/fit_testing.ipynb
+    - Mode search: notebooks/mode_selection_testing.ipynb
+
+plugins:
+  - search
+  - mkdocs-jupyter:
+      ignore_h1_titles: True
+  
+>>>>>>> examples
