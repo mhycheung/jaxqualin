@@ -1,5 +1,4 @@
 site_name: jaxqualin
-site_url: https://example.com/
 
 nav:
   - Home: index.md
