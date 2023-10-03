@@ -169,6 +169,9 @@ def str_to_lmnx(lmnxstring):
         lmnx.append(lmn)
     return lmnx
 
+def str_to_mode(str, M, a, retro = False):
+    lmnx = str_to_lmnx(str)
+    return mode(lmnx, M, a, retro = retro)
 
 def long_str_to_lmnxs(longstring):
     lmnxs = []
