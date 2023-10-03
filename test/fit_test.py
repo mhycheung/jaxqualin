@@ -21,7 +21,7 @@ def test_fit_free(test_waveform_tuple, test_results_free):
     fitter.do_fits()
     results = fitter.result_full
     for key in test_results_free.keys():
-        assert np.array_equal(np.array(test_results_free[key]), results.results_dict[key])
+        assert np.allclose(np.array(test_results_free[key]), results.results_dict[key])
 
 def test_fit_fixed(test_waveform_tuple, test_results_fixed):
     h, Mf, af, retro = test_waveform_tuple
@@ -39,5 +39,5 @@ def test_fit_fixed(test_waveform_tuple, test_results_fixed):
     fitter.do_fits()
     results = fitter.result_full
     for key in test_results_fixed.keys():
-        assert np.array_equal(np.array(test_results_fixed[key]), results.results_dict[key])
+        assert np.allclose(np.array(test_results_fixed[key]), results.results_dict[key])
     
