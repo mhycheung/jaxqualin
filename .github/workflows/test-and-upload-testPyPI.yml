@@ -10,7 +10,7 @@ name: Test and upload to TestPyPI
 
 on:
   push:
-    branches: [main]
+    branches: [pre-release]
 
 permissions:
   contents: write
