@@ -20,6 +20,7 @@ nav:
     - 5,5,0: mode_md/5.5.0.md
     - r2,2,0: mode_md/-2.2.0.md
     - r2,1,0: mode_md/-2.1.0.md
+  - Data: data.md
 
 plugins:
   - search
