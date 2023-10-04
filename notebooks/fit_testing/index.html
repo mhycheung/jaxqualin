@@ -95,6 +95,9 @@
 </li>
                                 </ul>
                             </li>
+                            <li class="navitem">
+                                <a href="../../data/" class="nav-link">Data</a>
+                            </li>
                         </ul>
 
                     <ul class="nav navbar-nav ml-auto">
@@ -632,7 +635,7 @@ import matplotlib.pyplot as plt</div>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
 <clipboard-copy for="cell-2">
@@ -645,17 +648,17 @@ import matplotlib.pyplot as plt</div>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">SXSnum</span> <span class="o">=</span> <span class="s2">"0305"</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">SXSnum</span> <span class="o">=</span> <span class="s2">"1419"</span>
 <span class="n">l</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="n">m</span> <span class="o">=</span> <span class="mi">2</span>
 
-<span class="n">h</span><span class="p">,</span> <span class="n">Mf</span><span class="p">,</span> <span class="n">af</span><span class="p">,</span> <span class="n">Lev</span><span class="p">,</span> <span class="n">retro</span> <span class="o">=</span> <span class="n">get_waveform_SXS</span><span class="p">(</span><span class="n">SXSnum</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+<span class="n">h</span><span class="p">,</span> <span class="n">Mf</span><span class="p">,</span> <span class="n">af</span><span class="p">,</span> <span class="n">Lev</span> <span class="o">=</span> <span class="n">get_waveform_SXS</span><span class="p">(</span><span class="n">SXSnum</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-2">SXSnum = "0305"
+<div class="clipboard-copy-txt" id="cell-2">SXSnum = "1419"
 l = 2
 m = 2
 
-h, Mf, af, Lev, retro = get_waveform_SXS(SXSnum, l, m)</div>
+h, Mf, af, Lev = get_waveform_SXS(SXSnum, l, m)</div>
 </div>
 </div>
 </div>
@@ -667,25 +670,63 @@ h, Mf, af, Lev, retro = get_waveform_SXS(SXSnum, l, m)</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Skipping download from 'https://data.black-holes.org/catalog.json' because local file is newer
-Skipping download from 'https://data.black-holes.org/catalog.json' because local file is newer
-Found the following files to load from the SXS catalog:
-    SXS:BBH:0305v5/Lev6/rhOverM_Asymptotic_GeometricUnits_CoM.h5
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>WARNING:absl:No GPU/TPU found, falling back to CPU. (Set TF_CPP_MIN_LOG_LEVEL=0 and rerun for more info.)
+<pre>Found the following files to load from the SXS catalog:
+    SXS:BBH:1419v5/Lev3/rhOverM_Asymptotic_GeometricUnits_CoM.h5
+Downloading to /home/markc/.cache/sxs/SXS:BBH:1419v2/Lev3/rhOverM_Asymptotic_GeometricUnits_CoM.h5:
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>  0%|          | 0/73245392 [00:00&lt;?, ?it/s]</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Found the following files to load from the SXS catalog:
-    SXS:BBH:0305v5/Lev6/metadata.json
+    SXS:BBH:1419v5/Lev3/metadata.json
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="CodeMirror cm-s-jupyter">
+<div class="zeroclipboard-container">
+<clipboard-copy for="cell-3">
+<div>
+<span class="notice" hidden="">Copied!</span>
+<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
+<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
+<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+</clipboard-copy>
+</div>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">af</span><span class="p">)</span>
+</pre></div>
+<div class="clipboard-copy-txt" id="cell-3">print(af)</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>-0.27629525974011904
 </pre>
 </div>
 </div>
@@ -714,7 +755,7 @@ If <code>load_pickle</code> is <code>True</code>, the fitter will load the pickl
 <div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy for="cell-3">
+<clipboard-copy for="cell-4">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -736,7 +777,7 @@ If <code>load_pickle</code> is <code>True</code>, the fitter will load the pickl
                             <span class="n">qnm_fixed_list</span> <span class="o">=</span> <span class="n">qnm_fixed_list</span><span class="p">,</span> <span class="n">load_pickle</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                             <span class="n">run_string_prefix</span> <span class="o">=</span> <span class="n">run_string_prefix</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-3">t0_arr = np.linspace(0, 50, num = 501) # array of starting times to fit for
+<div class="clipboard-copy-txt" id="cell-4">t0_arr = np.linspace(0, 50, num = 501) # array of starting times to fit for
                                        # t0 = 0 is the peak of the strain
 qnm_fixed_list = [] # list of QNMs with fixed frequencies in the fit model
 run_string_prefix = f"SXS{SXSnum}_lm_{l}.{m}" # prefix of pickle file for saving the results
@@ -761,7 +802,7 @@ fitter = QNMFitVaryingStartingTime(
 <div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy for="cell-4">
+<clipboard-copy for="cell-5">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -775,7 +816,7 @@ fitter = QNMFitVaryingStartingTime(
 <span class="c1"># This takes a little longer to run the first time</span>
 <span class="n">fitter</span><span class="o">.</span><span class="n">do_fits</span><span class="p">()</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4"># do fits, in series from lowest to highest starting time
+<div class="clipboard-copy-txt" id="cell-5"># do fits, in series from lowest to highest starting time
 # This takes a little longer to run the first time
 fitter.do_fits()</div>
 </div>
@@ -804,7 +845,7 @@ fitter.do_fits()</div>
 <div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy for="cell-5">
+<clipboard-copy for="cell-6">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -817,7 +858,7 @@ fitter.do_fits()</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># fitter results object</span>
 <span class="n">result</span> <span class="o">=</span> <span class="n">fitter</span><span class="o">.</span><span class="n">result_full</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-5"># fitter results object
+<div class="clipboard-copy-txt" id="cell-6"># fitter results object
 result = fitter.result_full</div>
 </div>
 </div>
@@ -844,7 +885,7 @@ result = fitter.result_full</div>
 <div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy for="cell-6">
+<clipboard-copy for="cell-7">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -862,7 +903,7 @@ result = fitter.result_full</div>
 <span class="n">plot_omega_free</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">ax</span><span class="p">)</span>
 <span class="n">plot_predicted_qnms</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">predicted_qnms</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">fig, ax = plt.subplots()
+<div class="clipboard-copy-txt" id="cell-7">fig, ax = plt.subplots()
 
 # mode locations to visualize on the plot
 predicted_qnms = mode_list(['2.2.0', '2.2.1', '3.2.0'], Mf, af, retro = retro)
@@ -907,7 +948,7 @@ We will use $N_f = 0$, meaning that we do not include additional free QNMs on to
 <div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy for="cell-7">
+<clipboard-copy for="cell-8">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -930,7 +971,7 @@ We will use $N_f = 0$, meaning that we do not include additional free QNMs on to
                             <span class="n">qnm_fixed_list</span> <span class="o">=</span> <span class="n">qnm_fixed_list</span><span class="p">,</span> <span class="n">load_pickle</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                             <span class="n">run_string_prefix</span> <span class="o">=</span> <span class="n">run_string_prefix</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-7">t0_arr = np.linspace(0, 50, num = 501) # array of starting times to fit for
+<div class="clipboard-copy-txt" id="cell-8">t0_arr = np.linspace(0, 50, num = 501) # array of starting times to fit for
                                        # t0 = 0 is the peak of the straisn
 qnm_fixed_list = mode_list(['2.2.0', '2.2.1', '3.2.0'],
                                    Mf, af, retro = retro) # list of QNMs with fixed frequencies in the fit model
@@ -956,7 +997,7 @@ fitter = QNMFitVaryingStartingTime(
 <div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy for="cell-8">
+<clipboard-copy for="cell-9">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -968,7 +1009,7 @@ fitter = QNMFitVaryingStartingTime(
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">fitter</span><span class="o">.</span><span class="n">do_fits</span><span class="p">()</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8">fitter.do_fits()</div>
+<div class="clipboard-copy-txt" id="cell-9">fitter.do_fits()</div>
 </div>
 </div>
 </div>
@@ -995,7 +1036,7 @@ fitter = QNMFitVaryingStartingTime(
 <div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy for="cell-9">
+<clipboard-copy for="cell-10">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1008,7 +1049,7 @@ fitter = QNMFitVaryingStartingTime(
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">fitter</span><span class="o">.</span><span class="n">result_full</span>
 <span class="n">popt_full</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">popt_full</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-9">result = fitter.result_full
+<div class="clipboard-copy-txt" id="cell-10">result = fitter.result_full
 popt_full = result.popt_full</div>
 </div>
 </div>
@@ -1035,7 +1076,7 @@ popt_full = result.popt_full</div>
 <div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy for="cell-10">
+<clipboard-copy for="cell-11">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1049,7 +1090,7 @@ popt_full = result.popt_full</div>
 <span class="n">plot_amplitudes</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">fixed_modes</span> <span class="o">=</span> <span class="n">qnm_fixed_list</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 <span class="n">plot_phases</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">fixed_modes</span> <span class="o">=</span> <span class="n">qnm_fixed_list</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">legend</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-10">fig, axs = plt.subplots(1, 2, figsize = (12, 5))
+<div class="clipboard-copy-txt" id="cell-11">fig, axs = plt.subplots(1, 2, figsize = (12, 5))
 plot_amplitudes(result, fixed_modes = qnm_fixed_list, ax = axs[0])
 plot_phases(result, fixed_modes = qnm_fixed_list, ax = axs[1], legend = False)</div>
 </div>
