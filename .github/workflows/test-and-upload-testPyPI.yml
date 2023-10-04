@@ -6,7 +6,7 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: Test and upload to TestPyPI
+name: Test build
 
 on:
   push:
@@ -31,6 +31,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - uses: actions/checkout@v4
     - name: Dynamic versioning with date and time
+      if: ${{ matrix.python-version == '3.11'}}
       run: |
         git config user.name github-actions
         git config user.email github-actions@github.com
@@ -57,6 +58,7 @@ jobs:
       run: |
         pytest
     - name: Build and upload to PyPI
+      if: ${{ matrix.python-version == '3.11'}}
       run: |
         python -m build
         python -m twine upload dist/*
