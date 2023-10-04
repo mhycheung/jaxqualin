@@ -97,9 +97,9 @@ def plot_omega_free(
 def plot_predicted_qnms(
         ax,
         predicted_qnm_list,
-        predicted_qnm_list_retro = [],
-        ellipse_qnm_list = [],
-        ellipse_qnm_list_retro = [],
+        # predicted_qnm_list_retro = [],
+        # ellipse_qnm_list = [],
+        # ellipse_qnm_list_retro = [],
         ellipse_x = 0.05,
         ellipse_y = 0.05,
         ellipse_edgecolor = 'gray',
@@ -115,10 +115,10 @@ def plot_predicted_qnms(
         cut_at_0 = False,
         pred_alpha = 1,
         present_modes = [],
-        present_modes_retro = [],
+        # present_modes_retro = [],
         edgecolor_present = 'k',
         expand_points = (1.1, 1.7),
-        physical_notation = False,
+        # physical_notation = False,
         xminmin = -2,
         xmaxmax = 2,
         yminmin = 0.05,
@@ -138,21 +138,20 @@ def plot_predicted_qnms(
     ymin, ymax = ax.get_ylim()
     texts = []
     circles = []
-    for i, mode in enumerate(predicted_qnm_list + predicted_qnm_list_retro):
-        if i >= len(predicted_qnm_list):
-            omegar = -mode.omegar
-            retro_string = r'$r$'
-            if mode.string() in present_modes_retro:
-                present = True
-            else:
-                present = False
+    for i, mode in enumerate(predicted_qnm_list):
+        # if i >= len(predicted_qnm_list):
+        #     omegar = -mode.omegar
+        #     retro_string = r'$r$'
+        #     if mode.string() in present_modes_retro:
+        #         present = True
+        #     else:
+        #         present = False
+        # else:
+        omegar = mode.omegar
+        if mode.string() in present_modes:
+            present = True
         else:
-            omegar = mode.omegar
-            retro_string = ''
-            if mode.string() in present_modes:
-                present = True
-            else:
-                present = False
+            present = False
         if present:
             edgecolor_adj = edgecolor_present
         else:
@@ -168,13 +167,10 @@ def plot_predicted_qnms(
             transform = ax.transData.transform((omegar, mode.omegai))
             mode_ax_coord = ax.transAxes.inverted().transform(transform)
             label_ax_coord = mode_ax_coord + label_offset
-            if physical_notation:
-                tex_string = tex_string_physical_notation(mode)
-            else:
-                tex_string = mode.tex_string()
+            tex_string = mode.tex_string()
             text = ax.text(
                         *label_ax_coord,
-                        retro_string + tex_string,
+                        tex_string,
                         color=edgecolor_adj,
                         transform=ax.transAxes,
                         horizontalalignment="center",
@@ -185,11 +181,8 @@ def plot_predicted_qnms(
     adjust_text(texts, expand_points=expand_points, ax = ax)
     
     ells = []
-    for i, mode in enumerate(predicted_qnm_list + predicted_qnm_list_retro):
-        if i >= len(predicted_qnm_list):
-            omegar = -mode.omegar
-        else:
-            omegar = mode.omegar
+    for i, mode in enumerate(predicted_qnm_list):
+        omegar = mode.omegar
         if xmin < omegar < xmax and ymax < mode.omegai < ymin:  # remember that y-axis is flipped
             ells.append(Ellipse(xy = (omegar, mode.omegai),
                      width = 2*ellipse_x, height = 2*ellipse_y,
@@ -279,7 +272,7 @@ def plot_M_a(
 def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True,
                     legend = True, color_dict = {}, lw = 2, bold_dict = {}, lw_bold = 4, alpha_bold = 1,
                     t_flat_start_dict = {}, flat_start_s = 20, flat_start_marker = 'o', plot_retro_pred = False,
-                    iota = None, af = None, phi = 0, A_fac = 1, physical_notation = True):
+                    iota = None, af = None, phi = 0, A_fac = 1):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -287,13 +280,10 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-"
     A_free_dict = results_full.A_free_dict
     t0_arr = results_full.t0_arr
     if fixed_modes is not None:
-        if physical_notation:
-            fixed_mode_string_tex_list = qnms_to_tex_string_physical_notation(fixed_modes)
-        else:
-            fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
+        fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
-                lmnx = fixed_modes[i].lmnx_retro
+                lmnx = fixed_modes[i].lmnx
                 if fixed_mode_string in color_dict:
                     color = color_dict[fixed_mode_string]
                 else:
@@ -339,7 +329,7 @@ def plot_amplitudes(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-"
     ax.set_ylabel(r"$A$")
     
 def plot_amplitudes_unadj(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-", use_label = True,
-                          legend = True, physical_notation = True):
+                          legend = True):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -347,10 +337,7 @@ def plot_amplitudes_unadj(results_full, fixed_modes=None, ax=None, alpha = 1, ls
     A_free_dict = results_full.A_free_dict
     t0_arr = results_full.t0_arr
     if fixed_modes is not None:
-        if physical_notation:
-            fixed_mode_string_tex_list = qnms_to_tex_string_physical_notation(fixed_modes)
-        else:
-            fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
+        fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
                 if use_label:
@@ -379,8 +366,7 @@ def plot_phases(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-",
                 legend = True, color_dict = {}, lw = 2, bold_dict = {}, 
                 lw_bold = 4, alpha_bold = 1,
                 t_flat_start_dict = {}, flat_start_s = 20, flat_start_marker = 'o',
-                plot_retro_pred = False, iota = None, af = None, phi = 0,
-                physical_notation = True):
+                plot_retro_pred = False, iota = None, af = None, phi = 0):
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -390,13 +376,10 @@ def plot_phases(results_full, fixed_modes=None, ax=None, alpha = 1, ls = "-",
     A_free_dict = results_full.A_free_dict
     t0_arr = results_full.t0_arr
     if fixed_modes is not None:
-        if physical_notation:
-            fixed_mode_string_tex_list = qnms_to_tex_string_physical_notation(fixed_modes)
-        else:
-            fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
+        fixed_mode_string_tex_list = qnms_to_tex_string(fixed_modes)
         fixed_mode_string_list = qnms_to_string(fixed_modes)
         for i, fixed_mode_string in enumerate(fixed_mode_string_list):
-            lmnx = fixed_modes[i].lmnx_retro
+            lmnx = fixed_modes[i].lmnx
             if fixed_mode_string in color_dict:
                 color = color_dict[fixed_mode_string]
             else:
@@ -615,139 +598,139 @@ def phase_break_for_plot(times, phis_in):
     return timeslist, phislist
 
 
-def mode_plot_3D(df, l, m, mode_string_pro, mode_string_retro, quantile_low = 0.01, quantile_hi = 0.99):
-    df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
-              ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
-    xyz = df[["SXS_num", "chi_1_z", "chi_2_z", "q"]].drop_duplicates()
-    df_missing = xyz[(~xyz["SXS_num"].isin(df_mode["SXS_num"]))]
+# def mode_plot_3D(df, l, m, mode_string_pro, mode_string_retro, quantile_low = 0.01, quantile_hi = 0.99):
+#     df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
+#               ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
+#     xyz = df[["SXS_num", "chi_1_z", "chi_2_z", "q"]].drop_duplicates()
+#     df_missing = xyz[(~xyz["SXS_num"].isin(df_mode["SXS_num"]))]
     
-    fig, axs = plt.subplots(2,2, figsize = (9, 7))
+#     fig, axs = plt.subplots(2,2, figsize = (9, 7))
     
-    vmin = np.quantile(np.log10(df_mode["A_med"]), quantile_low)
-    vmax = np.quantile(np.log10(df_mode["A_med"]), quantile_hi)
+#     vmin = np.quantile(np.log10(df_mode["A_med"]), quantile_low)
+#     vmax = np.quantile(np.log10(df_mode["A_med"]), quantile_hi)
     
-    axs[1,1].scatter(df_mode["chi_1_z"], df_mode["chi_2_z"], c=np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
-    axs[1,1].scatter(df_missing["chi_1_z"], df_missing["chi_2_z"], c = "gray", alpha = 0.1)
-    axs[1,1].set_xlabel(r"$\chi_1$")
-    axs[1,1].set_ylabel(r"$\chi_2$")
-    axs[1,0].scatter(df_mode["chi_1_z"], df_mode["q"], c=np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
-    axs[1,0].scatter(df_missing["chi_1_z"], df_missing["q"], c = "gray", alpha = 0.1)
-    axs[1,0].set_xlabel(r"$\chi_1$")
-    axs[1,0].set_ylabel(r"$q$")
-    axs[0,1].scatter(df_mode["chi_2_z"], df_mode["q"], c=np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
-    axs[0,1].scatter(df_missing["chi_2_z"], df_missing["q"], c = "gray", alpha = 0.1)
-    axs[0,1].set_xlabel(r"$\chi_2$")
-    axs[0,1].set_ylabel(r"$q$")
+#     axs[1,1].scatter(df_mode["chi_1_z"], df_mode["chi_2_z"], c=np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
+#     axs[1,1].scatter(df_missing["chi_1_z"], df_missing["chi_2_z"], c = "gray", alpha = 0.1)
+#     axs[1,1].set_xlabel(r"$\chi_1$")
+#     axs[1,1].set_ylabel(r"$\chi_2$")
+#     axs[1,0].scatter(df_mode["chi_1_z"], df_mode["q"], c=np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
+#     axs[1,0].scatter(df_missing["chi_1_z"], df_missing["q"], c = "gray", alpha = 0.1)
+#     axs[1,0].set_xlabel(r"$\chi_1$")
+#     axs[1,0].set_ylabel(r"$q$")
+#     axs[0,1].scatter(df_mode["chi_2_z"], df_mode["q"], c=np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
+#     axs[0,1].scatter(df_missing["chi_2_z"], df_missing["q"], c = "gray", alpha = 0.1)
+#     axs[0,1].set_xlabel(r"$\chi_2$")
+#     axs[0,1].set_ylabel(r"$q$")
     
-    axs[0,0].remove()
+#     axs[0,0].remove()
 
-    ax = fig.add_subplot(2,2,1,projection='3d')
-    sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["q"], c = np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
-    ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["q"], c = "gray", alpha = 0.1)
-    sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["q"], c = np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
-    for i in range(len(sc.get_facecolors())):
-        ax.plot([df_mode["chi_1_z"].to_numpy()[i], df_mode["chi_1_z"].to_numpy()[i]], 
-                [df_mode["chi_2_z"].to_numpy()[i], df_mode["chi_2_z"].to_numpy()[i]], 
-                [1, df_mode["q"].to_numpy()[i]], c = sc.get_facecolors()[i].tolist(), alpha = 0.5, lw = 1.5)
-    ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["q"], c = "gray", alpha = 0.2)
-    for i in range(len(df_missing["chi_1_z"].to_numpy())):
-        ax.plot([df_missing["chi_1_z"].to_numpy()[i], df_missing["chi_1_z"].to_numpy()[i]], 
-                [df_missing["chi_2_z"].to_numpy()[i], df_missing["chi_2_z"].to_numpy()[i]], 
-                [1, df_missing["q"].to_numpy()[i]], c = "gray", alpha = 0.2, lw = 1.5)
-    ax.set_xlabel(r"$\chi_1$", fontsize = 12, labelpad = -4)
-    ax.set_ylabel(r"$\chi_2$", fontsize = 12, labelpad = -4)
-    ax.set_zlabel(r"$q$", fontsize = 12, labelpad = -4)
-    ax.tick_params(axis = 'x', labelsize = 9, pad = -0.75)
-    ax.tick_params(axis = 'y', labelsize = 9, pad = -0.75)
-    ax.tick_params(axis = 'z', labelsize = 9, pad = -0.75)
+#     ax = fig.add_subplot(2,2,1,projection='3d')
+#     sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["q"], c = np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
+#     ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["q"], c = "gray", alpha = 0.1)
+#     sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["q"], c = np.log10(df_mode["A_med"]), vmin = vmin, vmax = vmax)
+#     for i in range(len(sc.get_facecolors())):
+#         ax.plot([df_mode["chi_1_z"].to_numpy()[i], df_mode["chi_1_z"].to_numpy()[i]], 
+#                 [df_mode["chi_2_z"].to_numpy()[i], df_mode["chi_2_z"].to_numpy()[i]], 
+#                 [1, df_mode["q"].to_numpy()[i]], c = sc.get_facecolors()[i].tolist(), alpha = 0.5, lw = 1.5)
+#     ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["q"], c = "gray", alpha = 0.2)
+#     for i in range(len(df_missing["chi_1_z"].to_numpy())):
+#         ax.plot([df_missing["chi_1_z"].to_numpy()[i], df_missing["chi_1_z"].to_numpy()[i]], 
+#                 [df_missing["chi_2_z"].to_numpy()[i], df_missing["chi_2_z"].to_numpy()[i]], 
+#                 [1, df_missing["q"].to_numpy()[i]], c = "gray", alpha = 0.2, lw = 1.5)
+#     ax.set_xlabel(r"$\chi_1$", fontsize = 12, labelpad = -4)
+#     ax.set_ylabel(r"$\chi_2$", fontsize = 12, labelpad = -4)
+#     ax.set_zlabel(r"$q$", fontsize = 12, labelpad = -4)
+#     ax.tick_params(axis = 'x', labelsize = 9, pad = -0.75)
+#     ax.tick_params(axis = 'y', labelsize = 9, pad = -0.75)
+#     ax.tick_params(axis = 'z', labelsize = 9, pad = -0.75)
     
-    # fig.tight_layout()
-    fig.suptitle(f"{mode_string_pro} in lm = {l}{m}", fontsize = 24)
-    fig.subplots_adjust(right=0.9,wspace=0.25, hspace=0.3)
-    ax.set_position([0,0.45,0.55,0.55])
-    cb_ax = fig.add_axes([0.93, 0.2, 0.02, 0.6])
-    cbar = fig.colorbar(sc, cax=cb_ax)
-    cb_ax.set_ylabel(r"$\log_{10} A$")
+#     # fig.tight_layout()
+#     fig.suptitle(f"{mode_string_pro} in lm = {l}{m}", fontsize = 24)
+#     fig.subplots_adjust(right=0.9,wspace=0.25, hspace=0.3)
+#     ax.set_position([0,0.45,0.55,0.55])
+#     cb_ax = fig.add_axes([0.93, 0.2, 0.02, 0.6])
+#     cbar = fig.colorbar(sc, cax=cb_ax)
+#     cb_ax.set_ylabel(r"$\log_{10} A$")
 
-def mode_plot_3D_eta(df, l, m, mode_string_pro, mode_string_retro, quantile_low = 0.01, quantile_hi = 0.99,
-                     adjust_eta = True, adjust_delta = False, plot_log = True, eta_cut = 0.2499,
-                     adjust_eta_poly = "1"):
-    if adjust_delta:
-        df_mode = df.loc[(((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
-                        ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))) & (df['eta'] < eta_cut)]
-    else:
-        df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
-              ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
-    xyz = df[["SXS_num", "chi_1_z", "chi_2_z", "eta"]].drop_duplicates()
-    df_missing = xyz[(~xyz["SXS_num"].isin(df_mode["SXS_num"]))]
+# def mode_plot_3D_eta(df, l, m, mode_string_pro, mode_string_retro, quantile_low = 0.01, quantile_hi = 0.99,
+#                      adjust_eta = True, adjust_delta = False, plot_log = True, eta_cut = 0.2499,
+#                      adjust_eta_poly = "1"):
+#     if adjust_delta:
+#         df_mode = df.loc[(((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
+#                         ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))) & (df['eta'] < eta_cut)]
+#     else:
+#         df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) | 
+#               ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro)& (df["retro"] == True))]
+#     xyz = df[["SXS_num", "chi_1_z", "chi_2_z", "eta"]].drop_duplicates()
+#     df_missing = xyz[(~xyz["SXS_num"].isin(df_mode["SXS_num"]))]
     
-    fig, axs = plt.subplots(2,2, figsize = (9, 7))
+#     fig, axs = plt.subplots(2,2, figsize = (9, 7))
     
-    A = df_mode["A_med"]
-    if adjust_eta:
-        A /= df_mode["eta"]
-    if adjust_delta:
-        A /= np.sqrt(1 - 4*df_mode["eta"])
-    x = df_mode["eta"]
-    eta_poly = eval(adjust_eta_poly)
-    A /= eta_poly
+#     A = df_mode["A_med"]
+#     if adjust_eta:
+#         A /= df_mode["eta"]
+#     if adjust_delta:
+#         A /= np.sqrt(1 - 4*df_mode["eta"])
+#     x = df_mode["eta"]
+#     eta_poly = eval(adjust_eta_poly)
+#     A /= eta_poly
 
-    if plot_log:
-        A_plot = np.log10(A)
-    else:
-        A_plot = A
+#     if plot_log:
+#         A_plot = np.log10(A)
+#     else:
+#         A_plot = A
 
-    vmin = np.quantile(A_plot, quantile_low)
-    vmax = np.quantile(A_plot, quantile_hi)
+#     vmin = np.quantile(A_plot, quantile_low)
+#     vmax = np.quantile(A_plot, quantile_hi)
     
-    axs[1,1].scatter(df_mode["chi_1_z"], df_mode["chi_2_z"], c=A_plot, vmin = vmin, vmax = vmax)
-    axs[1,1].scatter(df_missing["chi_1_z"], df_missing["chi_2_z"], c = "gray", alpha = 0.1)
-    axs[1,1].set_xlabel(r"$\chi_1$")
-    axs[1,1].set_ylabel(r"$\chi_2$")
-    axs[1,0].scatter(df_mode["chi_1_z"], df_mode["eta"], c=A_plot, vmin = vmin, vmax = vmax)
-    axs[1,0].scatter(df_missing["chi_1_z"], df_missing["eta"], c = "gray", alpha = 0.1)
-    axs[1,0].set_xlabel(r"$\chi_1$")
-    axs[1,0].set_ylabel(r"$\eta$")
-    axs[1,0].invert_yaxis()
-    axs[0,1].scatter(df_mode["chi_2_z"], df_mode["eta"], c=A_plot, vmin = vmin, vmax = vmax)
-    axs[0,1].scatter(df_missing["chi_2_z"], df_missing["eta"], c = "gray", alpha = 0.1)
-    axs[0,1].set_xlabel(r"$\chi_2$")
-    axs[0,1].set_ylabel(r"$\eta$")
-    axs[0,1].invert_yaxis()
+#     axs[1,1].scatter(df_mode["chi_1_z"], df_mode["chi_2_z"], c=A_plot, vmin = vmin, vmax = vmax)
+#     axs[1,1].scatter(df_missing["chi_1_z"], df_missing["chi_2_z"], c = "gray", alpha = 0.1)
+#     axs[1,1].set_xlabel(r"$\chi_1$")
+#     axs[1,1].set_ylabel(r"$\chi_2$")
+#     axs[1,0].scatter(df_mode["chi_1_z"], df_mode["eta"], c=A_plot, vmin = vmin, vmax = vmax)
+#     axs[1,0].scatter(df_missing["chi_1_z"], df_missing["eta"], c = "gray", alpha = 0.1)
+#     axs[1,0].set_xlabel(r"$\chi_1$")
+#     axs[1,0].set_ylabel(r"$\eta$")
+#     axs[1,0].invert_yaxis()
+#     axs[0,1].scatter(df_mode["chi_2_z"], df_mode["eta"], c=A_plot, vmin = vmin, vmax = vmax)
+#     axs[0,1].scatter(df_missing["chi_2_z"], df_missing["eta"], c = "gray", alpha = 0.1)
+#     axs[0,1].set_xlabel(r"$\chi_2$")
+#     axs[0,1].set_ylabel(r"$\eta$")
+#     axs[0,1].invert_yaxis()
     
-    axs[0,0].remove()
+#     axs[0,0].remove()
 
-    ax = fig.add_subplot(2,2,1,projection='3d')
-    sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["eta"], c = A_plot, vmin = vmin, vmax = vmax)
-    ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["eta"], c = "gray", alpha = 0.1)
-    sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["eta"], c = A_plot, vmin = vmin, vmax = vmax)
-    for i in range(len(sc.get_facecolors())):
-        ax.plot([df_mode["chi_1_z"].to_numpy()[i], df_mode["chi_1_z"].to_numpy()[i]], 
-                [df_mode["chi_2_z"].to_numpy()[i], df_mode["chi_2_z"].to_numpy()[i]], 
-                [0.25, df_mode["eta"].to_numpy()[i]], c = sc.get_facecolors()[i].tolist(), alpha = 0.5, lw = 1.5)
-    ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["eta"], c = "gray", alpha = 0.2)
-    for i in range(len(df_missing["chi_1_z"].to_numpy())):
-        ax.plot([df_missing["chi_1_z"].to_numpy()[i], df_missing["chi_1_z"].to_numpy()[i]], 
-                [df_missing["chi_2_z"].to_numpy()[i], df_missing["chi_2_z"].to_numpy()[i]], 
-                [0.25, df_missing["eta"].to_numpy()[i]], c = "gray", alpha = 0.2, lw = 1.5)
-    ax.set_xlabel(r"$\chi_1$", fontsize = 12, labelpad = -4)
-    ax.set_ylabel(r"$\chi_2$", fontsize = 12, labelpad = -4)
-    ax.set_zlabel(r"$\eta$", fontsize = 12, labelpad = -4)
-    ax.tick_params(axis = 'x', labelsize = 9, pad = -0.75)
-    ax.tick_params(axis = 'y', labelsize = 9, pad = -0.75)
-    ax.tick_params(axis = 'z', labelsize = 9, pad = -0.75)
-    ax.invert_zaxis()
+#     ax = fig.add_subplot(2,2,1,projection='3d')
+#     sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["eta"], c = A_plot, vmin = vmin, vmax = vmax)
+#     ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["eta"], c = "gray", alpha = 0.1)
+#     sc = ax.scatter3D(df_mode["chi_1_z"], df_mode["chi_2_z"], df_mode["eta"], c = A_plot, vmin = vmin, vmax = vmax)
+#     for i in range(len(sc.get_facecolors())):
+#         ax.plot([df_mode["chi_1_z"].to_numpy()[i], df_mode["chi_1_z"].to_numpy()[i]], 
+#                 [df_mode["chi_2_z"].to_numpy()[i], df_mode["chi_2_z"].to_numpy()[i]], 
+#                 [0.25, df_mode["eta"].to_numpy()[i]], c = sc.get_facecolors()[i].tolist(), alpha = 0.5, lw = 1.5)
+#     ax.scatter3D(df_missing["chi_1_z"], df_missing["chi_2_z"], df_missing["eta"], c = "gray", alpha = 0.2)
+#     for i in range(len(df_missing["chi_1_z"].to_numpy())):
+#         ax.plot([df_missing["chi_1_z"].to_numpy()[i], df_missing["chi_1_z"].to_numpy()[i]], 
+#                 [df_missing["chi_2_z"].to_numpy()[i], df_missing["chi_2_z"].to_numpy()[i]], 
+#                 [0.25, df_missing["eta"].to_numpy()[i]], c = "gray", alpha = 0.2, lw = 1.5)
+#     ax.set_xlabel(r"$\chi_1$", fontsize = 12, labelpad = -4)
+#     ax.set_ylabel(r"$\chi_2$", fontsize = 12, labelpad = -4)
+#     ax.set_zlabel(r"$\eta$", fontsize = 12, labelpad = -4)
+#     ax.tick_params(axis = 'x', labelsize = 9, pad = -0.75)
+#     ax.tick_params(axis = 'y', labelsize = 9, pad = -0.75)
+#     ax.tick_params(axis = 'z', labelsize = 9, pad = -0.75)
+#     ax.invert_zaxis()
     
-    # fig.tight_layout()
-    fig.suptitle(f"{mode_string_pro} in lm = {l}{m}", fontsize = 24)
-    fig.subplots_adjust(right=0.9,wspace=0.25, hspace=0.3)
-    ax.set_position([0,0.45,0.55,0.55])
-    cb_ax = fig.add_axes([0.93, 0.2, 0.02, 0.6])
-    cbar = fig.colorbar(sc, cax=cb_ax)
-    if plot_log:
-        cb_ax.set_ylabel(r"$\log_{10} A$")
-    else:
-        cb_ax.set_ylabel(r"$A$")
+#     # fig.tight_layout()
+#     fig.suptitle(f"{mode_string_pro} in lm = {l}{m}", fontsize = 24)
+#     fig.subplots_adjust(right=0.9,wspace=0.25, hspace=0.3)
+#     ax.set_position([0,0.45,0.55,0.55])
+#     cb_ax = fig.add_axes([0.93, 0.2, 0.02, 0.6])
+#     cbar = fig.colorbar(sc, cax=cb_ax)
+#     if plot_log:
+#         cb_ax.set_ylabel(r"$\log_{10} A$")
+#     else:
+#         cb_ax.set_ylabel(r"$A$")
 
 def linfunc(p, x):
     m, c= p
@@ -1258,9 +1241,9 @@ def plot_mode_searcher_results(mode_searcher, axs = None):
     for key in t_start_dict:
         t_start_dict[key] += 0.5      
 
-    for qnm in result.qnm_fixed_list:
-        if not hasattr(qnm, 'lmnx_retro'):
-            qnm.init_lmnx_retro()
+    # for qnm in result.qnm_fixed_list:
+    #     if not hasattr(qnm, 'lmnx_retro'):
+    #         qnm.init_lmnx_retro()
             
     plot_amplitudes(result, fixed_modes = result.qnm_fixed_list, ax = axs[1], use_label = False, 
                     legend = True, bold_dict = bold_dict, alpha = 0.3,

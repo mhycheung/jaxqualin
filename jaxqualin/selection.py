@@ -29,7 +29,7 @@ class IterativeFlatnessChecker:
         self.found_modes = found_modes
         self.fitter_list = []
         kwargs = {"run_string_prefix": "Default", "flatness_tol": 0.2,
-                  "flatness_range": 10, "retro": False, "load_pickle": True,
+                  "flatness_range": 10, "retro_def_orbit": True, "load_pickle": True,
                   "confusion_tol": 0.03, "quantile_range": 0.95,
                   "med_min" : 1e-3,
                   "weight_1": 1.0, "weight_2": 1.5,
@@ -50,20 +50,20 @@ class IterativeFlatnessChecker:
         self.CCE = self.kwargs["CCE"]
         self.fit_save_prefix = self.kwargs["fit_save_prefix"]
 
-        self.retro = self.kwargs["retro"]
+        self.retro_def_orbit = self.kwargs["retro_def_orbit"]
         self.load_pickle = self.kwargs["load_pickle"]
         
         
     def do_iterative_flatness_check(self):
 
-        if self.retro:
+        if self.retro_def_orbit and self.a < 0:
             _fund_mode_string = f"-{self.l}.{self.m}.0"
         else:
             _fund_mode_string = f"{self.l}.{self.m}.0"
         _current_modes = self.found_modes
         _current_modes_string = qnms_to_string(_current_modes)
         if _fund_mode_string not in _current_modes_string:
-            _current_modes.append(mode(_fund_mode_string, self.M, self.a, retro=self.retro))
+            _current_modes.append(mode(_fund_mode_string, self.M, self.a, retro_def_orbit=self.retro_def_orbit))
         i = 0
         _discard_mode = True
         _more_than_one_mode = True
@@ -234,7 +234,7 @@ class ModeSearchAllFreeLM:
         self.N_init = N_init
         self.N_step = N_step
         self.iterations = iterations
-        kwargs = {"retro": False, "run_string_prefix": "Default", "load_pickle": True,
+        kwargs = {"retro_def_orbit": True, "run_string_prefix": "Default", "load_pickle": True,
                   "a_recoil_tol": 0., "recoil_n_max" : 0,
                   "omega_r_tol" : 0.05, "omega_i_tol" : 0.05,
                   "t_tol" : 10, "fraction_tol" : 0.95, 'fit_kwargs' : {}, 
@@ -242,7 +242,7 @@ class ModeSearchAllFreeLM:
                   "A_guess_relative" : True, "set_seed" : 1234, 'fit_save_prefix': FIT_SAVE_PATH}
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
-        self.retro = self.kwargs["retro"]
+        self.retro_def_orbit = self.kwargs["retro_def_orbit"]
         self.run_string_prefix = self.kwargs["run_string_prefix"]
         self.a_recoil_tol = self.kwargs["a_recoil_tol"]
         self.omega_r_tol = self.kwargs["omega_r_tol"]
@@ -252,10 +252,10 @@ class ModeSearchAllFreeLM:
         self.recoil_n_max = self.kwargs["recoil_n_max"]
         if self.a >= self.a_recoil_tol:
             self.potential_modes_full = potential_modes(
-                self.l, self.m, self.M, self.a, self.relevant_lm_list, retro = self.retro)
+                self.l, self.m, self.M, self.a, self.relevant_lm_list, retro_def_orbit = self.retro_def_orbit)
         else:
             self.potential_modes_full = potential_modes(
-                self.l, self.m, self.M, self.a, [(self.l, self.m)], retro = self.retro,
+                self.l, self.m, self.M, self.a, [(self.l, self.m)], retro_def_orbit = self.retro_def_orbit,
                   recoil_n_max = self.recoil_n_max)
         self.potential_modes = self.potential_modes_full.copy()
         self.load_pickle = self.kwargs["load_pickle"]
@@ -391,7 +391,8 @@ class ModeSearchAllFreeVaryingN:
         kwargs = {'run_string_prefix' : 'Default',
                   'load_pickle' : True,
                   'N_list' : [5, 6, 7, 8, 9, 10],
-                  'CCE' : False}
+                  'CCE' : False,
+                  'retro_def_orbit': True}
         kwargs.update(kwargs_in)
         self.N_list = kwargs['N_list']
         self.kwargs = kwargs
@@ -475,12 +476,14 @@ class ModeSearchAllFreeVaryingNSXS:
                   'set_seed_SXS' : True,
                   'default_seed' : 1234,
                   'CCE' : False,
-                  'relevant_lm_list' : []}
+                  'relevant_lm_list' : [],
+                  'retro_def_orbit' : True}
         kwargs.update(kwargs_in)
         self.N_list = kwargs['N_list']
         self.postfix_string = kwargs['postfix_string']
         self.CCE = kwargs['CCE']
         self.kwargs = kwargs
+        self.retro_def_orbit = self.kwargs['retro_def_orbit']
 
         if len(self.kwargs['relevant_lm_list']) == 0:
             self.relevant_lm_list_override = True
@@ -515,7 +518,6 @@ class ModeSearchAllFreeVaryingNSXS:
             self.a,
             self.relevant_lm_list,
             t0_arr=self.t0_arr,
-            retro = self.retro,
             set_seed = self.set_seed,
             **kwargs)
         self.mode_searcher_vary_N.do_mode_searches()
@@ -529,16 +531,16 @@ class ModeSearchAllFreeVaryingNSXS:
             self.pickle_save()
 
     def get_waveform(self):
-        _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum, CCE = self.CCE)
+        _relevant_modes_dict = get_relevant_lm_waveforms_SXS(self.SXSnum, CCE = self.CCE)
         if not self.relevant_lm_list_override:
             self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
                 _relevant_modes_dict)
         peaktime_dom = list(_relevant_modes_dict.values())[0].peaktime
         if self.CCE:
-            self.h, self.M, self.a, self.Lev, _retro = get_waveform_CCE(
+            self.h, self.M, self.a, self.Lev = get_waveform_CCE(
                 self.SXSnum, self.l, self.m)
         else:
-            self.h, self.M, self.a, self.Lev, _retro = get_waveform_SXS(
+            self.h, self.M, self.a, self.Lev = get_waveform_SXS(
                 self.SXSnum, self.l, self.m)
         self.h.update_peaktime(peaktime_dom)
 
@@ -597,7 +599,7 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
                 )
 
     def get_relevant_lm_list(self):
-        _relevant_modes_dict, self.retro = get_relevant_lm_waveforms_SXS(self.SXSnum, CCE = self.CCE)
+        _relevant_modes_dict = get_relevant_lm_waveforms_SXS(self.SXSnum, CCE = self.CCE)
         self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
             _relevant_modes_dict)
 
@@ -759,7 +761,7 @@ def start_of_flat_region(length, arr1, arr2, quantile_range = 0.95,
     return np.nan
 
 
-def eff_mode_search(inject_params, runname, retro = False, load_pickle = True, delay = True,
+def eff_mode_search(inject_params, runname, retro_def_orbit = True, load_pickle = True, delay = True,
                      **kwargs):
     
     Mf = inject_params['Mf']
@@ -767,7 +769,7 @@ def eff_mode_search(inject_params, runname, retro = False, load_pickle = True, d
     relevant_lm_list = inject_params['relevant_lm_list']
     h_eff = make_eff_ringdown_waveform_from_param(inject_params, delay = delay)
     mode_searcher = ModeSearchAllFreeVaryingN(h_eff, Mf, af, relevant_lm_list = relevant_lm_list, 
-                                          retro = retro, run_string_prefix = runname,
+                                          retro_def_orbit = retro_def_orbit, run_string_prefix = runname,
                                           load_pickle = load_pickle, **kwargs)
     mode_searcher.do_mode_searches()
     
@@ -782,7 +784,7 @@ def eff_mode_search(inject_params, runname, retro = False, load_pickle = True, d
 #                         retro = retro, load_pickle = load_pickle)
 #         mode_searcher_list.append(mode_searcher)
 
-def read_json_eff_mode_search(i, batch_runname, retro = False, load_pickle = True, delay = True, 
+def read_json_eff_mode_search(i, batch_runname, retro_def_orbit = True, load_pickle = True, delay = True, 
                               setting_path = SETTING_PATH, **kwargs):
     
     with open(f"{setting_path}/{batch_runname}.json", 'r') as f:
@@ -790,7 +792,7 @@ def read_json_eff_mode_search(i, batch_runname, retro = False, load_pickle = Tru
     
     runname = f"{batch_runname}_{i:03d}"
     mode_searcher = eff_mode_search(inject_params_full[runname], runname,
-                                    retro = retro, load_pickle = load_pickle,
+                                    retro_def_orbit = retro_def_orbit, load_pickle = load_pickle,
                                     delay = delay, **kwargs)
     
     return mode_searcher

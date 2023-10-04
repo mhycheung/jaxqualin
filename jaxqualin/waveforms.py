@@ -66,12 +66,9 @@ def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1 = 120):
                  1.j * hs[:, indx].imag, l=l, m=m, t1 = t1)
     Mf = metadata['remnant_mass']
     a_arr = metadata['remnant_dimensionless_spin']
-    af = np.linalg.norm(a_arr)
-    if a_arr[2] >= 0:
-        retro = False
-    else:
-        retro = True
-    return h, Mf, af, Level, retro
+    #TODO: deal with spins with x and y component
+    af = np.linalg.norm(a_arr)*np.sign(a_arr[2])
+    return h, Mf, af, Level
 
 def get_waveform_CCE(CCEnum, l, m, Lev = 5, t1 = 120):
     dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
@@ -83,14 +80,14 @@ def get_waveform_CCE(CCEnum, l, m, Lev = 5, t1 = 120):
     hdict = {}
     for key in keys:
         hdict[key] = h5file['hdict'][key][()]
-    retro = False
     with open(metapath) as f:
         metadata = json.load(f)
     Mf = metadata['remnant_mass']
-    af = np.linalg.norm(metadata['remnant_dimensionless_spin'])
+    a_arr = metadata['remnant_dimensionless_spin']
+    af = np.linalg.norm(a_arr)*np.sign(a_arr[2])
     h_time, h_r, h_i = tuple(hdict[f"{l},{m}"])
     h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t1=t1)
-    return h, Mf, af, Lev, retro
+    return h, Mf, af, Lev
 
 def get_M_a_SXS(SXSnum, res=0):
     catalog = sxs.catalog.Catalog.load()
@@ -123,12 +120,8 @@ def get_SXS_waveform_dict(SXSnum, res=0, N_ext=2):
     m2 = metadata['reference_mass2']
     Mf = metadata['remnant_mass']
     a_arr = metadata['remnant_dimensionless_spin']
-    af = np.linalg.norm(a_arr)
-    if a_arr[2] >= 0:
-        retro = False
-    else:
-        retro = True
-    return Mf, af, Level, hdict, retro
+    af = np.linalg.norm(a_arr)*np.sign(a_arr[2])
+    return Mf, af, Level, hdict
 
 def get_CCE_waveform_dict(CCEnum, Lev = 5):
     dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
@@ -140,12 +133,12 @@ def get_CCE_waveform_dict(CCEnum, Lev = 5):
     hdict = {}
     for key in keys:
         hdict[key] = h5file['hdict'][key][()]
-    retro = False
     with open(metapath) as f:
         metadata = json.load(f)
     Mf = metadata['remnant_mass']
-    af = np.linalg.norm(metadata['remnant_dimensionless_spin'])
-    return Mf, af, Lev, hdict, retro
+    a_arr = metadata['remnant_dimensionless_spin']
+    af = np.linalg.norm(a_arr)*np.sign(a_arr[2])
+    return Mf, af, Lev, hdict
 
 def waveformabsmax(time, hr, hi, startcut=500):
     startindx = bisect_left(time, startcut)
@@ -196,9 +189,9 @@ def get_relevant_lm_waveforms_SXS(
         N_ext=2,
         CCE = False):
     if CCE:
-        Mf, af, Level, hdict, retro = get_CCE_waveform_dict(SXSnum)
+        Mf, af, Level, hdict = get_CCE_waveform_dict(SXSnum)
     else:
-        Mf, af, Level, hdict, retro = get_SXS_waveform_dict(SXSnum, res=res, N_ext=N_ext)
+        Mf, af, Level, hdict = get_SXS_waveform_dict(SXSnum, res=res, N_ext=N_ext)
     if (int(SXSnum) < 305) and (not force_early_sim) and (not CCE):
         tol_force = tol
     relevant_lm_list = getdommodes(
@@ -210,7 +203,7 @@ def get_relevant_lm_waveforms_SXS(
         h_time, h_r, h_i = tuple(hdict[f"{l},{m}"])
         h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t1=t1)
         waveform_dict[f"{l}.{m}"] = h
-    return waveform_dict, retro
+    return waveform_dict
 
 def lm_string_list_to_tuple(lm_string_list):
     tuple_list = []
@@ -311,7 +304,7 @@ def get_waveform_toy_no_exp(A_list, phi_list, qnm_list, t_arr, t_match, c_list, 
 
 def get_SXS_waveform_summed(SXSnum, iota, phi, l_max = 4, res = 0, N_ext = 2):
 
-    Mf, af, Level, hdict, retro = get_SXS_waveform_dict(SXSnum, res = res , N_ext = N_ext)
+    Mf, af, Level, hdict = get_SXS_waveform_dict(SXSnum, res = res , N_ext = N_ext)
 
     hdict_complex = {}
     for key in hdict:
@@ -327,7 +320,7 @@ def get_SXS_waveform_summed(SXSnum, iota, phi, l_max = 4, res = 0, N_ext = 2):
     
     h = waveform(t, h_sum)
 
-    return h, Mf, af, retro
+    return h, Mf, af
 
 def delayed_QNM(mode, t, A, phi, dA_ratio = 0.2, A_delay = 5, A_sig = 1, dphi = -np.pi/2, phi_delay = 5, phi_sig = 1):
     omega = mode.omega
