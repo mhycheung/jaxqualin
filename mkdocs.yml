@@ -8,6 +8,7 @@ nav:
   - Examples:
     - Fitting the ringdown: notebooks/fit_testing.ipynb
     - Mode search: notebooks/mode_selection_testing.ipynb
+    - Loading hyperfits and interpolators: notebooks/hyperfit_load.ipynb
   - Results: 
     - 2,2,0: mode_md/2.2.0.md
     - 2,2,1: mode_md/2.2.1.md
