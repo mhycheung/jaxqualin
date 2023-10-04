@@ -20,8 +20,8 @@ classifiers = [
 ]
 dependencies = [
   "adjustText==0.8",
-  "jax==0.3.23",
-  "jaxlib==0.3.22",
+  "jax>0.3.23",
+  "jaxlib>0.3.23",
   "jaxfit==0.0.3",
   "matplotlib==3.6.1",
   "numpy>1.23",
