@@ -23,16 +23,18 @@ dependencies = [
   "jax>0.3.23",
   "jaxlib>0.3.23",
   "jaxfit==0.0.3",
-  "matplotlib==3.6.1",
+  "matplotlib>3.6.1",
   "numpy>1.23",
-  "pandas==1.5.1",
-  "PyCBC==2.0.6",
+  "pandas>1.5.1",
   "pykerr==0.1.0",
   "qnm==0.4.3",
-  "scipy==1.9.3",
+  "scipy>1.9.3",
   "sxs==2022.4.5",
-  "tqdm==4.61.1",
+  "tqdm>4.61.1",
 ]
+
+[project.optional-dependencies]
+pycbc = ["PyCBC>2.0.6"]
 
 [tool.hatch.version]
 path = "jaxqualin/__about__.py"

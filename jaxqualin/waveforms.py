@@ -8,7 +8,14 @@ from .utils import *
 
 from scipy.interpolate import griddata
 from scipy.stats import loguniform, uniform
-from pycbc.waveform.waveform_modes import sum_modes
+
+try:
+    from pycbc.waveform.waveform_modes import sum_modes
+except ImportError:
+    _has_pycbc = False
+else:
+    _has_pycbc = True
+
 from numpy.random import default_rng
 from scipy.optimize import minimize
 rng = default_rng(seed=1234)
@@ -303,6 +310,9 @@ def get_waveform_toy_no_exp(A_list, phi_list, qnm_list, t_arr, t_match, c_list, 
     return h
 
 def get_SXS_waveform_summed(SXSnum, iota, phi, l_max = 4, res = 0, N_ext = 2):
+
+    if not _has_pycbc:
+        raise ImportError("This function requires pycbc. Install it with `pip install pycbc`.")
 
     Mf, af, Level, hdict = get_SXS_waveform_dict(SXSnum, res = res , N_ext = N_ext)
 
