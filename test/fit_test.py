@@ -6,7 +6,7 @@ import numpy as np
 
 #TODO: make this less boilerplatey by reading the settings from the results json file
 def test_fit_free(test_waveform_tuple, test_results_free):
-    h, Mf, af, retro = test_waveform_tuple
+    h, Mf, af = test_waveform_tuple
     t0_arr = np.linspace(0, 10, num = 11)
 
     qnm_fixed_list = []
@@ -24,10 +24,10 @@ def test_fit_free(test_waveform_tuple, test_results_free):
         assert np.allclose(np.array(test_results_free[key]), results.results_dict[key])
 
 def test_fit_fixed(test_waveform_tuple, test_results_fixed):
-    h, Mf, af, retro = test_waveform_tuple
+    h, Mf, af = test_waveform_tuple
     t0_arr = np.linspace(0, 10, num = 11)
 
-    qnm_fixed_list = mode_list(['2.2.0', '2.2.1'], Mf, af, retro = retro)
+    qnm_fixed_list = mode_list(['2.2.0', '2.2.1'], Mf, af)
     run_string_prefix = 'test'
     N_free = 0
 

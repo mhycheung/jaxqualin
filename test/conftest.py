@@ -12,9 +12,8 @@ def load_test_waveform_dict(test_waveform_dict):
     time_full = np.array(test_waveform_dict['time_full'])
     Mf = test_waveform_dict['Mf']
     af = test_waveform_dict['af']
-    retro = test_waveform_dict['retro']
     h = waveform(time_full, h_full)
-    return h, Mf, af, retro
+    return h, Mf, af
 
 @pytest.fixture
 def test_waveform_tuple():
@@ -44,5 +43,13 @@ def omega220r_test():
 @pytest.fixture
 def omega220i_test():
     return -0.08542197708263985
+
+@pytest.fixture
+def omegan220r_test():
+    return -0.326523709041974
+
+@pytest.fixture
+def omegan220i_test():
+    return -0.09325537321737846
 
 
