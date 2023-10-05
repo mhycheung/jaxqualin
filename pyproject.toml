@@ -3,10 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-dynamic = [
-  "version"
-]
-name = "jaxqualin_mhycheung"
+version = "0.0.0"
+name = "jaxqualin"
 authors = [
   { name="Mark Ho-Yeuk Cheung", email="hcheung5@jhu.edu" },
 ]
@@ -35,9 +33,6 @@ dependencies = [
 
 [project.optional-dependencies]
 pycbc = ["PyCBC>2.0.6"]
-
-[tool.hatch.version]
-path = "jaxqualin/__about__.py"
 
 [project.urls]
 "Homepage" = "https://github.com/mhycheung/Jaxqualin"
