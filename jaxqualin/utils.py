@@ -27,29 +27,34 @@ def sorti(li, i):
     li.sort(key=lambda x: x[i])
     return li[::-1]
 
+
 def npsign0(x):
     if x == 0:
         return 1
     else:
         return np.sign(x)
-    
+
+
 def jnpsign0(x):
     if x == 0:
         return 1
     else:
         return jnp.sign(x)
 
+
 def get_retrofac(retro):
     if retro:
         return -1
     else:
         return 1
-    
+
+
 def get_m(m):
     if m == -99:
         return 0
     else:
         return m
+
 
 def load_pickle_file(path):
     with open(path, 'rb') as f:

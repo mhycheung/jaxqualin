@@ -17,9 +17,6 @@ from bisect import bisect_left, bisect_right
 from jax.config import config
 config.update("jax_enable_x64", True)
 
-# ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-# SCRATCH_PATH = "/expanse/lustre/scratch/mcheung1/temp_project/Ringdown/jaxqualin/"
-# FIT_SAVE_PATH = os.path.join(SCRATCH_PATH, "pickle/fits")
 FIT_SAVE_PATH = os.path.join(os.getcwd(), ".jaxqualin_cache/fits")
 
 
@@ -37,13 +34,16 @@ def qnm_fit_func_mirror_fixed(
         omegai = qnm_fixed.omegai
         if part is None:
             Q += A * jnp.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
-            Q += mirror_ratio * A * jnp.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi))
+            Q += mirror_ratio * A * \
+                jnp.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi))
         elif part == "real":
             Q += A * jnp.exp(omegai * t) * jnp.cos(omegar * t + phi)
-            Q += mirror_ratio * A * jnp.exp(omegai * t) * jnp.cos(-omegar * t - phi)
+            Q += mirror_ratio * A * \
+                jnp.exp(omegai * t) * jnp.cos(-omegar * t - phi)
         elif part == "imag":
             Q += -A * jnp.exp(omegai * t) * jnp.sin(omegar * t + phi)
-            Q += - mirror_ratio * A * jnp.exp(omegai * t) * jnp.sin(-omegar * t - phi)
+            Q += - mirror_ratio * A * \
+                jnp.exp(omegai * t) * jnp.sin(-omegar * t - phi)
     return Q
 
 
@@ -84,7 +84,7 @@ def qnm_fit_func_varMa(
         free_mode_params_list,
         M,
         a,
-        retro=False,
+        retro_def_orbit=True,
         part=None):
     Q = 0
     for qnm_fixed, fix_mode_params in zip(
@@ -98,9 +98,10 @@ def qnm_fit_func_varMa(
             Q += A * np.exp(omegai * t) * np.cos(omegar * t + phi)
         elif part == "imag":
             Q += -A * np.exp(omegai * t) * np.sin(omegar * t + phi)
-    for free_mode_params, qnm_free in zip(free_mode_params_list, qnm_free_list):
+    for free_mode_params, qnm_free in zip(
+            free_mode_params_list, qnm_free_list):
         A, phi = tuple(free_mode_params)
-        qnm_free.fix_mode(M, a, retro=retro)
+        qnm_free.fix_mode(M, a, retro_def_orbit=retro_def_orbit)
         omegar = qnm_free.omegar
         omegai = qnm_free.omegai
         if part is None:
@@ -122,7 +123,7 @@ def qnm_fit_func_varMa_mirror(
         psi,
         M,
         a,
-        retro=False,
+        retro_def_orbit=True,
         part=None):
     Q = 0
     N_fix = len(qnm_fixed_list)
@@ -135,38 +136,44 @@ def qnm_fit_func_varMa_mirror(
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
-            S_fac = S_retro_fac(iota, a, l, m, n, phi = psi)
+            S_fac = S_retro_fac(iota, a, l, m, n, phi=psi)
             mirror_ratio *= S_fac
         if part is None:
             Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
-            Q += mirror_ratio * A * np.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi))
+            Q += mirror_ratio * A * \
+                np.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi))
         elif part == "real":
             Q += A * np.exp(omegai * t) * np.cos(omegar * t + phi)
-            Q += mirror_ratio * A * np.exp(omegai * t) * np.cos(-omegar * t - phi)
+            Q += mirror_ratio * A * \
+                np.exp(omegai * t) * np.cos(-omegar * t - phi)
         elif part == "imag":
             Q += -A * np.exp(omegai * t) * np.sin(omegar * t + phi)
-            Q += - mirror_ratio * A * np.exp(omegai * t) * np.sin(-omegar * t - phi)
+            Q += - mirror_ratio * A * \
+                np.exp(omegai * t) * np.sin(-omegar * t - phi)
     for free_mode_params, qnm_free in zip(
             free_mode_params_list, qnm_free_list):
         A, phi = tuple(free_mode_params)
-        qnm_free.fix_mode(M, a, retro=retro)
+        qnm_free.fix_mode(M, a, retro_def_orbit=retro_def_orbit)
         omegar = qnm_free.omegar
         omegai = qnm_free.omegai
         lmnx = qnm_free.lmnx
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
-            S_fac = S_retro_fac(iota, a, l, m, n, phi = psi)
+            S_fac = S_retro_fac(iota, a, l, m, n, phi=psi)
             mirror_ratio *= S_fac
         if part is None:
             Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
-            Q += mirror_ratio * A * np.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi))
+            Q += mirror_ratio * A * \
+                np.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi))
         elif part == "real":
             Q += A * np.exp(omegai * t) * np.cos(omegar * t + phi)
-            Q += mirror_ratio * A * np.exp(omegai * t) * np.cos(-omegar * t - phi)
+            Q += mirror_ratio * A * \
+                np.exp(omegai * t) * np.cos(-omegar * t - phi)
         elif part == "imag":
             Q += -A * np.exp(omegai * t) * np.sin(omegar * t + phi)
-            Q += - mirror_ratio * A * np.exp(omegai * t) * np.sin(-omegar * t - phi)
+            Q += - mirror_ratio * A * \
+                np.exp(omegai * t) * np.sin(-omegar * t - phi)
     return Q
 
 # https://stackoverflow.com/questions/34136737/using-scipy-curve-fit-for-a-variable-number-of-parameters
@@ -187,7 +194,7 @@ def qnm_fit_func_wrapper(t, qnm_fixed_list, N_free, *args, part=None):
             omegar = args[0][2 * N_fix + 4 * j + 2]
             omegai = args[0][2 * N_fix + 4 * j + 3]
             free_mode_params_list.append([A, phi, omegar, omegai])
-        except:
+        except BaseException:
             print(args)
             print(2 * N_fix + 4 * j)
             raise ValueError
@@ -195,7 +202,12 @@ def qnm_fit_func_wrapper(t, qnm_fixed_list, N_free, *args, part=None):
                         free_mode_params_list, part=part)
 
 
-def qnm_fit_func_mirror_wrapper(t, qnm_fixed_list, mirror_ratio_list, *args, part=None):
+def qnm_fit_func_mirror_wrapper(
+        t,
+        qnm_fixed_list,
+        mirror_ratio_list,
+        *args,
+        part=None):
     N_fix = len(qnm_fixed_list)
     fix_mode_params_list = []
     for i in range(N_fix):
@@ -203,10 +215,17 @@ def qnm_fit_func_mirror_wrapper(t, qnm_fixed_list, mirror_ratio_list, *args, par
         phi = args[0][2 * i + 1]
         fix_mode_params_list.append([A, phi])
     return qnm_fit_func_mirror_fixed(t, qnm_fixed_list, fix_mode_params_list,
-                        mirror_ratio_list, part=part)
+                                     mirror_ratio_list, part=part)
 
 
-def qnm_fit_func_wrapper_varMa(t, qnm_fixed_list, qnm_free_list, retro, *args, Schwarzschild=False, part=None):
+def qnm_fit_func_wrapper_varMa(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        retro_def_orbit,
+        *args,
+        Schwarzschild=False,
+        part=None):
     N_fix = len(qnm_fixed_list)
     N_free = len(qnm_free_list)
     fix_mode_params_list = []
@@ -221,16 +240,40 @@ def qnm_fit_func_wrapper_varMa(t, qnm_fixed_list, qnm_free_list, retro, *args, S
         free_mode_params_list.append([A, phi])
     M = args[0][2 * (N_fix + N_free)]
     if Schwarzschild:
-        return qnm_fit_func_varMa(t, qnm_fixed_list, qnm_free_list, fix_mode_params_list,
-                                  free_mode_params_list, M, 0., retro=retro, part=part)
+        return qnm_fit_func_varMa(
+            t,
+            qnm_fixed_list,
+            qnm_free_list,
+            fix_mode_params_list,
+            free_mode_params_list,
+            M,
+            0.,
+            retro_def_orbit=retro_def_orbit,
+            part=part)
     else:
         a = args[0][2 * (N_fix + N_free) + 1]
-        return qnm_fit_func_varMa(t, qnm_fixed_list, qnm_free_list, fix_mode_params_list,
-                                  free_mode_params_list, M, a, retro=retro, part=part)
+        return qnm_fit_func_varMa(
+            t,
+            qnm_fixed_list,
+            qnm_free_list,
+            fix_mode_params_list,
+            free_mode_params_list,
+            M,
+            a,
+            retro_def_orbit=retro_def_orbit,
+            part=part)
 
 
 def qnm_fit_func_wrapper_varMa_mirror(
-        t, qnm_fixed_list, qnm_free_list, iota, psi, retro, *args, Schwarzschild=False, part=None):
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        iota,
+        psi,
+        retro_def_orbit,
+        *args,
+        Schwarzschild=False,
+        part=None):
     N_fix = len(qnm_fixed_list)
     N_free = len(qnm_free_list)
     fix_mode_params_list = []
@@ -245,25 +288,50 @@ def qnm_fit_func_wrapper_varMa_mirror(
         free_mode_params_list.append([A, phi])
     M = args[0][2 * (N_fix + N_free)]
     if Schwarzschild:
-        return qnm_fit_func_varMa_mirror(t, qnm_fixed_list, qnm_free_list, fix_mode_params_list,
-                                  free_mode_params_list, iota, psi, M, 0., retro=retro, part=part)
+        return qnm_fit_func_varMa_mirror(
+            t,
+            qnm_fixed_list,
+            qnm_free_list,
+            fix_mode_params_list,
+            free_mode_params_list,
+            iota,
+            psi,
+            M,
+            0.,
+            retro_def_orbit=retro_def_orbit,
+            part=part)
     else:
         a = args[0][2 * (N_fix + N_free) + 1]
-        return qnm_fit_func_varMa_mirror(t, qnm_fixed_list, qnm_free_list, fix_mode_params_list,
-                                  free_mode_params_list, iota, psi, M, a, retro=retro, part=part)
+        return qnm_fit_func_varMa_mirror(
+            t,
+            qnm_fixed_list,
+            qnm_free_list,
+            fix_mode_params_list,
+            free_mode_params_list,
+            iota,
+            psi,
+            M,
+            a,
+            retro_def_orbit=retro_def_orbit,
+            part=part)
 
 
 # https://stackoverflow.com/questions/50203879/curve-fitting-of-complex-data
 
 
-def qnm_fit_func_wrapper_complex(t, qnm_fixed_list, N_free, *args, Schwarzschild=False):
+def qnm_fit_func_wrapper_complex(
+        t,
+        qnm_fixed_list,
+        N_free,
+        *args,
+        Schwarzschild=False):
     N = len(t)
     t_real = t[0::2]
     t_imag = t[1::2]
     h_real = qnm_fit_func_wrapper(
         t_real, qnm_fixed_list, N_free, *args, part="real")
     if Schwarzschild:
-        h_imag = jnp.zeros(int(N/2))
+        h_imag = jnp.zeros(int(N / 2))
     else:
         h_imag = qnm_fit_func_wrapper(
             t_imag, qnm_fixed_list, N_free, *args, part="imag")
@@ -271,14 +339,20 @@ def qnm_fit_func_wrapper_complex(t, qnm_fixed_list, N_free, *args, Schwarzschild
     return h_riffle
 
 
-def qnm_fit_func_wrapper_complex_mirror(t, qnm_fixed_list, mirror_ratio_list, N_free, *args, Schwarzschild=False):
+def qnm_fit_func_wrapper_complex_mirror(
+        t,
+        qnm_fixed_list,
+        mirror_ratio_list,
+        N_free,
+        *args,
+        Schwarzschild=False):
     N = len(t)
     t_real = t[0::2]
     t_imag = t[1::2]
     h_real = qnm_fit_func_mirror_wrapper(
         t_real, qnm_fixed_list, mirror_ratio_list, *args, part="real")
     if Schwarzschild:
-        h_imag = jnp.zeros(int(N/2))
+        h_imag = jnp.zeros(int(N / 2))
     else:
         h_imag = qnm_fit_func_mirror_wrapper(
             t_imag, qnm_fixed_list, mirror_ratio_list, *args, part="imag")
@@ -286,35 +360,71 @@ def qnm_fit_func_wrapper_complex_mirror(t, qnm_fixed_list, mirror_ratio_list, N_
     return h_riffle
 
 
-def qnm_fit_func_wrapper_complex_varMa(t, qnm_fixed_list, qnm_free_list, retro, *args):
+def qnm_fit_func_wrapper_complex_varMa(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        retro_def_orbit,
+        *args):
     N = len(t)
     t_real = t[0::2]
     t_imag = t[1::2]
     h_real = qnm_fit_func_wrapper_varMa(
-        t_real, qnm_fixed_list, qnm_free_list, retro, *args, part="real")
+        t_real,
+        qnm_fixed_list,
+        qnm_free_list,
+        retro_def_orbit,
+        *args,
+        part="real")
     h_imag = qnm_fit_func_wrapper_varMa(
-        t_imag, qnm_fixed_list, qnm_free_list, retro, *args, part="imag")
+        t_imag,
+        qnm_fixed_list,
+        qnm_free_list,
+        retro_def_orbit,
+        *args,
+        part="imag")
     h_riffle = interweave(h_real, h_imag)
     return h_riffle
 
 
-def qnm_fit_func_wrapper_complex_varMa_mirror(t, qnm_fixed_list, qnm_free_list, iota, psi, retro, *args):
+def qnm_fit_func_wrapper_complex_varMa_mirror(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        iota,
+        psi,
+        retro_def_orbit,
+        *args):
     N = len(t)
     t_real = t[0::2]
     t_imag = t[1::2]
     h_real = qnm_fit_func_wrapper_varMa_mirror(
-        t_real, qnm_fixed_list, qnm_free_list, iota, psi, retro, *args, part="real")
+        t_real,
+        qnm_fixed_list,
+        qnm_free_list,
+        iota,
+        psi,
+        retro_def_orbit,
+        *args,
+        part="real")
     h_imag = qnm_fit_func_wrapper_varMa_mirror(
-        t_imag, qnm_fixed_list, qnm_free_list, iota, psi, retro, *args, part="imag")
+        t_imag,
+        qnm_fixed_list,
+        qnm_free_list,
+        iota,
+        psi,
+        retro_def_orbit,
+        *args,
+        part="imag")
     h_riffle = interweave(h_real, h_imag)
     return h_riffle
- 
+
 
 class QNMFitResult:
 
     def __init__(self, popt, pcov, mismatch,
-                 cost = np.nan, grad = np.nan, nfev = np.nan,
-                 status = np.nan):
+                 cost=np.nan, grad=np.nan, nfev=np.nan,
+                 status=np.nan):
         self.popt = popt
         self.pcov = pcov
         self.mismatch = mismatch
@@ -336,11 +446,11 @@ class QNMFit:
             params0=None,
             max_nfev=200000,
             A_bound=np.inf,
-            weighted = False,
-            include_mirror = False,
-            mirror_ratio_list = None,
-            guess_fixed = [1, 1],
-            guess_free = [1, 1, 1, -1],
+            weighted=False,
+            include_mirror=False,
+            mirror_ratio_list=None,
+            guess_fixed=[1, 1],
+            guess_free=[1, 1, 1, -1],
             **fit_kwargs):
         self.h = h
         self.t0 = t0
@@ -364,7 +474,7 @@ class QNMFit:
         self.guess_free = guess_free
 
     def make_weights(self, hr, hi):
-        habs = np.abs(hr + 1.j*hi)
+        habs = np.abs(hr + 1.j * hi)
         weight = interweave(habs, habs)
         return np.array(weight)
 
@@ -391,20 +501,20 @@ class QNMFit:
                     t, self.qnm_fixed_list, self.mirror_ratio_list, self.N_free, params, Schwarzschild=self.Schwarzschild), np.array(
                     self._time_interweave), np.array(
                     self._h_interweave), bounds=bounds, p0=self.params0, max_nfev=self.max_nfev,
-                method="trf", sigma = sigma, **self.fit_kwargs, timeit = True)
+                method="trf", sigma=sigma, **self.fit_kwargs, timeit=True)
         else:
             self.popt, self.pcov, self.res, _, _ = jcf.curve_fit(
                 lambda t, *params: qnm_fit_func_wrapper_complex(
                     t, self.qnm_fixed_list, self.N_free, params, Schwarzschild=self.Schwarzschild), np.array(
                     self._time_interweave), np.array(
                     self._h_interweave), bounds=bounds, p0=self.params0, max_nfev=self.max_nfev,
-                method="trf", sigma = sigma, **self.fit_kwargs, timeit = True)
+                method="trf", sigma=sigma, **self.fit_kwargs, timeit=True)
         try:
             self.cost = self.res.cost
             self.grad = self.res.grad
             self.nfev = self.res.nfev
             self.status = self.res.status
-        except:
+        except BaseException:
             self.cost = np.nan
             self.grad = np.nan
             self.nfev = np.nan
@@ -414,21 +524,27 @@ class QNMFit:
                 self.time, self.qnm_fixed_list, self.N_free, self.popt, part="real")
         elif self.include_mirror:
             self.reconstruct_h = qnm_fit_func_mirror_wrapper(
-                self.time, self.qnm_fixed_list, self.mirror_ratio_list, self.popt)    
+                self.time, self.qnm_fixed_list, self.mirror_ratio_list, self.popt)
         else:
             self.reconstruct_h = qnm_fit_func_wrapper(
                 self.time, self.qnm_fixed_list, self.N_free, self.popt)
         self.h_true = self.hr + 1.j * self.hi
         self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
             np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
-        self.result = QNMFitResult(self.popt, self.pcov, self.mismatch,
-                                   self.cost, self.grad, self.nfev, self.status)
+        self.result = QNMFitResult(
+            self.popt,
+            self.pcov,
+            self.mismatch,
+            self.cost,
+            self.grad,
+            self.nfev,
+            self.status)
         self.fit_done = True
         if return_jcf:
             return jcf
 
     def copy_from_result(self, other_result):
-        if self.fit_done == False:
+        if not self.fit_done:
             self.popt = other_result.popt
             self.pcov = other_result.pcov
             try:
@@ -436,7 +552,7 @@ class QNMFit:
                 self.grad = other_result.grad
                 self.nfev = other_result.nfev
                 self.status = other_result.status
-            except:
+            except BaseException:
                 pass
             self.time, self.hr, self.hi = self.h.postmerger(self.t0)
             self._h_interweave = interweave(self.hr, self.hi)
@@ -457,18 +573,18 @@ class QNMFitVarMa:
             t0,
             qnm_free_list,
             qnm_fixed_list=[],
-            retro=False,
+            retro_def_orbit=True,
             Schwarzschild=False,
             jcf=CurveFit(),
             params0=None,
             max_nfev=200000,
-            include_mirror = False,
-            iota = None,
-            psi = None,
-            guess_fixed = [1, 1],
-            guess_free = [1, 1],
-            guess_M_a = [1, 0.5],
-            a_bound = 0.99,
+            include_mirror=False,
+            iota=None,
+            psi=None,
+            guess_fixed=[1, 1],
+            guess_free=[1, 1],
+            guess_M_a=[1, 0.5],
+            a_bound=0.99,
             **fit_kwargs):
         self.h = h
         self.t0 = t0
@@ -480,7 +596,7 @@ class QNMFitVarMa:
         # self.jcf = jcf
         self.max_nfev = max_nfev
         self.fit_done = False
-        self.retro = retro
+        self.retro_def_orbit = retro_def_orbit
         self.Schwarzschild = Schwarzschild
         self.fit_kwargs = fit_kwargs
         self.include_mirror = include_mirror
@@ -498,34 +614,47 @@ class QNMFitVarMa:
         self._time_interweave = interweave(self.time, self.time)
         if self.Schwarzschild:
             if not hasattr(self.params0, "__iter__"):
-                self.params0 = np.array(
-                    self.guess_fixed * self.N_fix + self.guess_free * self.N_free + self.guess_M_a[:1])
+                self.params0 = np.array(self.guess_fixed *
+                                        self.N_fix +
+                                        self.guess_free *
+                                        self.N_free +
+                                        self.guess_M_a[:1])
             if self.include_mirror:
                 fit_func = lambda t, *params: qnm_fit_func_wrapper_varMa_mirror(
                     t, self.qnm_fixed_list, self.qnm_free_list, self.iota, self.psi,
-                    self.retro, params, 0, Schwarzschild=True, part="real")
+                    self.retro_def_orbit, params, 0, Schwarzschild=True, part="real")
                 self.popt, self.pcov = curve_fit(fit_func, np.array(
                     self.time), np.array(
                     self.hr), p0=self.params0, max_nfev=self.max_nfev,
                     method="trf")
                 self.reconstruct_h = qnm_fit_func_wrapper_varMa_mirror(
                     self.time, self.qnm_fixed_list, self.qnm_free_list, self.iota, self.psi,
-                      self.retro, self.popt,
+                    self.retro_def_orbit, self.popt,
                     0, Schwarzschild=True, part="real")
             else:
                 fit_func = lambda t, *params: qnm_fit_func_wrapper_varMa(
-                    t, self.qnm_fixed_list, self.qnm_free_list, self.retro, params, 0, Schwarzschild=True, part="real")
+                    t, self.qnm_fixed_list, self.qnm_free_list, self.retro_def_orbit, params, 0, Schwarzschild=True, part="real")
                 self.popt, self.pcov = curve_fit(fit_func, np.array(
                     self.time), np.array(
                     self.hr), p0=self.params0, max_nfev=self.max_nfev,
                     method="trf")
                 self.reconstruct_h = qnm_fit_func_wrapper_varMa(
-                    self.time, self.qnm_fixed_list, self.qnm_free_list, self.retro, self.popt,
-                    0, Schwarzschild=True, part="real")
+                    self.time,
+                    self.qnm_fixed_list,
+                    self.qnm_free_list,
+                    self.retro_def_orbit,
+                    self.popt,
+                    0,
+                    Schwarzschild=True,
+                    part="real")
         else:
             if not hasattr(self.params0, "__iter__"):
                 self.params0 = np.array(
-                    self.guess_fixed * self.N_fix + self.guess_free * self.N_free + self.guess_M_a)
+                    self.guess_fixed *
+                    self.N_fix +
+                    self.guess_free *
+                    self.N_free +
+                    self.guess_M_a)
             lower_bound = [-np.inf] * \
                 (2 * self.N_fix + 2 * self.N_free + 1) + [-self.a_bound]
             upper_bound = [np.inf] * \
@@ -533,11 +662,11 @@ class QNMFitVarMa:
             bounds = (np.array(lower_bound), np.array(upper_bound))
             if self.include_mirror:
                 fit_func = lambda t, *params: qnm_fit_func_wrapper_complex_varMa_mirror(
-                    t, self.qnm_fixed_list, self.qnm_free_list,self.iota, self.psi,
-                      self.retro, params)
+                    t, self.qnm_fixed_list, self.qnm_free_list, self.iota, self.psi,
+                    self.retro_def_orbit, params)
             else:
                 fit_func = lambda t, *params: qnm_fit_func_wrapper_complex_varMa(
-                    t, self.qnm_fixed_list, self.qnm_free_list, self.retro, params)
+                    t, self.qnm_fixed_list, self.qnm_free_list, self.retro_def_orbit, params)
             self.popt, self.pcov = curve_fit(fit_func, np.array(
                 self._time_interweave), np.array(
                     self._h_interweave), p0=self.params0,
@@ -545,13 +674,13 @@ class QNMFitVarMa:
                 method="trf", **self.fit_kwargs)
             if self.include_mirror:
                 self.reconstruct_h = qnm_fit_func_wrapper_varMa_mirror(
-                    self.time, self.qnm_fixed_list, self.qnm_free_list, 
+                    self.time, self.qnm_fixed_list, self.qnm_free_list,
                     self.iota, self.psi,
-                    self.retro, self.popt)
+                    self.retro_def_orbit, self.popt)
             else:
                 self.reconstruct_h = qnm_fit_func_wrapper_varMa(
-                    self.time, self.qnm_fixed_list, self.qnm_free_list, 
-                    self.retro, self.popt)
+                    self.time, self.qnm_fixed_list, self.qnm_free_list,
+                    self.retro_def_orbit, self.popt)
         self.h_true = self.hr + 1.j * self.hi
         self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
             np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
@@ -559,7 +688,7 @@ class QNMFitVarMa:
         self.fit_done = True
 
     def copy_from_result(self, other_result):
-        if self.fit_done == False:
+        if not self.fit_done:
             self.popt = other_result.popt
             self.pcov = other_result.pcov
             self.time, self.hr, self.hi = self.h.postmerger(self.t0)
@@ -572,22 +701,39 @@ class QNMFitVarMa:
                 np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
             self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
 
-def make_initial_guess(N_free, guess_num, A_log_low = -1, A_log_hi = 1, phi_low = 0, phi_hi = 2*np.pi,
-                       omega_r_low = -2, omega_r_hi = 2, omega_i_low = 0, omega_i_hi = -1, seed = 1234,
-                       A_val = 1, A_guess_relative = True):
+
+def make_initial_guess(
+        N_free,
+        guess_num,
+        A_log_low=-1,
+        A_log_hi=1,
+        phi_low=0,
+        phi_hi=2 * np.pi,
+        omega_r_low=-2,
+        omega_r_hi=2,
+        omega_i_low=0,
+        omega_i_hi=-1,
+        seed=1234,
+        A_val=1,
+        A_guess_relative=True):
     if not A_guess_relative:
         A_val = 1
     rng = np.random.RandomState(seed)
-    A_guesses = A_val*10**(rng.uniform(A_log_low, A_log_hi, size = (guess_num, N_free)))
-    phi_guesses = rng.uniform(phi_low, phi_hi, size = (guess_num, N_free))
-    omegar_guesses = rng.uniform(omega_r_low, omega_r_hi, size = (guess_num, N_free))
-    omegai_guesses = rng.uniform(omega_i_low, omega_i_hi, size = (guess_num, N_free))
+    A_guesses = A_val * \
+        10**(rng.uniform(A_log_low, A_log_hi, size=(guess_num, N_free)))
+    phi_guesses = rng.uniform(phi_low, phi_hi, size=(guess_num, N_free))
+    omegar_guesses = rng.uniform(
+        omega_r_low, omega_r_hi, size=(
+            guess_num, N_free))
+    omegai_guesses = rng.uniform(
+        omega_i_low, omega_i_hi, size=(
+            guess_num, N_free))
 
-    guesses_stack = np.empty((guess_num, 4 * N_free), dtype = A_guesses.dtype)
-    guesses_stack[:,0::4] = A_guesses 
-    guesses_stack[:,1::4] = phi_guesses 
-    guesses_stack[:,2::4] = omegar_guesses
-    guesses_stack[:,3::4] = omegai_guesses
+    guesses_stack = np.empty((guess_num, 4 * N_free), dtype=A_guesses.dtype)
+    guesses_stack[:, 0::4] = A_guesses
+    guesses_stack[:, 1::4] = phi_guesses
+    guesses_stack[:, 2::4] = omegar_guesses
+    guesses_stack[:, 3::4] = omegai_guesses
 
     guess_list = [jnp.array(guess) for guess in guesses_stack]
 
@@ -604,14 +750,14 @@ class QNMFitVaryingStartingTimeResult:
             run_string_prefix="Default",
             nonconvergence_cut=False,
             nonconvergence_indx=[],
-            initial_num = 1,
-            include_mirror = False,
-            mirror_ratio_list = None,
-            iota = None,
-            psi = None,
-            fit_save_prefix = FIT_SAVE_PATH,
-            save_result = True
-            ):
+            initial_num=1,
+            include_mirror=False,
+            mirror_ratio_list=None,
+            iota=None,
+            psi=None,
+            fit_save_prefix=FIT_SAVE_PATH,
+            save_result=True
+    ):
         self.t0_arr = t0_arr
         self.qnm_fixed_list = qnm_fixed_list
         self.N_fix = len(self.qnm_fixed_list)
@@ -704,7 +850,11 @@ class QNMFitVaryingStartingTimeResult:
         popt = self.popt_full[:, indx]
         if self.include_mirror:
             Q = qnm_fit_func_mirror_wrapper(
-                t_arr, self.qnm_fixed_list, self.mirror_ratio_list, popt, part=None)
+                t_arr,
+                self.qnm_fixed_list,
+                self.mirror_ratio_list,
+                popt,
+                part=None)
         else:
             Q = qnm_fit_func_wrapper(
                 t_arr, self.qnm_fixed_list, self.N_free, popt, part=None)
@@ -716,11 +866,11 @@ class QNMFitVaryingStartingTimeResult:
         popt = self.popt_full[:, indx]
         for j in range(self.N_fix):
             Q = qnm_fit_func_wrapper(
-                t_arr, [self.qnm_fixed_list[j]], 0, popt[2*j:2*j+2], part=None)
+                t_arr, [self.qnm_fixed_list[j]], 0, popt[2 * j:2 * j + 2], part=None)
             Q_fix_list.append(Q)
         for j in range(self.N_free):
             Q = qnm_fit_func_wrapper(
-                t_arr, [], 1, popt[2 * self.N_fix + 4*j:2 * self.N_fix + 4*j + 4], part=None)
+                t_arr, [], 1, popt[2 * self.N_fix + 4 * j:2 * self.N_fix + 4 * j + 4], part=None)
             Q_free_list.append(Q)
         return Q_fix_list, Q_free_list
 
@@ -735,12 +885,12 @@ class QNMFitVaryingStartingTimeResultVarMa:
             Schwarzschild=False,
             run_string_prefix="Default",
             nonconvergence_cut=False,
-            include_mirror = False,
+            include_mirror=False,
             nonconvergence_indx=[],
-            iota = None,
-            psi = None,
-            fit_save_prefix = FIT_SAVE_PATH,
-            save_results = True):
+            iota=None,
+            psi=None,
+            fit_save_prefix=FIT_SAVE_PATH,
+            save_results=True):
         self.t0_arr = t0_arr
         self.qnm_fixed_list = qnm_fixed_list
         self.qnm_free_list = qnm_free_list
@@ -835,31 +985,30 @@ class QNMFitVaryingStartingTime:
             qnm_fixed_list=[],
             qnm_free_list=[],
             var_M_a=False,
-            retro=False,
             Schwarzschild=False,
             run_string_prefix="Default",
             params0=None,
             max_nfev=200000,
             sequential_guess=True,
             load_pickle=True,
-            fit_save_prefix = FIT_SAVE_PATH,
+            fit_save_prefix=FIT_SAVE_PATH,
             nonconvergence_cut=False,
             A_bound=np.inf,
             jcf=None,
             fit_kwargs={},
-            initial_num = 1,
-            random_initial = False,
-            initial_dict = {},
-            A_guess_relative = True,
-            set_seed = 1234,
-            weighted = False,
-            double_skip = True,
-            include_mirror = False,
-            iota = None,
-            psi = None,
-            mirror_ignore_phase = True,
-            skip_i_init = 1,
-            save_results = True):
+            initial_num=1,
+            random_initial=False,
+            initial_dict={},
+            A_guess_relative=True,
+            set_seed=1234,
+            weighted=False,
+            double_skip=True,
+            include_mirror=False,
+            iota=None,
+            psi=None,
+            mirror_ignore_phase=True,
+            skip_i_init=1,
+            save_results=True):
         self.h = h
         if A_guess_relative:
             A_rel = np.abs(h.h[0])
@@ -891,14 +1040,14 @@ class QNMFitVaryingStartingTime:
         self.run_string_prefix = run_string_prefix
         self.load_pickle = load_pickle
         self.fit_save_prefix = fit_save_prefix
-        self.retro = retro
         self.Schwarzschild = Schwarzschild
         self.nonconvergence_cut = nonconvergence_cut
         self.A_bound = A_bound
         self.jcf = jcf
         self.fit_kwargs = fit_kwargs
         self.initial_num = initial_num
-        self.random_initial = (random_initial and not self.var_M_a and self.N_free != 0)
+        self.random_initial = (
+            random_initial and not self.var_M_a and self.N_free != 0)
         self.initial_dict = initial_dict
         self.A_guess_relative = A_guess_relative
         self.set_seed = set_seed
@@ -906,11 +1055,13 @@ class QNMFitVaryingStartingTime:
         self.double_skip = double_skip
         self.include_mirror = include_mirror
         if self.include_mirror and self.N_free != 0:
-            raise ValueError("Cannot include mirror if there are free parameters")
+            raise ValueError(
+                "Cannot include mirror if there are free parameters")
         self.iota = iota
         self.psi = psi
         if self.include_mirror and (self.iota is None or self.psi is None):
-            raise ValueError("Must specify iota and phi to include mirror mode")
+            raise ValueError(
+                "Must specify iota and phi to include mirror mode")
         self.mirror_ignore_phase = mirror_ignore_phase
         if self.include_mirror and not self.var_M_a:
             self.mirror_ratio_list = self.get_mirror_ratio_list()
@@ -928,7 +1079,7 @@ class QNMFitVaryingStartingTime:
             mirror_ratio = 1
             for lmn in lmnx:
                 l, m, n = tuple(lmn)
-                S_fac = S_retro_fac(self.iota, af, l, m, n, phi = self.psi)
+                S_fac = S_retro_fac(self.iota, af, l, m, n, phi=self.psi)
                 if self.mirror_ignore_phase:
                     mirror_ratio *= S_fac
                 else:
@@ -936,11 +1087,11 @@ class QNMFitVaryingStartingTime:
             self.mirror_ratio_list.append(mirror_ratio)
         return self.mirror_ratio_list
 
-    def initial_guesses(self, jcf = None):
+    def initial_guesses(self, jcf=None):
         A_val = np.abs(self.h.h[0])
-        guess_list = make_initial_guess(self.N_free, self.initial_num, 
+        guess_list = make_initial_guess(self.N_free, self.initial_num,
                                         A_guess_relative=self.A_guess_relative,
-                                        seed = self.set_seed, A_val = A_val,
+                                        seed=self.set_seed, A_val=A_val,
                                         **self.initial_dict)
         if isinstance(jcf, CurveFit):
             _jcf = jcf
@@ -948,27 +1099,28 @@ class QNMFitVaryingStartingTime:
             _jcf = CurveFit(flength=2 * len(self._time_longest))
         qnm_fit_list = []
         desc = f"Runname: {self.run_string_prefix}, making initial guesses for N_free = {self.N_free}. Status"
-        for j, guess in tqdm(enumerate(guess_list), desc = desc, total = len(guess_list)):
+        for j, guess in tqdm(
+                enumerate(guess_list), desc=desc, total=len(guess_list)):
             qnm_fit = QNMFit(
-                        self.h,
-                        self.t0_arr[0],
-                        self.N_free,
-                        qnm_fixed_list=self.qnm_fixed_list,
-                        Schwarzschild=self.Schwarzschild,
-                        params0=guess,
-                        max_nfev=self.max_nfev,
-                        A_bound=self.A_bound,
-                        weighted=self.weighted,
-                        include_mirror = self.include_mirror,
-                        mirror_ratio_list = self.mirror_ratio_list,
-                        **self.fit_kwargs)
+                self.h,
+                self.t0_arr[0],
+                self.N_free,
+                qnm_fixed_list=self.qnm_fixed_list,
+                Schwarzschild=self.Schwarzschild,
+                params0=guess,
+                max_nfev=self.max_nfev,
+                A_bound=self.A_bound,
+                weighted=self.weighted,
+                include_mirror=self.include_mirror,
+                mirror_ratio_list=self.mirror_ratio_list,
+                **self.fit_kwargs)
             try:
-                qnm_fit.do_fit(jcf = _jcf)
+                qnm_fit.do_fit(jcf=_jcf)
             except RuntimeError:
                 print(f"{j}-th initial guess fit did not reach tolerance.\n")
                 qnm_fit = None
             qnm_fit_list.append(qnm_fit)
-        
+
         mismatches = []
         for i in range(self.initial_num):
             if qnm_fit_list[i] is None:
@@ -989,30 +1141,29 @@ class QNMFitVaryingStartingTime:
         if self.var_M_a:
             if self.Schwarzschild:
                 nan_popt = np.full(
-                    self.N_fix*2 + self.N_free*2 + 1, np.nan)
+                    self.N_fix * 2 + self.N_free * 2 + 1, np.nan)
                 nan_pcov = nan_popt
             else:
                 nan_popt = np.full(
-                    self.N_fix*2 + self.N_free*2 + 2, np.nan)
+                    self.N_fix * 2 + self.N_free * 2 + 2, np.nan)
                 nan_pcov = nan_popt
         else:
             nan_popt = np.full(
-                self.N_fix*2 + self.N_free*4, np.nan)
+                self.N_fix * 2 + self.N_free * 4, np.nan)
             nan_pcov = nan_popt
         nan_cost = np.nan
-        nan_grad = np.empty(self.N_fix*2 + self.N_free*4)
+        nan_grad = np.empty(self.N_fix * 2 + self.N_free * 4)
         nan_grad[:] = np.nan
         nan_nfev = self.max_nfev
         max_status = 0
         nan_result = QNMFitResult(
-            nan_popt, nan_pcov, nan_mismatch, 
+            nan_popt, nan_pcov, nan_mismatch,
             nan_cost, nan_grad, nan_nfev, max_status)
-        
+
         return nan_result
 
-
     def do_fits(self, jcf=None, return_jcf=False):
-        
+
         skip_i = 0
         skip_consect = 0
         self.not_converged = False
@@ -1031,10 +1182,10 @@ class QNMFitVaryingStartingTime:
                 run_string_prefix=self.run_string_prefix,
                 nonconvergence_cut=self.nonconvergence_cut,
                 include_mirror=self.include_mirror,
-                iota = self.iota,
-                psi = self.psi,
-                fit_save_prefix = self.fit_save_prefix,
-                save_results = self.save_results)
+                iota=self.iota,
+                psi=self.psi,
+                fit_save_prefix=self.fit_save_prefix,
+                save_results=self.save_results)
         else:
             self.result_full = QNMFitVaryingStartingTimeResult(
                 self.t0_arr,
@@ -1042,13 +1193,13 @@ class QNMFitVaryingStartingTime:
                 self.N_free,
                 run_string_prefix=self.run_string_prefix,
                 nonconvergence_cut=self.nonconvergence_cut,
-                initial_num = self.initial_num,
-                include_mirror = self.include_mirror,
-                mirror_ratio_list = self.mirror_ratio_list,
-                iota = self.iota,
-                psi = self.psi,
-                fit_save_prefix = self.fit_save_prefix,
-                save_result = self.save_results)
+                initial_num=self.initial_num,
+                include_mirror=self.include_mirror,
+                mirror_ratio_list=self.mirror_ratio_list,
+                iota=self.iota,
+                psi=self.psi,
+                fit_save_prefix=self.fit_save_prefix,
+                save_result=self.save_results)
         loaded_results = False
         if self.result_full.pickle_exists() and self.load_pickle:
             try:
@@ -1061,9 +1212,10 @@ class QNMFitVaryingStartingTime:
             except EOFError:
                 print("EOFError when loading pickle for fit. Doing new fit now...")
                 loaded_results = False
-        if loaded_results == False:
+        if not loaded_results:
             if self.random_initial:
-                best_guess_index, qnm_initial_fit_list, guess_list = self.initial_guesses(jcf = _jcf)
+                best_guess_index, qnm_initial_fit_list, guess_list = self.initial_guesses(
+                    jcf=_jcf)
                 if best_guess_index is None:
                     initial_converged = False
                 else:
@@ -1088,7 +1240,10 @@ class QNMFitVaryingStartingTime:
                 mode_string_list = qnms_to_string(self.qnm_fixed_list)
                 desc += ', '.join(mode_string_list)
                 desc += f"and N_free = {self.N_free}. Status"
-            for i, _t0 in tqdm(enumerate(self.t0_arr), desc = desc, total = len(self.t0_arr)):
+            for i, _t0 in tqdm(
+                enumerate(
+                    self.t0_arr), desc=desc, total=len(
+                    self.t0_arr)):
                 if self.var_M_a:
                     qnm_fit = QNMFitVarMa(
                         self.h,
@@ -1098,9 +1253,9 @@ class QNMFitVaryingStartingTime:
                         Schwarzschild=self.Schwarzschild,
                         params0=_params0,
                         max_nfev=self.max_nfev,
-                        include_mirror = self.include_mirror,
-                        iota = self.iota,
-                        psi = self.psi,
+                        include_mirror=self.include_mirror,
+                        iota=self.iota,
+                        psi=self.psi,
                         **self.fit_kwargs)
                 else:
                     qnm_fit = QNMFit(
@@ -1113,8 +1268,8 @@ class QNMFitVaryingStartingTime:
                         max_nfev=self.max_nfev,
                         A_bound=self.A_bound,
                         weighted=self.weighted,
-                        include_mirror = self.include_mirror,
-                        mirror_ratio_list = self.mirror_ratio_list,
+                        include_mirror=self.include_mirror,
+                        mirror_ratio_list=self.mirror_ratio_list,
                         **self.fit_kwargs)
                 if self.nonconvergence_cut and self.not_converged:
                     qnm_fit.copy_from_result(qnm_fit_result_temp)
@@ -1126,7 +1281,7 @@ class QNMFitVaryingStartingTime:
                             else:
                                 raise RuntimeError
                         else:
-                            if skip_consect < skip_i  and self.double_skip:
+                            if skip_consect < skip_i and self.double_skip:
                                 raise RuntimeError
                             else:
                                 qnm_fit.do_fit(jcf=_jcf)
@@ -1134,7 +1289,8 @@ class QNMFitVaryingStartingTime:
                         if skip_consect < skip_i:
                             print(f"skipped t0 = {_t0}.")
                         else:
-                            print(f"fit did not reach tolerance at t0 = {_t0}.")
+                            print(
+                                f"fit did not reach tolerance at t0 = {_t0}.")
                         qnm_fit.result = self.make_nan_result()
                         self.nonconvergence_indx.append(i)
                         self.not_converged = True
@@ -1171,33 +1327,65 @@ def fit_effective(omega_fund, A_merger, phi_merger, Mf, h):
     return popt, pcov
 
 
-def effective_ringdown(omega_fund, A_merger, phi_merger, Mf, t, c2, c3, d3, d4, part="complex"):
-    c1 = -A_merger*np.imag(omega_fund)*np.cosh(c3)**2/c2
-    c4 = A_merger - c1*np.tanh(c3)
-    d2 = 2*c2
-    d1 = Mf*(1 + d3 + d4) / (d2 * (d3 + 2*d4)) * \
+def effective_ringdown(
+        omega_fund,
+        A_merger,
+        phi_merger,
+        Mf,
+        t,
+        c2,
+        c3,
+        d3,
+        d4,
+        part="complex"):
+    c1 = -A_merger * np.imag(omega_fund) * np.cosh(c3)**2 / c2
+    c4 = A_merger - c1 * np.tanh(c3)
+    d2 = 2 * c2
+    d1 = Mf * (1 + d3 + d4) / (d2 * (d3 + 2 * d4)) * \
         (np.real(omega_fund) - phi_merger)
-    A = c1*np.tanh(c2*t + c3) + c4
-    phi = - d1 * np.log((1 + d3 * np.exp(-d2*t) + d4 *
-                        np.exp(-2*d2*t)) / (1 + d3 + d4))
+    A = c1 * np.tanh(c2 * t + c3) + c4
+    phi = - d1 * np.log((1 + d3 * np.exp(-d2 * t) + d4 *
+                        np.exp(-2 * d2 * t)) / (1 + d3 + d4))
     if part == "complex":
-        return A*np.exp(1.j*phi)*np.exp(-1.j*(omega_fund*t + phi_merger))
+        return A * np.exp(1.j * phi) * np.exp(-1.j *
+                                              (omega_fund * t + phi_merger))
     elif part == "real":
-        return np.real(A*np.exp(1.j*phi)*np.exp(-1.j*(omega_fund*t + phi_merger)))
+        return np.real(A * np.exp(1.j * phi) *
+                       np.exp(-1.j * (omega_fund * t + phi_merger)))
     elif part == "imag":
-        return np.imag(A*np.exp(1.j*phi)*np.exp(-1.j*(omega_fund*t + phi_merger)))
+        return np.imag(A * np.exp(1.j * phi) *
+                       np.exp(-1.j * (omega_fund * t + phi_merger)))
     else:
         raise ValueError("part must be complex, real or imag")
         return
 
 
-def effective_ringdown_for_fit(omega_fund, A_merger, phi_merger, Mf, t_comp, c2, c3, d3, d4):
+def effective_ringdown_for_fit(
+        omega_fund,
+        A_merger,
+        phi_merger,
+        Mf,
+        t_comp,
+        c2,
+        c3,
+        d3,
+        d4):
     fit_params = (c2, c3, d3, d4)
-    N = int(len(t_comp)/2)
-    h_real = effective_ringdown(
-        omega_fund, A_merger, phi_merger, Mf, t_comp[:N], *fit_params, part="real")
-    h_imag = effective_ringdown(
-        omega_fund, A_merger, phi_merger, Mf, t_comp[N:], *fit_params, part="imag")
+    N = int(len(t_comp) / 2)
+    h_real = effective_ringdown(omega_fund,
+                                A_merger,
+                                phi_merger,
+                                Mf,
+                                t_comp[:N],
+                                *fit_params,
+                                part="real")
+    h_imag = effective_ringdown(omega_fund,
+                                A_merger,
+                                phi_merger,
+                                Mf,
+                                t_comp[N:],
+                                *fit_params,
+                                part="imag")
     h_comp = np.concatenate((h_real, h_imag))
     return h_comp
 
@@ -1209,29 +1397,47 @@ def fit_effective_2(h, A_fund, phi_fund, omega_fund, t_match):
     def fit_func(t_comp, c1, c2, d1, d2): return \
         effective_ringdown_for_fit_2(
             t_comp, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2)
-    popt, pcov = curve_fit(fit_func, t_comp, h_comp, maxfev=1000000, bounds=([-np.inf, 0, 0, 0],
-                                                                             [np.inf, np.inf, np.inf, np.inf]))
+    popt, pcov = curve_fit(fit_func, t_comp, h_comp, maxfev=1000000, bounds=(
+        [-np.inf, 0, 0, 0], [np.inf, np.inf, np.inf, np.inf]))
     return popt, pcov
 
 
-def effective_ringdown_2(t, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2, part="complex"):
-    A = -c1*(np.tanh((t - t_match)/c2)-1)/2 + A_fund
-    # d1*np.log(1+d2*np.exp(-d3*(t-t_match)))
-    phi = phi_fund - d1*(np.tanh((t - t_match)/d2)-1)/2
+def effective_ringdown_2(
+        t,
+        A_fund,
+        phi_fund,
+        omega_fund,
+        t_match,
+        c1,
+        c2,
+        d1,
+        d2,
+        part="complex"):
+    A = -c1 * (np.tanh((t - t_match) / c2) - 1) / 2 + A_fund
+    phi = phi_fund - d1 * (np.tanh((t - t_match) / d2) - 1) / 2
     if part == "complex":
-        return A*np.exp(-1.j*(omega_fund * t + phi))
+        return A * np.exp(-1.j * (omega_fund * t + phi))
     elif part == "real":
-        return np.real(A*np.exp(-1.j*(omega_fund * t + phi)))
+        return np.real(A * np.exp(-1.j * (omega_fund * t + phi)))
     elif part == "imag":
-        return np.imag(A*np.exp(-1.j*(omega_fund * t + phi)))
+        return np.imag(A * np.exp(-1.j * (omega_fund * t + phi)))
     else:
         raise ValueError("part must be complex, real or imag")
         return
 
 
-def effective_ringdown_for_fit_2(t_comp, A_fund, phi_fund, omega_fund, t_match, c1, c2, d1, d2):
+def effective_ringdown_for_fit_2(
+        t_comp,
+        A_fund,
+        phi_fund,
+        omega_fund,
+        t_match,
+        c1,
+        c2,
+        d1,
+        d2):
     fit_params = (c1, c2, d1, d2)
-    N = int(len(t_comp)/2)
+    N = int(len(t_comp) / 2)
     h_real = effective_ringdown_2(
         t_comp[:N], A_fund, phi_fund, omega_fund, t_match, *fit_params, part="real")
     h_imag = effective_ringdown_2(
@@ -1239,31 +1445,32 @@ def effective_ringdown_for_fit_2(t_comp, A_fund, phi_fund, omega_fund, t_match, 
     h_comp = np.concatenate((h_real, h_imag))
     return h_comp
 
-def estimate_mass_and_spin(Psi, qnm_free_list, 
-                run_string_prefix,
-                tstart = 30,
-                tend = 50,
-                one_t = False,
-                gamma = None,
-                gamma_scale = False,
-                Schwarzschild = False,
-                qnm_fixed_list = [],
-                t0_arr = np.linspace(0, 100, num = 51),
-                load_pickle = True,
-                fit_save_prefix = FIT_SAVE_PATH):
-                  
+
+def estimate_mass_and_spin(Psi, qnm_free_list,
+                           run_string_prefix,
+                           tstart=30,
+                           tend=50,
+                           one_t=False,
+                           gamma=None,
+                           gamma_scale=False,
+                           Schwarzschild=False,
+                           qnm_fixed_list=[],
+                           t0_arr=np.linspace(0, 100, num=51),
+                           load_pickle=True,
+                           fit_save_prefix=FIT_SAVE_PATH):
+
     qnm_fitter = QNMFitVaryingStartingTime(Psi,
-                t0_arr,
-                qnm_fixed_list = qnm_fixed_list,
-                qnm_free_list = qnm_free_list,
-                Schwarzschild = Schwarzschild,
-                run_string_prefix=run_string_prefix,
-                var_M_a = True,
-                load_pickle=load_pickle,
-                fit_save_prefix = fit_save_prefix)
-    
+                                           t0_arr,
+                                           qnm_fixed_list=qnm_fixed_list,
+                                           qnm_free_list=qnm_free_list,
+                                           Schwarzschild=Schwarzschild,
+                                           run_string_prefix=run_string_prefix,
+                                           var_M_a=True,
+                                           load_pickle=load_pickle,
+                                           fit_save_prefix=fit_save_prefix)
+
     qnm_fitter.do_fits()
-    
+
     M = qnm_fitter.result_full.Ma_dict["M"]
     tstartindx = bisect_left(t0_arr, tstart)
     tendindx = bisect_left(t0_arr, tend)
@@ -1285,5 +1492,5 @@ def estimate_mass_and_spin(Psi, qnm_free_list,
             a_mean = np.mean(a_win)
             a_std = np.std(a_win)
         return M_mean, M_std, a_mean, a_std
-    
+
     return M_mean, M_std

@@ -1,1 +1,0 @@
-15.46 - 407 \eta^2 + 55.43 \eta \chi_+ - 413.5 \eta \chi_- + 14.82 \chi_+^2 - 65.08 \chi_+ \chi_- + 17.99 \chi_-^2 + 1731 \eta^3 + 4245 \eta^2 \chi_- + 876.8 \eta \chi_+ \chi_- - 72.06 \eta \chi_-^2 + 11.46 \chi_+^3 + 101.2 \chi_+ \chi_-^2 - 2.499 \chi_-^3 - 10310 \eta^3 \chi_- - 2485 \eta^2 \chi_+ \chi_- - 400 \eta \chi_+ \chi_-^2

@@ -3,10 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-dynamic = [
-  "version"
-]
-name = "jaxqualin_mhycheung"
+version = "0.0.0"
+name = "jaxqualin"
 authors = [
   { name="Mark Ho-Yeuk Cheung", email="hcheung5@jhu.edu" },
 ]
@@ -20,22 +18,21 @@ classifiers = [
 ]
 dependencies = [
   "adjustText==0.8",
-  "jax==0.3.23",
-  "jaxlib==0.3.22",
+  "jax>0.3.23",
+  "jaxlib>0.3.23",
   "jaxfit==0.0.3",
-  "matplotlib==3.6.1",
-  "numpy==1.23.4",
-  "pandas==1.5.1",
-  "PyCBC==2.0.6",
+  "matplotlib>3.6.1",
+  "numpy>1.23",
+  "pandas>1.5.1",
   "pykerr==0.1.0",
   "qnm==0.4.3",
-  "scipy==1.9.3",
-  "sxs==2022.4.5",
-  "tqdm==4.61.1",
+  "scipy>1.9.3",
+  "sxs>2022.4.5",
+  "tqdm>4.61.1",
 ]
 
-[tool.hatch.version]
-path = "jaxqualin/__about__.py"
+[project.optional-dependencies]
+pycbc = ["PyCBC>2.0.6"]
 
 [project.urls]
 "Homepage" = "https://github.com/mhycheung/Jaxqualin"

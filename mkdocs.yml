@@ -8,6 +8,7 @@ nav:
   - Examples:
     - Fitting the ringdown: notebooks/fit_testing.ipynb
     - Mode search: notebooks/mode_selection_testing.ipynb
+    - Loading hyperfits and interpolators: notebooks/hyperfit_load.ipynb
   - Results: 
     - 2,2,0: mode_md/2.2.0.md
     - 2,2,1: mode_md/2.2.1.md
@@ -20,11 +21,18 @@ nav:
     - 5,5,0: mode_md/5.5.0.md
     - r2,2,0: mode_md/-2.2.0.md
     - r2,1,0: mode_md/-2.1.0.md
+  - Data: data.md
+  - API: references.md
 
 plugins:
   - search
   - mkdocs-jupyter:
       ignore_h1_titles: True
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_submodules: true
 
 markdown_extensions:
   - pymdownx.arithmatex:
