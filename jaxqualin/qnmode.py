@@ -7,54 +7,27 @@ from .utils import *
 
 import itertools
 
+
 class mode_free:
-    
-    def __init__(self, lmnx, s = -2):
+
+    def __init__(self, lmnx, s=-2):
         self.spinseq_list = []
         self.spinseq_list_neg_a = []
-        # lmnx_actual = []
-        # self.retro_mode_fac_x = []
-        # self.lmnx_retro = lmnx
         if lmnx != "constant":
             if isinstance(lmnx, str):
                 lmnx = str_to_lmnx(lmnx)
-                # self.lmnx_retro = str_to_lmnx(self.lmnx_retro)
             for lmn in lmnx:
                 l, m, n = tuple(lmn)
-                # if l < 0:
-                #     l = -l
-                #     # self.retro_mode_fac_x.append(-1)
-                #     self.spinseq_list.append(qnm.modes_cache(s=s, l=l, m=-m, n=n))
-                #     self.spinseq_list_neg_a.append(qnm.modes_cache(s=s, l=l, m=m, n=n))
-                # else:
-                #     # self.retro_mode_fac_x.append(1)
-                self.spinseq_list.append(qnm.modes_cache(s=s, l=np.abs(l), m=np.abs(m), n=n))
-                self.spinseq_list_neg_a.append(qnm.modes_cache(s=s, l=np.abs(l), m=-np.abs(m), n=n))
-                # lmnx_actual.append([l, m, n])
+                self.spinseq_list.append(qnm.modes_cache(
+                    s=s, l=np.abs(l), m=np.abs(m), n=n))
+                self.spinseq_list_neg_a.append(
+                    qnm.modes_cache(
+                        s=s, l=np.abs(l), m=-np.abs(m), n=n))
             self.lmnx = lmnx
         else:
             self.lmnx = "constant"
-
-    # def init_lmnx_retro(self):
-    #     lmnx = self.lmnx
-    #     self.lmnx_retro = lmnx
-    #     self.retro_mode_fac_x = []
-    #     lmnx_actual = []
-    #     if lmnx != "constant":
-    #         if isinstance(lmnx, str):
-    #             lmnx = str_to_lmnx(lmnx)
-    #             self.lmnx_retro = str_to_lmnx(self.lmnx_retro)
-    #         for lmn in lmnx:
-    #             l, m, n = tuple(lmn)
-    #             if l < 0:
-    #                 l = -l
-    #                 self.retro_mode_fac_x.append(-1)
-    #             else:
-    #                 self.retro_mode_fac_x.append(1)
-    #             lmnx_actual.append([l, m, n])
-    #         self.lmnx = lmnx_actual
-        
-    def fix_mode(self, M, a, retro_def_orbit = True):
+            
+    def fix_mode(self, M, a, retro_def_orbit=True):
         if a > 0.99:
             a = 0.99
         elif a < -0.99:
@@ -62,35 +35,29 @@ class mode_free:
         self.omegar = 0
         self.omegai = 0
         if self.lmnx != "constant":
-            # if a < 0:
-            #     spinseq_list = self.spinseq_list_neg_a
-            # else:
-            #     spinseq_list = self.spinseq_list
             for i, lmn in enumerate(self.lmnx):
                 l, m, n = tuple(lmn)
                 if retro_def_orbit:
                     retro_fac = jnp.sign(l)
-                    use_neg = jnp.sign(a)*jnp.sign(l)
+                    use_neg = jnp.sign(a) * jnp.sign(l)
                 else:
-                    retro_fac = jnp.sign(a)*jnp.sign(l)
+                    retro_fac = jnp.sign(a) * jnp.sign(l)
                     use_neg = jnp.sign(l)
                 if use_neg < 0:
                     spinseq = self.spinseq_list_neg_a[i]
                 else:
                     spinseq = self.spinseq_list[i]
                 omega, _, _ = spinseq(a=np.abs(a))
-                self.omegar += retro_fac*jnpsign0(m) * jnp.real(omega) / M
+                self.omegar += retro_fac * jnpsign0(m) * jnp.real(omega) / M
                 self.omegai += jnp.imag(omega) / M
         self.omega = self.omegar + 1.j * self.omegai
         self.M = M
         self.a = a
-        
+
     def string(self):
         if self.lmnx == "constant":
             return "constant"
         lmnstrings = []
-        # if not hasattr(self, 'lmnx_retro'):
-        #     self.init_lmnx_retro()
         for lmn in self.lmnx:
             l, m, n = tuple(lmn)
             lmnstrings.append(f"{l}.{m}.{n}")
@@ -132,22 +99,21 @@ class mode_free:
                 m_sum += m
         return l_sum, m_sum
 
+
 class mode(mode_free):
-    
-    def __init__(self, lmnx, M, a, retro_def_orbit = True, s = -2):
+
+    def __init__(self, lmnx, M, a, retro_def_orbit=True, s=-2):
         super().__init__(lmnx, s=s)
-        super().fix_mode(M, a, retro_def_orbit = retro_def_orbit)
+        super().fix_mode(M, a, retro_def_orbit=retro_def_orbit)
         self.M = M
         self.a = a
         self.spin_flipped = retro_def_orbit
+
 
 def tex_string_physical_notation(mode):
     if mode.lmnx == "constant":
         return r"constant"
     lmnstrings = []
-    # if hasattr(mode, 'lmnx_retro'):
-    #     lmnx = mode.lmnx_retro
-    # else:
     lmnx = mode.lmnx
     for lmn in lmnx:
         l, m, n = tuple(lmn)
@@ -164,6 +130,7 @@ def tex_string_physical_notation(mode):
     _tex_string = _tex_string.replace('.', r"{,}")
     return _tex_string
 
+
 def str_to_lmnx(lmnxstring):
     if lmnxstring == "constant":
         return "constant"
@@ -175,9 +142,11 @@ def str_to_lmnx(lmnxstring):
         lmnx.append(lmn)
     return lmnx
 
-def str_to_mode(str, M, a, retro_def_orbit = True):
+
+def str_to_mode(str, M, a, retro_def_orbit=True):
     lmnx = str_to_lmnx(str)
-    return mode(lmnx, M, a, retro_def_orbit = retro_def_orbit)
+    return mode(lmnx, M, a, retro_def_orbit=retro_def_orbit)
+
 
 def long_str_to_lmnxs(longstring):
     lmnxs = []
@@ -213,6 +182,7 @@ def lmnxs_to_qnms_free(lmnxs, **kwargs):
     for lmnx in lmnxs:
         qnms.append(mode_free(lmnx, **kwargs))
     return qnms
+
 
 def long_str_to_qnms(longstring, M, a, **kwargs):
     if longstring == '':
@@ -288,20 +258,33 @@ def lmnx_sum_lm(lmnx):
             m_sum += m
     return l_sum, m_sum
 
-def fix_modes(qnms_free_list, M, a, retro_def_orbit = True):
+
+def fix_modes(qnms_free_list, M, a, retro_def_orbit=True):
     for qnm in qnms_free_list:
-        qnm.fix_mode(M, a, retro_def_orbit = True)
+        qnm.fix_mode(M, a, retro_def_orbit=True)
 
 
-def potential_modes(l, m, M, a, relevant_lm_list, retro_def_orbit = True, recoil_n_max = 0,
-                    return_lmnx = False, include_r220 = True, include_constant = True):
+def potential_modes(
+        l,
+        m,
+        M,
+        a,
+        relevant_lm_list,
+        retro_def_orbit=True,
+        recoil_n_max=0,
+        return_lmnx=False,
+        include_r220=True,
+        include_constant=True):
     potential_lmnx_list = []
     potential_lmnx_list.extend(overtone_modes(l, m))
     potential_lmnx_list.extend(spheroidal_mixing_modes(l, m))
-    potential_lmnx_list.extend(recoil_modes(relevant_lm_list, recoil_n_max=recoil_n_max))
+    potential_lmnx_list.extend(
+        recoil_modes(
+            relevant_lm_list,
+            recoil_n_max=recoil_n_max))
     potential_lmnx_list.extend(retrograde_modes_spheroidal(l, m))
     potential_lmnx_list.extend(quadratic_modes_matching_m(m, relevant_lm_list))
-    
+
     for lmnx in potential_lmnx_list:
         lmn_pos = []
         for lmn in lmnx:
@@ -315,21 +298,26 @@ def potential_modes(l, m, M, a, relevant_lm_list, retro_def_orbit = True, recoil
             lmnx_pos = sorted(list(lmntup))
             if lmnx_pos not in potential_lmnx_list:
                 potential_lmnx_list.append(lmnx_pos)
-    
+
     potential_mode_strings = lmnxs_to_string(potential_lmnx_list)
     if include_constant:
         potential_mode_strings.append("constant")
     if include_r220:
         potential_mode_strings.append("-2.2.0")
 
-    if a<0 and not retro_def_orbit:
-        potential_mode_strings = [qnm_string_l_reverse(str) for str in potential_mode_strings]
+    if a < 0 and not retro_def_orbit:
+        potential_mode_strings = [qnm_string_l_reverse(
+            str) for str in potential_mode_strings]
 
     if return_lmnx:
         return potential_mode_strings
     else:
         potential_mode_list = lmnxs_to_qnms(
-        list(set(potential_mode_strings)), M, a, retro_def_orbit = retro_def_orbit)
+            list(
+                set(potential_mode_strings)),
+            M,
+            a,
+            retro_def_orbit=retro_def_orbit)
         return potential_mode_list
 
 
@@ -348,7 +336,7 @@ def spheroidal_mixing_modes(l, m, l_max=10, spheroidal_n_max=4):
     return spheroidal_mode_list
 
 
-def recoil_modes(relevant_lm_list, recoil_n_max = 0):
+def recoil_modes(relevant_lm_list, recoil_n_max=0):
     recoil_mode_list = []
     for lm in relevant_lm_list:
         l, m = lm
@@ -356,7 +344,12 @@ def recoil_modes(relevant_lm_list, recoil_n_max = 0):
             recoil_mode_list.append([[l, m, n]])
     return recoil_mode_list
 
-def quadratic_modes_matching_m(m, relevant_lm_list_unsorted, quadratic_n_max=1, retro = False):
+
+def quadratic_modes_matching_m(
+        m,
+        relevant_lm_list_unsorted,
+        quadratic_n_max=1,
+        retro=False):
     relevant_lm_list = sorted(relevant_lm_list_unsorted)
     quad_mode_list = []
     relevant_length = len(relevant_lm_list)
@@ -370,32 +363,10 @@ def quadratic_modes_matching_m(m, relevant_lm_list_unsorted, quadratic_n_max=1, 
                 else:
                     quadratic_n_max2 = quadratic_n_max
                 for n2 in range(quadratic_n_max2 + 1):
-                    if m1 + m2 == m: 
+                    if m1 + m2 == m:
                         lmnx = sorted([[l2, m2, n2], [l1, m1, n1]])
                         quad_mode_list.append(lmnx)
     return quad_mode_list
-
-# def quadratic_modes(relevant_lm_list_unsorted, quadratic_n_max=1, retro = False):
-#     if retro:
-#         retrofac = -1
-#     else:
-#         retrofac = 1
-#     relevant_lm_list = sorted(relevant_lm_list_unsorted)
-#     quad_mode_list = []
-#     relevant_length = len(relevant_lm_list)
-#     for i in range(relevant_length):
-#         l1, m1 = relevant_lm_list[i]
-#         for j in range(i + 1):
-#             l2, m2 = relevant_lm_list[j]
-#             for n1 in range(quadratic_n_max + 1):
-#                 if i == j:
-#                     quadratic_n_max2 = n1
-#                 else:
-#                     quadratic_n_max2 = quadratic_n_max
-#                 for n2 in range(quadratic_n_max2 + 1):
-#                     lmnx = sorted([[l2, retrofac*m2, n2], [l1, retrofac*m1, n1]])
-#                     quad_mode_list.append(lmnx)
-#     return quad_mode_list
 
 
 def retrograde_modes_relevant(relevant_lm_list, retrograde_n_max=3):
@@ -406,7 +377,8 @@ def retrograde_modes_relevant(relevant_lm_list, retrograde_n_max=3):
             retrograde_mode_list.append([[-l, m, n]])
     return retrograde_mode_list
 
-def retrograde_modes_spheroidal(l, m, retrograde_n_max=3, retrograde_l_max = 10):
+
+def retrograde_modes_spheroidal(l, m, retrograde_n_max=3, retrograde_l_max=10):
     retrograde_mode_list = []
     for l in range(max(2, m), retrograde_l_max + 1):
         for n in range(retrograde_n_max + 1):
@@ -433,6 +405,7 @@ def lower_overtone_present(test_mode, found_modes):
                 return False
     return True
 
+
 def lower_l_mode_present(l, m, relevant_lm_list, test_mode, found_modes):
     lmnx = test_mode.lmnx
     if lmnx == "constant":
@@ -447,21 +420,24 @@ def lower_l_mode_present(l, m, relevant_lm_list, test_mode, found_modes):
     if (np.abs(l_test), m_test) in relevant_lm_list:
         return True
     if np.abs(l_test) > l:
-        lower_l_mode_lmnx = [[l_test-np.sign(l_test), m_test, n_test]]
+        lower_l_mode_lmnx = [[l_test - np.sign(l_test), m_test, n_test]]
     else:
-        lower_l_mode_lmnx = [[l_test+np.sign(l_test), m_test, n_test]]
+        lower_l_mode_lmnx = [[l_test + np.sign(l_test), m_test, n_test]]
     if lmnx_to_string(lower_l_mode_lmnx) not in qnms_to_string(found_modes):
         return False
     return True
+
 
 def sort_lmnx(lmnx_in):
     lmnx = sorted(lmnx_in)
     return lmnx
 
+
 def first_n_overtones_string(l, m, n):
-    strings = [f"{l}.{m}.{i}" for i in range(n+1)]
+    strings = [f"{l}.{m}.{i}" for i in range(n + 1)]
     return "_".join(strings)
-               
+
+
 def qnm_string_m_reverse(str):
     if str == 'constant':
         return 'constant'
@@ -476,6 +452,7 @@ def qnm_string_m_reverse(str):
     str_out = lmnx_to_string(lmnx)
     return str_out
 
+
 def qnm_string_l_reverse(str):
     if str == 'constant':
         return 'constant'
@@ -485,17 +462,20 @@ def qnm_string_l_reverse(str):
     str_out = lmnx_to_string(lmnx)
     return str_out
 
-def S_retro_fac(iota, af, l, m, n, phi = 0.):
+
+def S_retro_fac(iota, af, l, m, n, phi=0.):
     S = pykerr.spheroidal(iota, af, l, m, n, phi=phi)
     S_n = pykerr.spheroidal(iota, af, l, -m, n, phi=phi)
-    return np.abs(S_n)/np.abs(S)
+    return np.abs(S_n) / np.abs(S)
 
-def S_retro_fac_complex(iota, af, l, m, n, phi = 0.):
+
+def S_retro_fac_complex(iota, af, l, m, n, phi=0.):
     S = pykerr.spheroidal(iota, af, l, m, n, phi=phi)
     S_n = pykerr.spheroidal(iota, af, l, -m, n, phi=phi)
-    return S_n/S
+    return S_n / S
 
-def S_retro_phase_diff(iota, af, l, m, n, phi = 0.):
+
+def S_retro_phase_diff(iota, af, l, m, n, phi=0.):
     S = pykerr.spheroidal(iota, af, l, m, n, phi=phi)
     S_n = pykerr.spheroidal(iota, af, l, -m, n, phi=phi)
     if l % 2 != 0:
