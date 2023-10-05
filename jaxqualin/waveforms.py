@@ -57,7 +57,10 @@ class waveform:
         endindx = bisect_left(self.fulltime, tend)
         return self.fulltime[startindx:endindx] - self.peaktime, jnp.real(
             self.fullh[startindx:endindx]), jnp.imag(self.fullh[startindx:endindx])
-
+    
+    def set_lm(self, l, m):
+        self.l = l
+        self.m = m 
 
 def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1 = 120):
     catalog = sxs.catalog.Catalog.load()

@@ -220,9 +220,7 @@ class ModeSearchAllFreeLM:
                 0,
                 50,
                 num=501),
-            N_init=5,
-            N_step=3,
-            iterations=2,
+            N=5,
             **kwargs_in):
         self.h = h
         self.l = self.h.l
@@ -231,9 +229,7 @@ class ModeSearchAllFreeLM:
         self.a = a
         self.relevant_lm_list = relevant_lm_list
         self.t0_arr = t0_arr
-        self.N_init = N_init
-        self.N_step = N_step
-        self.iterations = iterations
+        self.N = N
         kwargs = {"retro_def_orbit": True, "run_string_prefix": "Default", "load_pickle": True,
                   "a_recoil_tol": 0., "recoil_n_max" : 0,
                   "omega_r_tol" : 0.05, "omega_i_tol" : 0.05,
@@ -268,53 +264,51 @@ class ModeSearchAllFreeLM:
         self.fit_save_prefix = self.kwargs["fit_save_prefix"]
 
     def mode_search_all_free(self):
-        _N = self.N_init
+        _N = self.N
         self.found_modes = []
-        for i in range(self.iterations):
-            if i > 0:
-                _N = self.N_step
-            self.full_fit = QNMFitVaryingStartingTime(
-                self.h,
-                self.t0_arr,
-                _N,
-                self.found_modes,
-                run_string_prefix=self.run_string_prefix,
-                load_pickle = self.load_pickle,
-                fit_kwargs = self.fit_kwargs,
-                initial_num = self.initial_num,
-                random_initial = self.random_initial,
-                initial_dict = self.initial_dict,
-                A_guess_relative = self.A_guess_relative,
-                set_seed = self.set_seed,
-                fit_save_prefix = self.fit_save_prefix)
-            self.full_fit.do_fits()
-            self.mode_selector = ModeSelectorAllFree(
-                self.full_fit.result_full, self.potential_modes, omega_r_tol = self.omega_r_tol,
-                omega_i_tol=self.omega_i_tol, t_tol=self.t_tol, fraction_tol=self.fraction_tol, N_max = _N)
-            self.mode_selector.do_selection()
-            # print(qnms_to_string(self.mode_selector.passed_mode_list))
-            _jump_mode_indx = []
-            for j in range(len(self.mode_selector.passed_mode_list)):
-                if not lower_overtone_present(
-                        self.mode_selector.passed_mode_list[j],
-                        self.mode_selector.passed_mode_list + self.found_modes):
-                    _jump_mode_indx.append(j)
-                if not lower_l_mode_present(self.l, self.m, 
-                                            self.relevant_lm_list, 
-                                            self.mode_selector.passed_mode_list[j], 
-                                            self.mode_selector.passed_mode_list + self.found_modes):
-                    _jump_mode_indx.append(j)
-            # print(list(set(_jump_mode_indx)))
-            for k in sorted(list(set(_jump_mode_indx)), reverse=True):
-                del self.mode_selector.passed_mode_list[k]
-            if len(self.mode_selector.passed_mode_list) == 0:
-                break
-            self.found_modes.extend(self.mode_selector.passed_mode_list)
-            print_string = f"Runname: {self.run_string_prefix}, N_free = {_N}, potential modes: "
-            print_string += ', '.join(qnms_to_string(self.mode_selector.passed_mode_list))
-            print(print_string)
-            for j in sorted(self.mode_selector.passed_mode_indx, reverse=True):
-                del self.potential_modes[j]
+        # for i in range(self.iterations):
+        #     if i > 0:
+        #         _N = self.N_step
+        self.full_fit = QNMFitVaryingStartingTime(
+            self.h,
+            self.t0_arr,
+            _N,
+            self.found_modes,
+            run_string_prefix=self.run_string_prefix,
+            load_pickle = self.load_pickle,
+            fit_kwargs = self.fit_kwargs,
+            initial_num = self.initial_num,
+            random_initial = self.random_initial,
+            initial_dict = self.initial_dict,
+            A_guess_relative = self.A_guess_relative,
+            set_seed = self.set_seed,
+            fit_save_prefix = self.fit_save_prefix)
+        self.full_fit.do_fits()
+        self.mode_selector = ModeSelectorAllFree(
+            self.full_fit.result_full, self.potential_modes, omega_r_tol = self.omega_r_tol,
+            omega_i_tol=self.omega_i_tol, t_tol=self.t_tol, fraction_tol=self.fraction_tol, N_max = _N)
+        self.mode_selector.do_selection()
+        # print(qnms_to_string(self.mode_selector.passed_mode_list))
+        _jump_mode_indx = []
+        for j in range(len(self.mode_selector.passed_mode_list)):
+            if not lower_overtone_present(
+                    self.mode_selector.passed_mode_list[j],
+                    self.mode_selector.passed_mode_list + self.found_modes):
+                _jump_mode_indx.append(j)
+            if not lower_l_mode_present(self.l, self.m, 
+                                        self.relevant_lm_list, 
+                                        self.mode_selector.passed_mode_list[j], 
+                                        self.mode_selector.passed_mode_list + self.found_modes):
+                _jump_mode_indx.append(j)
+        # print(list(set(_jump_mode_indx)))
+        for k in sorted(list(set(_jump_mode_indx)), reverse=True):
+            del self.mode_selector.passed_mode_list[k]
+        self.found_modes.extend(self.mode_selector.passed_mode_list)
+        print_string = f"Runname: {self.run_string_prefix}, N_free = {_N}, potential modes: "
+        print_string += ', '.join(qnms_to_string(self.mode_selector.passed_mode_list))
+        print(print_string)
+        for j in sorted(self.mode_selector.passed_mode_indx, reverse=True):
+            del self.potential_modes[j]
 
     def do_mode_search(self):
         self.mode_search_all_free()
@@ -413,8 +407,9 @@ class ModeSearchAllFreeVaryingN:
                     self.M,
                     self.a,
                     self.relevant_lm_list,
-                    N_init=_N_init,
+                    N=_N_init,
                     iterations=1,
+                    t0_arr = self.t0_arr,
                     **self.mode_searcher_kwargs,
                     **self.kwargs))
 
