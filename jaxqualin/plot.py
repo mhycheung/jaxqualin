@@ -475,8 +475,8 @@ def plot_mode_distance(
         fig, ax = plt.subplots()
     for mode in fixed_modes:
         delta = closest_free_mode_distance(result_full, mode,
-                                           r_scale=omega_r_tol,
-                                           i_scale=omega_i_tol)
+                                           alpha_r=omega_r_tol,
+                                           alpha_i=omega_i_tol)
         ax.semilogy(t0_arr, delta, lw=2, label=mode.tex_string())
     ax.legend()
 
