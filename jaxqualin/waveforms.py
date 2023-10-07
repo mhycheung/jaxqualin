@@ -26,21 +26,7 @@ rng = default_rng(seed=1234)
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 
-_CCE_radext_list = [
-    292,
-    261,
-    250,
-    236,
-    274,
-    273,
-    270,
-    305,
-    270,
-    235,
-    222,
-    223,
-    237]
-
+# _CCE_radext_list = [292, 261, 250, 236, 274, 273, 270, 305, 270, 235, 222, 223, 237]
 
 class waveform:
 
@@ -230,7 +216,8 @@ def get_relevant_lm_waveforms_SXS(
         N_ext=2,
         CCE=False):
     if CCE:
-        Mf, af, Level, hdict = get_CCE_waveform_dict(SXSnum)
+        raise NotImplementedError
+        # Mf, af, Level, hdict = get_CCE_waveform_dict(SXSnum)
     else:
         Mf, af, Level, hdict = get_SXS_waveform_dict(
             SXSnum, res=res, N_ext=N_ext)
