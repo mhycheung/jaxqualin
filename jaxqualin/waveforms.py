@@ -91,25 +91,26 @@ def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1=120):
 
 
 def get_waveform_CCE(CCEnum, l, m, Lev=5, t1=120):
-    dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
-    metapath = os.path.join(
-        ROOT_PATH,
-        f"CCE_waveforms/{CCEnum}/Lev{Lev}/metadata.json")
-    radext = _CCE_radext_list[int(CCEnum) - 1]
-    filepath = os.path.join(dir, f"{CCEnum}_hdict_radext_{radext}_Lev_{Lev}.h")
-    h5file = h5py.File(filepath)
-    keys = list(h5file['hdict'].keys())
-    hdict = {}
-    for key in keys:
-        hdict[key] = h5file['hdict'][key][()]
-    with open(metapath) as f:
-        metadata = json.load(f)
-    Mf = metadata['remnant_mass']
-    a_arr = metadata['remnant_dimensionless_spin']
-    af = np.linalg.norm(a_arr) * np.sign(a_arr[2])
-    h_time, h_r, h_i = tuple(hdict[f"{l},{m}"])
-    h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t1=t1)
-    return h, Mf, af, Lev
+    raise NotImplementedError
+    # dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
+    # metapath = os.path.join(
+    #     ROOT_PATH,
+    #     f"CCE_waveforms/{CCEnum}/Lev{Lev}/metadata.json")
+    # radext = _CCE_radext_list[int(CCEnum) - 1]
+    # filepath = os.path.join(dir, f"{CCEnum}_hdict_radext_{radext}_Lev_{Lev}.h")
+    # h5file = h5py.File(filepath)
+    # keys = list(h5file['hdict'].keys())
+    # hdict = {}
+    # for key in keys:
+    #     hdict[key] = h5file['hdict'][key][()]
+    # with open(metapath) as f:
+    #     metadata = json.load(f)
+    # Mf = metadata['remnant_mass']
+    # a_arr = metadata['remnant_dimensionless_spin']
+    # af = np.linalg.norm(a_arr) * np.sign(a_arr[2])
+    # h_time, h_r, h_i = tuple(hdict[f"{l},{m}"])
+    # h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t1=t1)
+    # return h, Mf, af, Lev
 
 
 def get_M_a_SXS(SXSnum, res=0):
@@ -148,23 +149,24 @@ def get_SXS_waveform_dict(SXSnum, res=0, N_ext=2):
 
 
 def get_CCE_waveform_dict(CCEnum, Lev=5):
-    dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
-    metapath = os.path.join(
-        ROOT_PATH,
-        f"CCE_waveforms/{CCEnum}/Lev{Lev}/metadata.json")
-    radext = _CCE_radext_list[int(CCEnum) - 1]
-    filepath = os.path.join(dir, f"{CCEnum}_hdict_radext_{radext}_Lev_{Lev}.h")
-    h5file = h5py.File(filepath)
-    keys = list(h5file['hdict'].keys())
-    hdict = {}
-    for key in keys:
-        hdict[key] = h5file['hdict'][key][()]
-    with open(metapath) as f:
-        metadata = json.load(f)
-    Mf = metadata['remnant_mass']
-    a_arr = metadata['remnant_dimensionless_spin']
-    af = np.linalg.norm(a_arr) * np.sign(a_arr[2])
-    return Mf, af, Lev, hdict
+    raise NotImplementedError
+    # dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
+    # metapath = os.path.join(
+    #     ROOT_PATH,
+    #     f"CCE_waveforms/{CCEnum}/Lev{Lev}/metadata.json")
+    # radext = _CCE_radext_list[int(CCEnum) - 1]
+    # filepath = os.path.join(dir, f"{CCEnum}_hdict_radext_{radext}_Lev_{Lev}.h")
+    # h5file = h5py.File(filepath)
+    # keys = list(h5file['hdict'].keys())
+    # hdict = {}
+    # for key in keys:
+    #     hdict[key] = h5file['hdict'][key][()]
+    # with open(metapath) as f:
+    #     metadata = json.load(f)
+    # Mf = metadata['remnant_mass']
+    # a_arr = metadata['remnant_dimensionless_spin']
+    # af = np.linalg.norm(a_arr) * np.sign(a_arr[2])
+    # return Mf, af, Lev, hdict
 
 
 def waveformabsmax(time, hr, hi, startcut=500):
@@ -469,25 +471,6 @@ def delayed_QNM(
         t,
         A,
         phi,
-        dA_ratio=0.2,
-        A_delay=5,
-        A_sig=1,
-        dphi=-np.pi / 2,
-        phi_delay=5,
-        phi_sig=1):
-    omega = mode.omega
-    mode_clean = A * np.exp(-1.j * (omega * t + phi))
-    modulation = (1 - dA_ratio) + (dA_ratio) * \
-        (1 + np.tanh((t - A_delay) / A_sig)) / 2
-    phase_delay = dphi * (1 - np.tanh((t - phi_delay) / phi_sig)) / 2
-    return modulation * mode_clean * np.exp(1.j * phase_delay)
-
-
-def delayed_QNM_2(
-        mode,
-        t,
-        A,
-        phi,
         A_red_ratio=1,
         A_delay=5,
         A_sig=1,
@@ -530,7 +513,7 @@ def make_eff_ringdown_waveform(
     A_fund, phi_fund = inj_dict[fund_string]
 
     if delay:
-        h_fund = delayed_QNM_2(mode_fund, time, A_fund, phi_fund,
+        h_fund = delayed_QNM(mode_fund, time, A_fund, phi_fund,
                                A_delay=0, A_sig=10,
                                phi_delay=0, dphi=-np.pi, phi_sig=5)
     else:
@@ -543,7 +526,7 @@ def make_eff_ringdown_waveform(
         omega = long_str_to_qnms(key, Mf, af)[0]
         A, phi = inj_dict[key]
         if delay:
-            h_mode = delayed_QNM_2(omega, h0.time, A, phi,
+            h_mode = delayed_QNM(omega, h0.time, A, phi,
                                    A_red_ratio=1, A_delay=5, A_sig=2,
                                    phi_delay=0, dphi=-np.pi, phi_sig=2)
         else:

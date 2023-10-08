@@ -1427,14 +1427,13 @@ def plot_mode_searcher_results(mode_searcher, axs=None):
         fig, axs = plt.subplots(1, 3, figsize=(18, 5))
 
     present_mode_strings = qnms_to_string(mode_searcher.found_modes_final)
-    mode_searcher_vary_N = mode_searcher.mode_searcher_vary_N
-    best_run_indx = mode_searcher_vary_N.best_run_indx
-    best_N = mode_searcher_vary_N.N_list[best_run_indx]
-    best_mode_searcher = mode_searcher_vary_N.mode_searchers[best_run_indx]
+    best_run_indx = mode_searcher.best_run_indx
+    best_N = mode_searcher.N_list[best_run_indx]
+    best_mode_searcher = mode_searcher.mode_searchers[best_run_indx]
     potential_modes_list = best_mode_searcher.potential_modes_full
-    best_N_free_result = mode_searcher_vary_N.mode_searchers[best_run_indx].full_fit.result_full
+    best_N_free_result = mode_searcher.mode_searchers[best_run_indx].full_fit.result_full
 
-    best_flatness_checker = mode_searcher_vary_N.flatness_checkers[best_run_indx]
+    best_flatness_checker = mode_searcher.flatness_checkers[best_run_indx]
     best_fitter_list = best_flatness_checker.fitter_list
     best_fluc_least_indx_list = best_flatness_checker.fluc_least_indx_list
     best_start_flat_indx_list = best_flatness_checker.start_flat_indx_list
