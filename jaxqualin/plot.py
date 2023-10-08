@@ -106,8 +106,8 @@ def plot_omega_free(
 def plot_predicted_qnms(
         ax,
         predicted_qnm_list,
-        ellipse_x=0.05,
-        ellipse_y=0.05,
+        alpha_r=0.05,
+        alpha_i=0.05,
         ellipse_edgecolor='gray',
         ellipse_facecolor='lightgray',
         ellipse_alpha=0.5,
@@ -186,7 +186,7 @@ def plot_predicted_qnms(
         omegar = mode.omegar
         if xmin < omegar < xmax and ymax < mode.omegai < ymin:  # remember that y-axis is flipped
             ells.append(Ellipse(xy=(omegar, mode.omegai),
-                                width=2 * ellipse_x, height=2 * ellipse_y,
+                                width=2 * alpha_r, height=2 * alpha_i,
                                 fill=True,
                                 facecolor=ellipse_facecolor,
                                 edgecolor=ellipse_edgecolor,
@@ -1439,9 +1439,14 @@ def plot_mode_searcher_results(mode_searcher, axs=None):
     best_fluc_least_indx_list = best_flatness_checker.fluc_least_indx_list
     best_start_flat_indx_list = best_flatness_checker.start_flat_indx_list
 
+    alpha_r = best_mode_searcher.alpha_r
+    alpha_i = best_mode_searcher.alpha_i
+    tau_stable_length = best_flatness_checker.tau_stable_length
+
     plot_omega_free(best_N_free_result, ax=axs[0])
     plot_predicted_qnms(axs[0], potential_modes_list,
-                        present_modes=present_mode_strings)
+                        present_modes=present_mode_strings,
+                        alpha_r = alpha_r, alpha_i = alpha_i)
 
     axs[0].text(
         0.95,
@@ -1458,7 +1463,7 @@ def plot_mode_searcher_results(mode_searcher, axs=None):
     t_start_dict = {}
     for start_flat_indx, fluc_least_indx, found_mode_string in zip(
             best_start_flat_indx_list, best_fluc_least_indx_list, present_mode_strings):
-        bold_dict[found_mode_string] = (fluc_least_indx, fluc_least_indx + 100)
+        bold_dict[found_mode_string] = (fluc_least_indx, fluc_least_indx + tau_stable_length)
         t_start_dict[found_mode_string] = result.t0_arr[start_flat_indx]
 
     for key in t_start_dict:
