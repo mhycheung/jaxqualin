@@ -24,32 +24,28 @@ class IterativeFlatnessChecker:
         self.a = a
         self.found_modes = found_modes
         self.fitter_list = []
-        kwargs = {
-            "run_string_prefix": "Default",
-            "flatness_tol": 0.2,
-            "flatness_range": 10,
-            "retro_def_orbit": True,
-            "load_pickle": True,
-            "confusion_tol": 0.03,
-            "quantile_range": 0.95,
-            "med_min": 1e-3,
-            "weight_1": 1.0,
-            "weight_2": 1.5,
-            "CCE": False,
-            "fit_save_prefix": FIT_SAVE_PATH}
+        kwargs = {"run_string_prefix": "Default", "epsilon_stable": 0.2,
+                  "tau_stable": 10, "retro_def_orbit": True, "load_pickle": True,
+                  "confusion_tol": 0.03, "p_stable": 0.95,
+                  "A_tol" : 1e-3,
+                  "beta_A": 1.0, "beta_phi": 1.5,
+                  "CCE" : False,
+                  "fit_save_prefix" : FIT_SAVE_PATH
+                  }
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
         self.run_string_prefix = self.kwargs["run_string_prefix"]
-        self.flatness_tol = self.kwargs["flatness_tol"]
+        self.epsilon_stable = self.kwargs["epsilon_stable"]
         self.confusion_tol = self.kwargs["confusion_tol"]
-        self.flatness_range = self.kwargs["flatness_range"]
-        self.flatness_length = int(
-            self.flatness_range / (self.t0_arr[1] - self.t0_arr[0]) + 1)
-        self.quantile_range = self.kwargs["quantile_range"]
-        self.med_min = self.kwargs["med_min"]
-        self.weight_1 = self.kwargs["weight_1"]
-        self.weight_2 = self.kwargs["weight_2"]
+        self.tau_stable = self.kwargs["tau_stable"] 
+        self.tau_stable_length = int(self.tau_stable/(self.t0_arr[1] - self.t0_arr[0])+1)
+        self.p_stable = self.kwargs["p_stable"]
+        self.A_tol = self.kwargs["A_tol"]
+        self.beta_A = self.kwargs["beta_A"]
+        self.beta_phi = self.kwargs["beta_phi"]
         self.CCE = self.kwargs["CCE"]
+        if self.CCE:
+            raise NotImplementedError
         self.fit_save_prefix = self.kwargs["fit_save_prefix"]
 
         self.retro_def_orbit = self.kwargs["retro_def_orbit"]
@@ -117,12 +113,12 @@ class IterativeFlatnessChecker:
                     list(_fitter.result_full.phi_fix_dict["phi_" + _current_modes_string[j]]))
                 _phi_fix_j_arr = np.where(collapsed, np.nan, _phi_fix_j_arr)
                 _fluc_least_indx, _fluc_least, start_flat_indx = flattest_region_quadrature(
-                    self.flatness_length,
-                    _A_fix_j_arr, _phi_fix_j_arr,
-                    quantile_range=self.quantile_range,
-                    med_min=self.med_min,
-                    fluc_tol=self.flatness_tol,
-                    weight_1=self.weight_1, weight_2=self.weight_2)
+                    self.tau_stable_length,
+                    _A_fix_j_arr, _phi_fix_j_arr, 
+                    quantile_range = self.p_stable,
+                    med_min = self.A_tol,
+                    fluc_tol = self.epsilon_stable,
+                    weight_1 = self.beta_A, weight_2 = self.beta_phi)
                 _fluc_least_list.append(_fluc_least)
                 _fluc_least_indx_list.append(_fluc_least_indx)
                 start_flat_indx_list.append(start_flat_indx)
@@ -135,10 +131,10 @@ class IterativeFlatnessChecker:
             bad_mode_indx_list = []
             bad_mode_fluc_list = []
             for ii, fluc_least in enumerate(_fluc_least_list):
-                if fluc_least > self.flatness_tol:
+                if fluc_least > self.epsilon_stable:
                     bad_mode_indx_list.append(ii)
                     bad_mode_fluc_list.append(fluc_least)
-            _discard_mode = _fluc_least_list[_worst_mode_indx] > self.flatness_tol
+            _discard_mode = _fluc_least_list[_worst_mode_indx] > self.epsilon_stable
             worst_mode = _current_modes[_worst_mode_indx]
             worst_l, worst_m = worst_mode.sum_lm()
             sacrifice_mode = False
@@ -181,17 +177,17 @@ class ModeSelectorAllFree:
             self,
             result_full,
             potential_mode_list,
-            omega_r_tol=0.05,
-            omega_i_tol=0.05,
-            t_tol=10,
-            fraction_tol=0.95,
-            N_max=10):
+            alpha_r=0.05,
+            alpha_i=0.05,
+            tau_agnostic=10,
+            p_agnostic=0.95,
+            N_max = 10):
         self.result_full = result_full
         self.potential_mode_list = potential_mode_list
-        self.omega_r_tol = omega_r_tol
-        self.omega_i_tol = omega_i_tol
-        self.t_tol = t_tol
-        self.fraction_tol = fraction_tol
+        self.alpha_r = alpha_r
+        self.alpha_i = alpha_i
+        self.tau_agnostic = tau_agnostic
+        self.p_agnostic = p_agnostic
         self.passed_mode_list = []
         self.passed_mode_indx = []
         self.N_max = N_max
@@ -200,13 +196,13 @@ class ModeSelectorAllFree:
         t_approach_duration_list = []
         for i, _mode in enumerate(self.potential_mode_list):
             min_distance = closest_free_mode_distance(self.result_full, _mode,
-                                                      r_scale=self.omega_r_tol,
-                                                      i_scale=self.omega_i_tol)
+                                                      alpha_r=self.alpha_r,
+                                                      alpha_i=self.alpha_i)
             _start_indx, _end_indx = max_consecutive_trues(
-                min_distance < 1, tol=self.fraction_tol)
+                min_distance < 1, tol=self.p_agnostic)
             _t0_arr = self.result_full.t0_arr
             t_approach_duration = _t0_arr[_end_indx] - _t0_arr[_start_indx]
-            if t_approach_duration > self.t_tol:
+            if t_approach_duration > self.tau_agnostic:
                 self.passed_mode_list.append(_mode)
                 self.passed_mode_indx.append(i)
                 t_approach_duration_list.append(t_approach_duration)
@@ -241,33 +237,24 @@ class ModeSearchAllFreeLM:
         self.a = a
         self.relevant_lm_list = relevant_lm_list
         self.t0_arr = t0_arr
-        self.N = N
-        kwargs = {
-            "retro_def_orbit": True,
-            "run_string_prefix": "Default",
-            "load_pickle": True,
-            "a_recoil_tol": 0.,
-            "recoil_n_max": 0,
-            "omega_r_tol": 0.05,
-            "omega_i_tol": 0.05,
-            "t_tol": 10,
-            "fraction_tol": 0.95,
-            'fit_kwargs': {},
-            "initial_num": 1,
-            "random_initial": False,
-            "initial_dict": {},
-            "A_guess_relative": True,
-            "set_seed": 1234,
-            'fit_save_prefix': FIT_SAVE_PATH}
+        self.N_init = N_init
+        self.N_step = N_step
+        self.iterations = iterations
+        kwargs = {"retro_def_orbit": True, "run_string_prefix": "Default", "load_pickle": True,
+                  "a_recoil_tol": 0., "recoil_n_max" : 0,
+                  "alpha_r" : 0.05, "alpha_i" : 0.05,
+                  "tau_agnostic" : 10, "p_agnostic" : 0.95, 'fit_kwargs' : {}, 
+                  "initial_num" : 1, "random_initial" : False, "initial_dict" : {},
+                  "A_guess_relative" : True, "set_seed" : 1234, 'fit_save_prefix': FIT_SAVE_PATH}
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
         self.retro_def_orbit = self.kwargs["retro_def_orbit"]
         self.run_string_prefix = self.kwargs["run_string_prefix"]
         self.a_recoil_tol = self.kwargs["a_recoil_tol"]
-        self.omega_r_tol = self.kwargs["omega_r_tol"]
-        self.omega_i_tol = self.kwargs["omega_i_tol"]
-        self.t_tol = self.kwargs["t_tol"]
-        self.fraction_tol = self.kwargs["fraction_tol"]
+        self.alpha_r = self.kwargs["alpha_r"]
+        self.alpha_i = self.kwargs["alpha_i"]
+        self.tau_agnostic = self.kwargs["tau_agnostic"]
+        self.p_agnostic = self.kwargs["p_agnostic"]
         self.recoil_n_max = self.kwargs["recoil_n_max"]
         if self.a >= self.a_recoil_tol:
             self.potential_modes_full = potential_modes(
@@ -293,53 +280,51 @@ class ModeSearchAllFreeLM:
     def mode_search_all_free(self):
         _N = self.N
         self.found_modes = []
-        self.full_fit = QNMFitVaryingStartingTime(
-            self.h,
-            self.t0_arr,
-            _N,
-            self.found_modes,
-            run_string_prefix=self.run_string_prefix,
-            load_pickle=self.load_pickle,
-            fit_kwargs=self.fit_kwargs,
-            initial_num=self.initial_num,
-            random_initial=self.random_initial,
-            initial_dict=self.initial_dict,
-            A_guess_relative=self.A_guess_relative,
-            set_seed=self.set_seed,
-            fit_save_prefix=self.fit_save_prefix)
-        self.full_fit.do_fits()
-        self.mode_selector = ModeSelectorAllFree(
-            self.full_fit.result_full,
-            self.potential_modes,
-            omega_r_tol=self.omega_r_tol,
-            omega_i_tol=self.omega_i_tol,
-            t_tol=self.t_tol,
-            fraction_tol=self.fraction_tol,
-            N_max=_N)
-        self.mode_selector.do_selection()
-        _jump_mode_indx = []
-        for j in range(len(self.mode_selector.passed_mode_list)):
-            if not lower_overtone_present(
-                    self.mode_selector.passed_mode_list[j],
-                    self.mode_selector.passed_mode_list + self.found_modes):
-                _jump_mode_indx.append(j)
-            if not lower_l_mode_present(
-                    self.l,
-                    self.m,
-                    self.relevant_lm_list,
-                    self.mode_selector.passed_mode_list[j],
-                    self.mode_selector.passed_mode_list +
-                    self.found_modes):
-                _jump_mode_indx.append(j)
-        for k in sorted(list(set(_jump_mode_indx)), reverse=True):
-            del self.mode_selector.passed_mode_list[k]
-        self.found_modes.extend(self.mode_selector.passed_mode_list)
-        print_string = f"Runname: {self.run_string_prefix}, N_free = {_N}, potential modes: "
-        print_string += ', '.join(qnms_to_string(
-            self.mode_selector.passed_mode_list))
-        print(print_string)
-        for j in sorted(self.mode_selector.passed_mode_indx, reverse=True):
-            del self.potential_modes[j]
+        for i in range(self.iterations):
+            if i > 0:
+                _N = self.N_step
+            self.full_fit = QNMFitVaryingStartingTime(
+                self.h,
+                self.t0_arr,
+                _N,
+                self.found_modes,
+                run_string_prefix=self.run_string_prefix,
+                load_pickle = self.load_pickle,
+                fit_kwargs = self.fit_kwargs,
+                initial_num = self.initial_num,
+                random_initial = self.random_initial,
+                initial_dict = self.initial_dict,
+                A_guess_relative = self.A_guess_relative,
+                set_seed = self.set_seed,
+                fit_save_prefix = self.fit_save_prefix)
+            self.full_fit.do_fits()
+            self.mode_selector = ModeSelectorAllFree(
+                self.full_fit.result_full, self.potential_modes, alpha_r = self.alpha_r,
+                alpha_i=self.alpha_i, tau_agnostic=self.tau_agnostic, p_agnostic=self.p_agnostic, N_max = _N)
+            self.mode_selector.do_selection()
+            # print(qnms_to_string(self.mode_selector.passed_mode_list))
+            _jump_mode_indx = []
+            for j in range(len(self.mode_selector.passed_mode_list)):
+                if not lower_overtone_present(
+                        self.mode_selector.passed_mode_list[j],
+                        self.mode_selector.passed_mode_list + self.found_modes):
+                    _jump_mode_indx.append(j)
+                if not lower_l_mode_present(self.l, self.m, 
+                                            self.relevant_lm_list, 
+                                            self.mode_selector.passed_mode_list[j], 
+                                            self.mode_selector.passed_mode_list + self.found_modes):
+                    _jump_mode_indx.append(j)
+            # print(list(set(_jump_mode_indx)))
+            for k in sorted(list(set(_jump_mode_indx)), reverse=True):
+                del self.mode_selector.passed_mode_list[k]
+            if len(self.mode_selector.passed_mode_list) == 0:
+                break
+            self.found_modes.extend(self.mode_selector.passed_mode_list)
+            print_string = f"Runname: {self.run_string_prefix}, N_free = {_N}, potential modes: "
+            print_string += ', '.join(qnms_to_string(self.mode_selector.passed_mode_list))
+            print(print_string)
+            for j in sorted(self.mode_selector.passed_mode_indx, reverse=True):
+                del self.potential_modes[j]
 
     def do_mode_search(self):
         self.mode_search_all_free()
@@ -382,6 +367,8 @@ class ModeSearchAllFreeVaryingN:
         self.run_string_prefix = kwargs["run_string_prefix"]
         self.load_pickle = self.kwargs["load_pickle"]
         self.CCE = self.kwargs["CCE"]
+        if self.CCE:
+            raise NotImplementedError
 
     def init_searchers(self):
         for _N_init in self.N_list:
@@ -462,6 +449,8 @@ class ModeSearchAllFreeVaryingNSXS:
         self.N_list = kwargs['N_list']
         self.postfix_string = kwargs['postfix_string']
         self.CCE = kwargs['CCE']
+        if self.CCE:
+            raise NotImplementedError
         self.kwargs = kwargs
         self.retro_def_orbit = self.kwargs['retro_def_orbit']
 
@@ -511,18 +500,19 @@ class ModeSearchAllFreeVaryingNSXS:
             self.pickle_save()
 
     def get_waveform(self):
-        _relevant_modes_dict = get_relevant_lm_waveforms_SXS(
-            self.SXSnum, CCE=self.CCE)
+        if self.CCE:
+            raise NotImplementedError
+        _relevant_modes_dict = get_relevant_lm_waveforms_SXS(self.SXSnum, CCE = self.CCE)
         if not self.relevant_lm_list_override:
             self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
                 _relevant_modes_dict)
         peaktime_dom = list(_relevant_modes_dict.values())[0].peaktime
-        if self.CCE:
-            self.h, self.M, self.a, self.Lev = get_waveform_CCE(
-                self.SXSnum, self.l, self.m)
-        else:
-            self.h, self.M, self.a, self.Lev = get_waveform_SXS(
-                self.SXSnum, self.l, self.m)
+        # if self.CCE:
+        #     # self.h, self.M, self.a, self.Lev = get_waveform_CCE(
+        #     #     self.SXSnum, self.l, self.m)
+        # else:
+        self.h, self.M, self.a, self.Lev = get_waveform_SXS(
+            self.SXSnum, self.l, self.m)
         self.h.update_peaktime(peaktime_dom)
 
     def pickle_save(self):
@@ -562,6 +552,8 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
         self.N_list = kwargs['N_list']
         self.postfix_string = kwargs['postfix_string']
         self.CCE = kwargs['CCE']
+        if self.CCE:
+            raise NotImplementedError
         self.get_relevant_lm_list()
         self.get_relevant_lm_mode_searcher_varying_N()
 
@@ -603,13 +595,13 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
                     **self.kwargs))
 
 
-def closest_free_mode_distance(result_full, mode, r_scale=1, i_scale=1):
+def closest_free_mode_distance(result_full, mode, alpha_r=1, alpha_i=1):
     omega_r_dict = result_full.omega_dict["real"]
     omega_i_dict = result_full.omega_dict["imag"]
     omega_r_arr = np.array(list(omega_r_dict.values()))
     omega_i_arr = np.array(list(omega_i_dict.values()))
-    scaled_distance_arr = ((omega_r_arr - mode.omegar) /
-                           r_scale)**2 + ((omega_i_arr - mode.omegai) / i_scale)**2
+    scaled_distance_arr = ((omega_r_arr - mode.omegar) / \
+                           alpha_r)**2 + ((omega_i_arr - mode.omegai) / alpha_i)**2
     min_distance = np.nanmin(scaled_distance_arr, axis=0)
     return min_distance
 
