@@ -1,3 +1,7 @@
+<h1 align="center">
+    <img src="docs/jaxqualin_logo.png" alt="jaxqualin" width="500">
+</h1>
+
 <h4 align="center"> A python package for extracting quasinormal modes from black-hole ringdown simulations.</h4>
 
 <p align="center">
