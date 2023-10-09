@@ -12,6 +12,7 @@ import jaxlib
 
 ArrayImpl = jaxlib.xla_extension.ArrayImpl
 
+
 class mode_free:
     """
     A class representing a mode of a black hole.
@@ -40,7 +41,7 @@ class mode_free:
     M: float
     a: float
 
-    def __init__(self, lmnx: Union[List[List[int]], str], s: int =-2) -> None:
+    def __init__(self, lmnx: Union[List[List[int]], str], s: int = -2) -> None:
         """
         Initializes a mode_free object.
 
@@ -63,8 +64,12 @@ class mode_free:
             self.lmnx = lmnx
         else:
             self.lmnx = "constant"
-            
-    def fix_mode(self, M: float, a: float, retro_def_orbit: bool =True) -> None:
+
+    def fix_mode(
+            self,
+            M: float,
+            a: float,
+            retro_def_orbit: bool = True) -> None:
         """
         Fixes the complex frequency of the mode.
 

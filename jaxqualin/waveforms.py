@@ -1,3 +1,6 @@
+import jaxlib
+from jax.typing import ArrayLike
+from typing import List, Tuple, Union, Optional
 import os
 import json
 import h5py
@@ -23,15 +26,13 @@ from numpy.random import default_rng
 from scipy.optimize import minimize
 rng = default_rng(seed=1234)
 
-from typing import List, Tuple, Union, Optional
-from jax.typing import ArrayLike
-import jaxlib
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 # _CCE_radext_list = [292, 261, 250, 236, 274, 273, 270, 305, 270, 235, 222, 223, 237]
 
 ArrayImpl = jaxlib.xla_extension.ArrayImpl
+
 
 class waveform:
     """
@@ -75,11 +76,11 @@ class waveform:
             fulltime: np.ndarray,
             fullh: np.ndarray,
             t_peak: Optional[float] = None,
-            t_start: float=0.,
-            t_end: float=np.inf,
+            t_start: float = 0.,
+            t_end: float = np.inf,
             l: int = None,
             m: int = None,
-            remove_num: int =500) -> None:
+            remove_num: int = 500) -> None:
         """
         Initialize a waveform.
 
@@ -114,7 +115,7 @@ class waveform:
         """
         self.t_peak = t_peak
 
-    def argabsmax(self, remove_num: int=500) -> int:
+    def argabsmax(self, remove_num: int = 500) -> int:
         """
         Returns the array index of the time of peak strain of the waveform.
 
@@ -123,11 +124,15 @@ class waveform:
 
         Returns:
             The array index of the time of peak strain of the waveform.
-        
+
         """
         return jnp.nanargmax(jnp.abs(self.fullh[remove_num:])) + remove_num
 
-    def postmerger(self, t_start: float, t_end: float=np.inf) -> Tuple[np.ndarray, jnp.ndarray, jnp.ndarray]:
+    def postmerger(self,
+                   t_start: float,
+                   t_end: float = np.inf) -> Tuple[np.ndarray,
+                                                   jnp.ndarray,
+                                                   jnp.ndarray]:
         """
         Returns the time, real part, and imaginary part of the waveform after the peak.
 
@@ -152,7 +157,7 @@ class waveform:
         Parameters:
             l: The spherical harmonic mode number l of the waveform.
             m: The spherical harmonic mode number m of the waveform.
-    
+
         """
         self.l = l
         self.m = m
@@ -601,8 +606,8 @@ def make_eff_ringdown_waveform(
 
     if delay:
         h_fund = delayed_QNM(mode_fund, time, A_fund, phi_fund,
-                               A_delay=0, A_sig=10,
-                               phi_delay=0, dphi=-np.pi, phi_sig=5)
+                             A_delay=0, A_sig=10,
+                             phi_delay=0, dphi=-np.pi, phi_sig=5)
     else:
         h_fund = clean_QNM(mode_fund, time, A_fund, phi_fund)
     h0 = waveform(np.asarray(time), h_fund, remove_num=0, t_peak=0)
@@ -614,8 +619,8 @@ def make_eff_ringdown_waveform(
         A, phi = inj_dict[key]
         if delay:
             h_mode = delayed_QNM(omega, h0.time, A, phi,
-                                   A_red_ratio=1, A_delay=5, A_sig=2,
-                                   phi_delay=0, dphi=-np.pi, phi_sig=2)
+                                 A_red_ratio=1, A_delay=5, A_sig=2,
+                                 phi_delay=0, dphi=-np.pi, phi_sig=2)
         else:
             h_mode = clean_QNM(omega, h0.time, A, phi)
         h_effective += h_mode

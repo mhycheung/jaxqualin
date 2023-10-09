@@ -1445,7 +1445,7 @@ def plot_mode_searcher_results(mode_searcher, axs=None):
     plot_omega_free(best_N_free_result, ax=axs[0])
     plot_predicted_qnms(axs[0], potential_modes_list,
                         present_modes=present_mode_strings,
-                        alpha_r = alpha_r, alpha_i = alpha_i)
+                        alpha_r=alpha_r, alpha_i=alpha_i)
 
     axs[0].text(
         0.95,
@@ -1462,7 +1462,8 @@ def plot_mode_searcher_results(mode_searcher, axs=None):
     t_start_dict = {}
     for start_flat_indx, fluc_least_indx, found_mode_string in zip(
             best_start_flat_indx_list, best_fluc_least_indx_list, present_mode_strings):
-        bold_dict[found_mode_string] = (fluc_least_indx, fluc_least_indx + tau_stable_length)
+        bold_dict[found_mode_string] = (
+            fluc_least_indx, fluc_least_indx + tau_stable_length)
         t_start_dict[found_mode_string] = result.t0_arr[start_flat_indx]
 
     for key in t_start_dict:

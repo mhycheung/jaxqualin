@@ -26,21 +26,27 @@ class IterativeFlatnessChecker:
         self.a = a
         self.found_modes = found_modes
         self.fitter_list = []
-        kwargs = {"run_string_prefix": "Default", "epsilon_stable": 0.2,
-                  "tau_stable": 10, "retro_def_orbit": True, "load_pickle": True,
-                  "confusion_tol": 0.03, "p_stable": 0.95,
-                  "A_tol" : 1e-3,
-                  "beta_A": 1.0, "beta_phi": 1.5,
-                  "CCE" : False,
-                  "fit_save_prefix" : FIT_SAVE_PATH
-                  }
+        kwargs = {
+            "run_string_prefix": "Default",
+            "epsilon_stable": 0.2,
+            "tau_stable": 10,
+            "retro_def_orbit": True,
+            "load_pickle": True,
+            "confusion_tol": 0.03,
+            "p_stable": 0.95,
+            "A_tol": 1e-3,
+            "beta_A": 1.0,
+            "beta_phi": 1.5,
+            "CCE": False,
+            "fit_save_prefix": FIT_SAVE_PATH}
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
         self.run_string_prefix = self.kwargs["run_string_prefix"]
         self.epsilon_stable = self.kwargs["epsilon_stable"]
         self.confusion_tol = self.kwargs["confusion_tol"]
-        self.tau_stable = self.kwargs["tau_stable"] 
-        self.tau_stable_length = int(self.tau_stable/(self.t0_arr[1] - self.t0_arr[0])+1)
+        self.tau_stable = self.kwargs["tau_stable"]
+        self.tau_stable_length = int(
+            self.tau_stable / (self.t0_arr[1] - self.t0_arr[0]) + 1)
         self.p_stable = self.kwargs["p_stable"]
         self.A_tol = self.kwargs["A_tol"]
         self.beta_A = self.kwargs["beta_A"]
@@ -116,11 +122,11 @@ class IterativeFlatnessChecker:
                 phi_fix_j_arr = np.where(collapsed, np.nan, phi_fix_j_arr)
                 fluc_least_indx, _fluc_least, start_flat_indx = flattest_region_quadrature(
                     self.tau_stable_length,
-                    A_fix_j_arr, phi_fix_j_arr, 
-                    quantile_range = self.p_stable,
-                    med_min = self.A_tol,
-                    fluc_tol = self.epsilon_stable,
-                    weight_1 = self.beta_A, weight_2 = self.beta_phi)
+                    A_fix_j_arr, phi_fix_j_arr,
+                    quantile_range=self.p_stable,
+                    med_min=self.A_tol,
+                    fluc_tol=self.epsilon_stable,
+                    weight_1=self.beta_A, weight_2=self.beta_phi)
                 fluc_least_list.append(_fluc_least)
                 fluc_least_indx_list.append(fluc_least_indx)
                 start_flat_indx_list.append(start_flat_indx)
@@ -183,7 +189,7 @@ class ModeSelectorAllFree:
             alpha_i=0.05,
             tau_agnostic=10,
             p_agnostic=0.95,
-            N_max = 10):
+            N_max=10):
         self.result_full = result_full
         self.potential_mode_list = potential_mode_list
         self.alpha_r = alpha_r
@@ -240,12 +246,23 @@ class ModeSearchAllFreeLM:
         self.relevant_lm_list = relevant_lm_list
         self.t0_arr = t0_arr
         self.N = N
-        kwargs = {"retro_def_orbit": True, "run_string_prefix": "Default", "load_pickle": True,
-                  "a_recoil_tol": 0., "recoil_n_max" : 0,
-                  "alpha_r" : 0.05, "alpha_i" : 0.05,
-                  "tau_agnostic" : 10, "p_agnostic" : 0.95, 'fit_kwargs' : {}, 
-                  "initial_num" : 1, "random_initial" : False, "initial_dict" : {},
-                  "A_guess_relative" : True, "set_seed" : 1234, 'fit_save_prefix': FIT_SAVE_PATH}
+        kwargs = {
+            "retro_def_orbit": True,
+            "run_string_prefix": "Default",
+            "load_pickle": True,
+            "a_recoil_tol": 0.,
+            "recoil_n_max": 0,
+            "alpha_r": 0.05,
+            "alpha_i": 0.05,
+            "tau_agnostic": 10,
+            "p_agnostic": 0.95,
+            'fit_kwargs': {},
+            "initial_num": 1,
+            "random_initial": False,
+            "initial_dict": {},
+            "A_guess_relative": True,
+            "set_seed": 1234,
+            'fit_save_prefix': FIT_SAVE_PATH}
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
         self.retro_def_orbit = self.kwargs["retro_def_orbit"]
@@ -286,18 +303,23 @@ class ModeSearchAllFreeLM:
             N,
             self.found_modes,
             run_string_prefix=self.run_string_prefix,
-            load_pickle = self.load_pickle,
-            fit_kwargs = self.fit_kwargs,
-            initial_num = self.initial_num,
-            random_initial = self.random_initial,
-            initial_dict = self.initial_dict,
-            A_guess_relative = self.A_guess_relative,
-            set_seed = self.set_seed,
-            fit_save_prefix = self.fit_save_prefix)
+            load_pickle=self.load_pickle,
+            fit_kwargs=self.fit_kwargs,
+            initial_num=self.initial_num,
+            random_initial=self.random_initial,
+            initial_dict=self.initial_dict,
+            A_guess_relative=self.A_guess_relative,
+            set_seed=self.set_seed,
+            fit_save_prefix=self.fit_save_prefix)
         self.full_fit.do_fits()
         self.mode_selector = ModeSelectorAllFree(
-            self.full_fit.result_full, self.potential_modes, alpha_r = self.alpha_r,
-            alpha_i=self.alpha_i, tau_agnostic=self.tau_agnostic, p_agnostic=self.p_agnostic, N_max = N)
+            self.full_fit.result_full,
+            self.potential_modes,
+            alpha_r=self.alpha_r,
+            alpha_i=self.alpha_i,
+            tau_agnostic=self.tau_agnostic,
+            p_agnostic=self.p_agnostic,
+            N_max=N)
         self.mode_selector.do_selection()
         # print(qnms_to_string(self.mode_selector.passed_mode_list))
         jump_mode_indx = []
@@ -306,17 +328,21 @@ class ModeSearchAllFreeLM:
                     self.mode_selector.passed_mode_list[j],
                     self.mode_selector.passed_mode_list + self.found_modes):
                 jump_mode_indx.append(j)
-            if not lower_l_mode_present(self.l, self.m, 
-                                        self.relevant_lm_list, 
-                                        self.mode_selector.passed_mode_list[j], 
-                                        self.mode_selector.passed_mode_list + self.found_modes):
+            if not lower_l_mode_present(
+                    self.l,
+                    self.m,
+                    self.relevant_lm_list,
+                    self.mode_selector.passed_mode_list[j],
+                    self.mode_selector.passed_mode_list +
+                    self.found_modes):
                 jump_mode_indx.append(j)
         # print(list(set(_jump_mode_indx)))
         for k in sorted(list(set(jump_mode_indx)), reverse=True):
             del self.mode_selector.passed_mode_list[k]
         self.found_modes.extend(self.mode_selector.passed_mode_list)
         print_string = f"Runname: {self.run_string_prefix}, N_free = {N}, potential modes: "
-        print_string += ', '.join(qnms_to_string(self.mode_selector.passed_mode_list))
+        print_string += ', '.join(qnms_to_string(
+            self.mode_selector.passed_mode_list))
         print(print_string)
         for j in sorted(self.mode_selector.passed_mode_indx, reverse=True):
             del self.potential_modes[j]
@@ -349,7 +375,7 @@ class ModeSearchAllFreeVaryingN:
         fixed_fitters: A list of `QNMFitVaryingStartingTime` objects that contains the final list of fitters used for the flatness checkers in each mode searcher.
         flatness_checkers: A list of `IterativeFlatnessChecker` objects that contains the list of flatness checkers used for the mode searchers.
         best_run_indx: An integer that specifies the index of the mode searcher that found the most number of modes.
-    
+
     Methods:
         init_searchers: Initializes the mode searchers.
         do_mode_searches: Performs the mode searches.
@@ -375,19 +401,18 @@ class ModeSearchAllFreeVaryingN:
     flatness_checkers: List[IterativeFlatnessChecker]
     best_run_indx: int
 
-
     def __init__(
             self,
             h: waveform,
             M: float,
             a: float,
-            relevant_lm_list: List[Tuple[int, int]]=[],
-            t0_arr: np.ndarray =np.linspace(
+            relevant_lm_list: List[Tuple[int, int]] = [],
+            t0_arr: np.ndarray = np.linspace(
                 0,
                 50,
                 num=501),
-            flatness_checker_kwargs: Dict[str, Any]={},
-            mode_searcher_kwargs: Dict[str, Any]={},
+            flatness_checker_kwargs: Dict[str, Any] = {},
+            mode_searcher_kwargs: Dict[str, Any] = {},
             **kwargs_in: Any) -> None:
         """
         Initialize the `ModeSearchAllFreeVaryingN` class.
@@ -554,11 +579,11 @@ class ModeSearchAllFreeVaryingNSXS:
             SXSnum: str,
             l: int,
             m: int,
-            t0_arr: np.ndarray=np.linspace(
+            t0_arr: np.ndarray = np.linspace(
                 0,
                 50,
                 num=501),
-            **kwargs_in: Any)-> None:
+            **kwargs_in: Any) -> None:
         """
         Initialize the `ModeSearchAllFreeVaryingNSXS` class.
 
@@ -617,7 +642,7 @@ class ModeSearchAllFreeVaryingNSXS:
         else:
             self.run_string_full = f"{self.run_string}_{self.postfix_string}"
         self.file_path = os.path.join(
-                save_path, f"ModeSearcher_{self.run_string_full}.pickle")
+            save_path, f"ModeSearcher_{self.run_string_full}.pickle")
         self.load_pickle = self.kwargs["load_pickle"]
         self.mode_searcher_load_pickle = self.kwargs["mode_searcher_load_pickle"]
         if self.kwargs['set_seed_SXS']:
@@ -639,7 +664,7 @@ class ModeSearchAllFreeVaryingNSXS:
             self.relevant_lm_list,
             t0_arr=self.t0_arr,
             set_seed=self.set_seed,
-            run_string_prefix = self.run_string_fitter,
+            run_string_prefix=self.run_string_fitter,
             **kwargs)
         self.mode_searcher_vary_N.do_mode_searches()
         self.found_modes_final = self.mode_searcher_vary_N.found_modes_final
@@ -660,7 +685,8 @@ class ModeSearchAllFreeVaryingNSXS:
         """
         if self.CCE:
             raise NotImplementedError
-        relevant_modes_dict = get_relevant_lm_waveforms_SXS(self.SXSnum, CCE = self.CCE)
+        relevant_modes_dict = get_relevant_lm_waveforms_SXS(
+            self.SXSnum, CCE=self.CCE)
         if not self.relevant_lm_list_override:
             self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
                 relevant_modes_dict)
@@ -879,7 +905,7 @@ def start_of_flat_region(length, arr1, arr2, quantile_range=0.95,
         if fluc < fluc_tol and arr1_nan_frac < nan_tol:
             start_flat_indx = i
             return start_flat_indx
-        
+
     return np.nan
 
 
