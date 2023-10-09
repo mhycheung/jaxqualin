@@ -7,10 +7,47 @@ from .utils import *
 
 import itertools
 
+from typing import List, Tuple, Union
+import jaxlib
+
+ArrayImpl = jaxlib.xla_extension.ArrayImpl
 
 class mode_free:
+    """
+    A class representing a mode of a black hole.
 
-    def __init__(self, lmnx, s=-2):
+    Attributes:
+        lmnx: A list of lists of integers representing the mode numbers, or a string equal to `constant`. Each list of integers represents a constituent linear mode, and the list of lists represents a nonlinear mode if `len(lmnx) > 1`. For example, `[[2, 2, 0], [3, 3, 0]]` represents the `2,2,0x3,3,0` quadratic mode.
+        spinseq_list: A list of `qnm.spinsequence.KerrSpinSeq` objects of the `qnm` package that maps the spin parameter `a` of the black hole into the QNM frequencies.
+        spinseq_list_neg_a: Same as `spinseq_list` but for the retrograde branch of the QNM solution.
+        omegar: The real part of the QNM , if fixed. `jaxlib.xla_extension.ArrayImpl` of a single `jnp.float64`.
+        omegai: The imaginary part of the QNM frequency, if fixed. `jaxlib.xla_extension.ArrayImpl` of a single `jnp.float64`.
+        omega: The complex QNM frequency, if fixed. `jaxlib.xla_extension.ArrayImpl` of a single `jnp.complex128`.
+        M: The mass of the black hole, if fixed.
+        a: The spin parameter of the black hole, if fixed.
+
+    Methods:
+        __init__: Initializes a mode_free object.
+        fix_mode: Fixes the complex frequency of the mode.
+
+    """
+    lmnx: Union[List[List[int]], str]
+    spinseq_list: List[qnm.spinsequence.KerrSpinSeq]
+    spinseq_list_neg_a: List[qnm.spinsequence.KerrSpinSeq]
+    omegar: float
+    omegai: float
+    omega: complex
+    M: float
+    a: float
+
+    def __init__(self, lmnx: Union[List[List[int]], str], s: int =-2) -> None:
+        """
+        Initializes a mode_free object.
+
+        Parameters:
+            lmnx: A list of lists of integers representing the mode numbers, or a string equal to `constant`. Each list of integers represents a constituent linear mode, and the list of lists represents a nonlinear mode if `len(lmnx) > 1`. For example, `[[2, 2, 0], [3, 3, 0]]` represents the `2,2,0x3,3,0` quadratic mode.
+            s: The spin weight of the mode. Defaults to -2.
+        """
         self.spinseq_list = []
         self.spinseq_list_neg_a = []
         if lmnx != "constant":
@@ -27,7 +64,15 @@ class mode_free:
         else:
             self.lmnx = "constant"
             
-    def fix_mode(self, M, a, retro_def_orbit=True):
+    def fix_mode(self, M: float, a: float, retro_def_orbit: bool =True) -> None:
+        """
+        Fixes the complex frequency of the mode.
+
+        Parameters:
+            M: The mass of the black hole.
+            a: The spin parameter of the black hole.
+            retro_def_orbit: Whether to define retrograde modes with respect to the orbital frame (`True`) or remnant black hole frame (`False`). See the methods paper for details. Defaults to True.
+        """
         if a > 0.99:
             a = 0.99
         elif a < -0.99:
@@ -54,7 +99,13 @@ class mode_free:
         self.M = M
         self.a = a
 
-    def string(self):
+    def string(self) -> str:
+        """
+        Returns a string representation of the mode numbers.
+
+        Returns:
+            A string representation of the mode numbers.
+        """
         if self.lmnx == "constant":
             return "constant"
         lmnstrings = []
@@ -63,7 +114,13 @@ class mode_free:
             lmnstrings.append(f"{l}.{m}.{n}")
         return 'x'.join(lmnstrings)
 
-    def tex_string(self):
+    def tex_string(self) -> str:
+        """
+        Returns a TeX string representation of the mode numbers.
+
+        Returns:
+            A TeX string representation of the mode numbers.
+        """
         if self.lmnx == "constant":
             return r"constant"
         lmnstrings = []
@@ -80,7 +137,13 @@ class mode_free:
         _tex_string = _tex_string.replace('.', r"{,}")
         return _tex_string
 
-    def is_overtone(self):
+    def is_overtone(self) -> bool:
+        """
+        Determines whether the mode is an overtone.
+
+        Returns:
+            Whether the mode is an overtone.
+        """
         if self.lmnx == "constant":
             return False
         else:
@@ -89,7 +152,13 @@ class mode_free:
                 if n > 0:
                     return True
 
-    def sum_lm(self):
+    def sum_lm(self) -> Tuple[int, int]:
+        """
+        Returns the sum of the mode quantum numbers of constituent linear modes.
+
+        Returns:
+            The sum of the mode quantum numbers of constituent linear modes.
+        """
         l_sum = 0
         m_sum = 0
         if self.lmnx != "constant":
@@ -101,13 +170,26 @@ class mode_free:
 
 
 class mode(mode_free):
+    """
+    A class representing a frequency-fixed mode of a black hole.
+
+    Attributes:
+        M: The mass of the black hole.
+        a: The spin parameter of the black hole.
+        retro_def_orbit: Whether define retrograde modes with respect to the orbital frame (`True`) or remnant black hole frame (`False`). See the methods paper for details.
+
+    """
+
+    M: float
+    a: float
+    retro_def_orbit: bool
 
     def __init__(self, lmnx, M, a, retro_def_orbit=True, s=-2):
         super().__init__(lmnx, s=s)
         super().fix_mode(M, a, retro_def_orbit=retro_def_orbit)
         self.M = M
         self.a = a
-        self.spin_flipped = retro_def_orbit
+        self.retro_def_orbit = retro_def_orbit
 
 
 def tex_string_physical_notation(mode):

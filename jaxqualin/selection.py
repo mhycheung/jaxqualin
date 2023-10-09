@@ -8,6 +8,8 @@ import pickle
 import json
 import os
 
+from typing import List, Tuple, Union, Optional, Dict, Any
+
 SETTING_PATH = os.getcwd()
 MODE_SEARCHERS_SAVE_PATH = os.path.join(
     os.getcwd(), ".jaxqualin_cache/mode_searchers")
@@ -324,19 +326,82 @@ class ModeSearchAllFreeLM:
 
 
 class ModeSearchAllFreeVaryingN:
+    """
+    A class that performs a mode search for a given waveform, varying the number of free modes used in the fit.
+
+    Attributes:
+        h: The waveform to be fit.
+        l: The harmonic number l of the waveform.
+        m: The harmonic number m of the waveform.
+        M: The mass of the black hole.
+        a: The dimensionless spin of the black hole.
+        relevant_lm_list: A list of tuples of the form (l, m) that specifies which recoil modes are relevant for the waveform.
+        t0_arr: array of starting times for fitting.
+        N_list: A list of integers that specifies the number of free modes to be used in each mode searcher in `mode_searchers`.
+        kwargs: A dictionary of keyword arguments.
+        flatness_checker_kwargs: A dictionary of keyword arguments for the `IterativeFlatnessChecker` class.
+        mode_searcher_kwargs: A dictionary of keyword arguments for the `ModeSearchAllFreeLM` class.
+        mode_searchers: A list of `ModeSearchAllFreeLM` objects for mode searching with different number of free modes.
+        found_modes_final: A list of `mode` objects that contains the final list of modes found by the best mode searcher.
+        run_string_prefix: A string that is used as a prefix for the run name for dumping the `pickle` file.
+        load_pickle: A boolean that specifies whether to load the `pickle` file.
+        CCE: A boolean that specifies whether the waveform is a CCE waveform. This is not implemented yet.
+        fixed_fitters: A list of `QNMFitVaryingStartingTime` objects that contains the final list of fitters used for the flatness checkers in each mode searcher.
+        flatness_checkers: A list of `IterativeFlatnessChecker` objects that contains the list of flatness checkers used for the mode searchers.
+        best_run_indx: An integer that specifies the index of the mode searcher that found the most number of modes.
+    
+    Methods:
+        init_searchers: Initializes the mode searchers.
+        do_mode_searches: Performs the mode searches.
+    """
+
+    h: waveform
+    l: int
+    m: int
+    M: float
+    a: float
+    relevant_lm_list: List[Tuple[int, int]]
+    t0_arr: np.ndarray
+    N_list: List[int]
+    kwargs: Dict[str, Any]
+    flatness_checker_kwargs: Dict[str, Any]
+    mode_searcher_kwargs: Dict[str, Any]
+    mode_searchers: List[ModeSearchAllFreeLM]
+    found_modes_final: List[mode]
+    run_string_prefix: str
+    load_pickle: bool
+    CCE: bool
+    fixed_fitters: List[QNMFitVaryingStartingTime]
+    flatness_checkers: List[IterativeFlatnessChecker]
+    best_run_indx: int
+
+
     def __init__(
             self,
-            h,
-            M,
-            a,
-            relevant_lm_list=[],
-            t0_arr=np.linspace(
+            h: waveform,
+            M: float,
+            a: float,
+            relevant_lm_list: List[Tuple[int, int]]=[],
+            t0_arr: np.ndarray =np.linspace(
                 0,
                 50,
                 num=501),
-            flatness_checker_kwargs={},
-            mode_searcher_kwargs={},
-            **kwargs_in):
+            flatness_checker_kwargs: Dict[str, Any]={},
+            mode_searcher_kwargs: Dict[str, Any]={},
+            **kwargs_in: Any) -> None:
+        """
+        Initialize the `ModeSearchAllFreeVaryingN` class.
+
+        Parameters:
+            h: The waveform to be fit.
+            M: The mass of the black hole.
+            a: The dimensionless spin of the black hole.
+            relevant_lm_list: A list of tuples of the form (l, m) that specifies which recoil modes are relevant for the waveform.
+            t0_arr: array of starting times for fitting.
+            flatness_checker_kwargs: A dictionary of keyword arguments for the `IterativeFlatnessChecker` class.
+            mode_searcher_kwargs: A dictionary of keyword arguments for the `ModeSearchAllFreeLM` class.
+            **kwargs_in: keyword arguments.
+        """
         self.h = h
         self.l = self.h.l
         self.m = self.h.m
@@ -363,7 +428,10 @@ class ModeSearchAllFreeVaryingN:
         if self.CCE:
             raise NotImplementedError
 
-    def init_searchers(self):
+    def init_searchers(self) -> None:
+        """
+        Initializes the mode searchers.
+        """
         for _N_init in self.N_list:
             self.mode_searchers.append(
                 ModeSearchAllFreeLM(
@@ -376,7 +444,10 @@ class ModeSearchAllFreeVaryingN:
                     **self.mode_searcher_kwargs,
                     **self.kwargs))
 
-    def do_mode_searches(self):
+    def do_mode_searches(self) -> None:
+        """
+        Performs the mode searches.
+        """
         self.fixed_fitters = []
         self.flatness_checkers = []
         if self.CCE:
@@ -411,17 +482,93 @@ class ModeSearchAllFreeVaryingN:
 
 
 class ModeSearchAllFreeVaryingNSXS:
+    """
+    A class that performs a mode search for a given SXS waveform, varying the number of free modes used in the fit.
+
+    Attributes:
+        SXSnum: The SXS number of the waveform.
+        l: The harmonic number l of the waveform.
+        m: The harmonic number m of the waveform.
+        t0_arr: array of starting times for fitting.
+        N_list: A list of integers that specifies the number of free modes to be used in each mode searcher in `mode_searchers`.
+        postfix_string: A string that is appended to the run name for dumping the `pickle` file.
+        CCE: A boolean that specifies whether the waveform is a CCE waveform. This is not implemented yet.
+        kwargs: A dictionary of keyword arguments.
+        retro_def_orbit: retro_def_orbit: Whether to define retrograde modes with respect to the orbital frame (`True`) or remnant black hole frame (`False`). See the methods paper for details. Defaults to True.
+        relevant_lm_list_override: A boolean that specifies whether to override the `relevant_lm_list` attribute of the `ModeSearchAllFreeVaryingN` class.
+        relevant_lm_list: A list of tuples of the form (l, m) that specifies which recoil modes are relevant for the waveform. Used if `relevant_lm_list_override` is `True`.
+        h: The waveform to be fit.
+        M: The mass of the black hole.
+        a: The dimensionless spin of the black hole.
+        Lev: The resolution level of the SXS simulation.
+        N_list_string: A string that is used as a suffix for the run name for dumping the `pickle` file.
+        run_string_fitter: A string that is used as a prefix for the run name for dumping the `pickle` file for the fitters.
+        run_string: A string that is used as a prefix for the run name for dumping the `pickle` file for the mode searcher.
+        run_string_full: A string that is used as a prefix for the run name for dumping the `pickle` file for the mode searcher, including the `postfix_string`.
+        file_path: The path to the `pickle` file.
+        load_pickle: A boolean that specifies whether to load the `pickle` file for the fitters.
+        mode_searcher_load_pickle: A boolean that specifies whether to load the `pickle` file for the mode searcher.
+        set_seed: An integer that specifies the seed for the random number generator.
+        save_mode_searcher: A boolean that specifies whether to save the mode searcher to a `pickle` file.
+        mode_searcher_vary_N: A `ModeSearchAllFreeVaryingN` object that performs the mode search.
+        found_modes_final: A list of `mode` objects that contains the final list of modes found by the best mode searcher.
+
+    Methods:
+        mode_search_varying_N_sxs: Performs the mode searches.
+        do_mode_search_varying_N: Performs the mode searches and dumps the class instance to a `pickle` file.
+        get_waveform: Loads the waveform from the SXS catalog.
+        pickle_save: Dumps the class instance to a `pickle` file.
+        pickle_load: Check whether a `pickle` file exists and can be loaded.
+
+    """
+
+    SXSnum: str
+    l: int
+    m: int
+    t0_arr: np.ndarray
+    N_list: List[int]
+    postfix_string: str
+    CCE: bool
+    kwargs: Dict[str, Any]
+    retro_def_orbit: bool
+    relevant_lm_list_override: bool
+    relevant_lm_list: List[Tuple[int, int]]
+    h: waveform
+    M: float
+    a: float
+    Lev: int
+    N_list_string: str
+    run_string_fitter: str
+    run_string: str
+    run_string_full: str
+    file_path: str
+    load_pickle: bool
+    mode_searcher_load_pickle: bool
+    set_seed: int
+    save_mode_searcher: bool
+    mode_searcher_vary_N: ModeSearchAllFreeVaryingN
+    found_modes_final: List[mode]
 
     def __init__(
             self,
-            SXSnum,
-            l,
-            m,
-            t0_arr=np.linspace(
+            SXSnum: str,
+            l: int,
+            m: int,
+            t0_arr: np.ndarray=np.linspace(
                 0,
                 50,
                 num=501),
-            **kwargs_in):
+            **kwargs_in: Any)-> None:
+        """
+        Initialize the `ModeSearchAllFreeVaryingNSXS` class.
+
+        Parameters:
+            SXSnum: The SXS number of the waveform.
+            l: The harmonic number l of the waveform.
+            m: The harmonic number m of the waveform.
+            t0_arr: array of starting times for fitting.
+            **kwargs_in: keyword arguments.
+        """
         self.SXSnum = SXSnum
         self.l = l
         self.m = m
@@ -479,7 +626,10 @@ class ModeSearchAllFreeVaryingNSXS:
             self.set_seed = self.kwargs['default_seed']
         self.save_mode_searcher = self.kwargs['save_mode_searcher']
 
-    def mode_search_varying_N_sxs(self):
+    def mode_search_varying_N_sxs(self) -> None:
+        """
+        Performs the mode searches.
+        """
         kwargs = self.kwargs.copy()
         kwargs.pop('relevant_lm_list')
         self.mode_searcher_vary_N = ModeSearchAllFreeVaryingN(
@@ -496,12 +646,18 @@ class ModeSearchAllFreeVaryingNSXS:
         print(f"Runname: {self.run_string}, final list of modes: ")
         print(', '.join(qnms_to_string(self.found_modes_final)))
 
-    def do_mode_search_varying_N(self):
+    def do_mode_search_varying_N(self) -> None:
+        """
+        Performs the mode searches and dumps the class instance to a `pickle` file.
+        """
         self.mode_search_varying_N_sxs()
         if self.save_mode_searcher:
             self.pickle_save()
 
-    def get_waveform(self):
+    def get_waveform(self) -> None:
+        """
+        Loads the waveform from the SXS catalog.
+        """
         if self.CCE:
             raise NotImplementedError
         relevant_modes_dict = get_relevant_lm_waveforms_SXS(self.SXSnum, CCE = self.CCE)
@@ -517,13 +673,19 @@ class ModeSearchAllFreeVaryingNSXS:
             self.SXSnum, self.l, self.m)
         self.h.update_peaktime(peaktime_dom)
 
-    def pickle_save(self):
+    def pickle_save(self) -> None:
+        """
+        Dump the class instance to a `pickle` file.
+        """
         if not os.path.exists(os.path.dirname(self.file_path)):
             os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
         with open(self.file_path, "wb") as f:
             pickle.dump(self, f)
 
-    def pickle_exists(self):
+    def pickle_exists(self) -> bool:
+        """
+        Check whether a `pickle` file exists and can be loaded.
+        """
         if self.mode_searcher_load_pickle:
             return os.path.exists(self.file_path)
         else:
