@@ -10,7 +10,9 @@ name: Pytest
 
 on:
   push:
-    branches: [dev]
+    branches: [dev, main]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write

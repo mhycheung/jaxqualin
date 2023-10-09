@@ -1,3 +1,6 @@
+import jaxlib
+from jax.typing import ArrayLike
+from typing import List, Tuple, Union, Optional
 import os
 import json
 import h5py
@@ -26,34 +29,79 @@ rng = default_rng(seed=1234)
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 
-_CCE_radext_list = [
-    292,
-    261,
-    250,
-    236,
-    274,
-    273,
-    270,
-    305,
-    270,
-    235,
-    222,
-    223,
-    237]
+# _CCE_radext_list = [292, 261, 250, 236, 274, 273, 270, 305, 270, 235, 222, 223, 237]
+
+ArrayImpl = jaxlib.xla_extension.ArrayImpl
 
 
 class waveform:
+    """
+    A class representing a waveform containing a ringdown phase to be fitted.
+
+    Attributes:
+        fulltime: The full time array of the waveform. 
+        fullh: The full complex waveform. 
+        peaktime: The time of peak strain `jnp.abs(h)` of the waveform. 
+        peakindx: The array index of the time of peak strain of the
+            waveform.
+        t_peak: The time of peak strain of the waveform. This can be defined
+            by the user and overrides `peaktime`.
+        time: The time array of the waveform after the peak, starting at
+            `t_peak` and time shifted such that `t_peak = 0`.
+        hr: The real part of the waveform after the peak.
+        hi: The imaginary part of the waveform after the peak. 
+        h: The complex waveform after the peak.
+        l: The spherical harmonic mode number l of the waveform. 
+        m: The spherical harmonic mode number m of the waveform.
+
+    Methods:
+        update_peaktime: Sets `t_peak` to override the peak time. 
+        argabsmax: Returns the array index of the time of peak strain of the 
+            waveform.
+        postmerger: Returns the time, real part, and imaginary part of the
+            waveform after the peak. 
+        set_lm: Sets the spherical harmonic mode numbers l and m of the 
+            waveform.
+
+    """
+
+    fulltime: np.ndarray
+    fullh: np.ndarray
+    peaktime: float
+    peakindx: int
+    t_peak: int
+    time: np.ndarray
+    hr: jnp.ndarray
+    hi: jnp.ndarray
+    h: jnp.ndarray
+    l: int
+    m: int
 
     def __init__(
             self,
-            fulltime,
-            fullh,
-            t_peak=None,
-            t0=0,
-            t1=np.inf,
-            l=None,
-            m=None,
-            remove_num=500):
+            fulltime: np.ndarray,
+            fullh: np.ndarray,
+            t_peak: Optional[float] = None,
+            t_start: float = 0.,
+            t_end: float = np.inf,
+            l: int = None,
+            m: int = None,
+            remove_num: int = 500) -> None:
+        """
+        Initialize a waveform.
+
+        Parameters:
+            fulltime: The full time array of the waveform.
+            fullh: The full complex waveform.
+            t_peak: The time of peak strain of the waveform. This can be
+                defined by the user and overrides `peaktime`.
+            t_start: The time after the peak to start the waveform.
+            t_end: The time after the peak to end the waveform.
+            l: The spherical harmonic mode number l of the waveform.
+            m: The spherical harmonic mode number m of the waveform.
+            remove_num: The number of points to remove from the beginning of
+                the waveform to avoid numerical artifacts.
+        """
         self.fulltime = fulltime
         self.fullh = fullh
         self.peakindx = self.argabsmax(remove_num=remove_num)
@@ -61,26 +109,67 @@ class waveform:
             self.peaktime = self.fulltime[self.peakindx]
         else:
             self.peaktime = t_peak
-        self.time, self.hr, self.hi = self.postmerger(t0, t1)
+        self.time, self.hr, self.hi = self.postmerger(t_start, t_end)
         self.h = self.hr + 1.j * self.hi
         self.l = l
         self.m = m
 
-    def update_peaktime(self, t_peak):
+    def update_peaktime(self, t_peak: float) -> None:
+        """
+        Override the peak time of the waveform.
+
+        Parameters:
+            t_peak: The user-defined peak time of the waveform.
+        """
         self.t_peak = t_peak
 
-    def argabsmax(self, remove_num=500):
+    def argabsmax(self, remove_num: int = 500) -> int:
+        """
+        Returns the array index of the time of peak strain of the waveform.
+
+        Parameters:
+            remove_num: The number of points to remove from the beginning of the
+                waveform to avoid numerical artifacts.
+
+        Returns:
+            The array index of the time of peak strain of the waveform.
+
+        """
         return jnp.nanargmax(jnp.abs(self.fullh[remove_num:])) + remove_num
 
-    def postmerger(self, t0, t1=np.inf):
-        tstart = self.peaktime + t0
-        tend = self.peaktime + t1
+    def postmerger(self,
+                   t_start: float,
+                   t_end: float = np.inf) -> Tuple[np.ndarray,
+                                                   jnp.ndarray,
+                                                   jnp.ndarray]:
+        """
+        Returns the time, real part, and imaginary part of the waveform after
+        the peak.
+
+        Parameters:
+            t_start: The time after the peak to start the waveform. t_end: The
+                time after the peak to end the waveform.
+
+        Returns:
+            The time, real part, and imaginary part of the waveform after the
+            peak.
+        """
+        tstart = self.peaktime + t_start
+        tend = self.peaktime + t_end
         startindx = bisect_left(self.fulltime, tstart)
         endindx = bisect_left(self.fulltime, tend)
         return self.fulltime[startindx:endindx] - self.peaktime, jnp.real(
             self.fullh[startindx:endindx]), jnp.imag(self.fullh[startindx:endindx])
 
-    def set_lm(self, l, m):
+    def set_lm(self, l: int, m: int) -> None:
+        """
+        Sets the spherical harmonic mode numbers l and m of the waveform.
+
+        Parameters:
+            l: The spherical harmonic mode number l of the waveform.
+            m: The spherical harmonic mode number m of the waveform.
+
+        """
         self.l = l
         self.m = m
 
@@ -96,7 +185,7 @@ def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1=120):
     Level = metaloadname[metaloadname.find("Lev") + 3]
     indx = hs.index(l, m)
     h = waveform(hs[:, indx].time, hs[:, indx].real +
-                 1.j * hs[:, indx].imag, l=l, m=m, t1=t1)
+                 1.j * hs[:, indx].imag, l=l, m=m, t_end=t1)
     Mf = metadata['remnant_mass']
     a_arr = metadata['remnant_dimensionless_spin']
     # TODO: deal with spins with x and y component
@@ -105,25 +194,26 @@ def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1=120):
 
 
 def get_waveform_CCE(CCEnum, l, m, Lev=5, t1=120):
-    dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
-    metapath = os.path.join(
-        ROOT_PATH,
-        f"CCE_waveforms/{CCEnum}/Lev{Lev}/metadata.json")
-    radext = _CCE_radext_list[int(CCEnum) - 1]
-    filepath = os.path.join(dir, f"{CCEnum}_hdict_radext_{radext}_Lev_{Lev}.h")
-    h5file = h5py.File(filepath)
-    keys = list(h5file['hdict'].keys())
-    hdict = {}
-    for key in keys:
-        hdict[key] = h5file['hdict'][key][()]
-    with open(metapath) as f:
-        metadata = json.load(f)
-    Mf = metadata['remnant_mass']
-    a_arr = metadata['remnant_dimensionless_spin']
-    af = np.linalg.norm(a_arr) * np.sign(a_arr[2])
-    h_time, h_r, h_i = tuple(hdict[f"{l},{m}"])
-    h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t1=t1)
-    return h, Mf, af, Lev
+    raise NotImplementedError
+    # dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
+    # metapath = os.path.join(
+    #     ROOT_PATH,
+    #     f"CCE_waveforms/{CCEnum}/Lev{Lev}/metadata.json")
+    # radext = _CCE_radext_list[int(CCEnum) - 1]
+    # filepath = os.path.join(dir, f"{CCEnum}_hdict_radext_{radext}_Lev_{Lev}.h")
+    # h5file = h5py.File(filepath)
+    # keys = list(h5file['hdict'].keys())
+    # hdict = {}
+    # for key in keys:
+    #     hdict[key] = h5file['hdict'][key][()]
+    # with open(metapath) as f:
+    #     metadata = json.load(f)
+    # Mf = metadata['remnant_mass']
+    # a_arr = metadata['remnant_dimensionless_spin']
+    # af = np.linalg.norm(a_arr) * np.sign(a_arr[2])
+    # h_time, h_r, h_i = tuple(hdict[f"{l},{m}"])
+    # h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t1=t1)
+    # return h, Mf, af, Lev
 
 
 def get_M_a_SXS(SXSnum, res=0):
@@ -162,23 +252,24 @@ def get_SXS_waveform_dict(SXSnum, res=0, N_ext=2):
 
 
 def get_CCE_waveform_dict(CCEnum, Lev=5):
-    dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
-    metapath = os.path.join(
-        ROOT_PATH,
-        f"CCE_waveforms/{CCEnum}/Lev{Lev}/metadata.json")
-    radext = _CCE_radext_list[int(CCEnum) - 1]
-    filepath = os.path.join(dir, f"{CCEnum}_hdict_radext_{radext}_Lev_{Lev}.h")
-    h5file = h5py.File(filepath)
-    keys = list(h5file['hdict'].keys())
-    hdict = {}
-    for key in keys:
-        hdict[key] = h5file['hdict'][key][()]
-    with open(metapath) as f:
-        metadata = json.load(f)
-    Mf = metadata['remnant_mass']
-    a_arr = metadata['remnant_dimensionless_spin']
-    af = np.linalg.norm(a_arr) * np.sign(a_arr[2])
-    return Mf, af, Lev, hdict
+    raise NotImplementedError
+    # dir = os.path.join(ROOT_PATH, "CCE_waveforms/CCE_processed")
+    # metapath = os.path.join(
+    #     ROOT_PATH,
+    #     f"CCE_waveforms/{CCEnum}/Lev{Lev}/metadata.json")
+    # radext = _CCE_radext_list[int(CCEnum) - 1]
+    # filepath = os.path.join(dir, f"{CCEnum}_hdict_radext_{radext}_Lev_{Lev}.h")
+    # h5file = h5py.File(filepath)
+    # keys = list(h5file['hdict'].keys())
+    # hdict = {}
+    # for key in keys:
+    #     hdict[key] = h5file['hdict'][key][()]
+    # with open(metapath) as f:
+    #     metadata = json.load(f)
+    # Mf = metadata['remnant_mass']
+    # a_arr = metadata['remnant_dimensionless_spin']
+    # af = np.linalg.norm(a_arr) * np.sign(a_arr[2])
+    # return Mf, af, Lev, hdict
 
 
 def waveformabsmax(time, hr, hi, startcut=500):
@@ -230,7 +321,8 @@ def get_relevant_lm_waveforms_SXS(
         N_ext=2,
         CCE=False):
     if CCE:
-        Mf, af, Level, hdict = get_CCE_waveform_dict(SXSnum)
+        raise NotImplementedError
+        # Mf, af, Level, hdict = get_CCE_waveform_dict(SXSnum)
     else:
         Mf, af, Level, hdict = get_SXS_waveform_dict(
             SXSnum, res=res, N_ext=N_ext)
@@ -243,7 +335,7 @@ def get_relevant_lm_waveforms_SXS(
         l = lm[0]
         m = lm[1]
         h_time, h_r, h_i = tuple(hdict[f"{l},{m}"])
-        h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t1=t1)
+        h = waveform(h_time, h_r + 1.j * h_i, l=l, m=m, t_end=t1)
         waveform_dict[f"{l}.{m}"] = h
     return waveform_dict
 
@@ -286,7 +378,7 @@ def waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l=2, m=2):
 
 def get_waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l=2, m=2):
     fullh = waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l=l, m=m)
-    h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
+    h = waveform(t_arr, fullh, t_peak=0, t_start=0, l=l, m=m)
     return h
 
 
@@ -303,7 +395,7 @@ def get_waveform_toy_bump(
     bump = A_bump * np.exp(-(t_arr - t0_bump)**2 / (2 * sig_bump**2))
     fullh = waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l=l, m=m)
     fullh += bump
-    h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
+    h = waveform(t_arr, fullh, t_peak=0, t_start=0, l=l, m=m)
     return h
 
 
@@ -320,7 +412,7 @@ def get_waveform_toy_stretch(
         A_list, phi_list, qnm_list, t_arr, l=l, m=m)
     t_stretch = t_arr * (A_stretch * np.exp(-t_arr / sig_stretch) + 1)
     fullh = griddata(t_stretch, fullh_clean, t_arr)
-    h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
+    h = waveform(t_arr, fullh, t_peak=0, t_start=0, l=l, m=m)
     return h
 
 
@@ -371,7 +463,7 @@ def get_waveform_toy_EOB_model(
         d_list,
         l=l,
         m=m)
-    h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
+    h = waveform(t_arr, fullh, t_peak=0, t_start=0, l=l, m=m)
     return h
 
 
@@ -396,7 +488,7 @@ def get_waveform_toy_EOB_model_no_fund(
         l=l,
         m=m)
     cleanh = waveform_toy_clean(A_list, phi_list, qnm_list, t_arr, l=l, m=m)
-    h = waveform(t_arr, fullh - cleanh, t_peak=0, t0=0, l=l, m=m)
+    h = waveform(t_arr, fullh - cleanh, t_peak=0, t_start=0, l=l, m=m)
     return h
 
 
@@ -447,7 +539,7 @@ def get_waveform_toy_no_exp(
         d_list,
         l=l,
         m=m)
-    h = waveform(t_arr, fullh, t_peak=0, t0=0, l=l, m=m)
+    h = waveform(t_arr, fullh, t_peak=0, t_start=0, l=l, m=m)
     return h
 
 
@@ -478,25 +570,6 @@ def get_SXS_waveform_summed(SXSnum, iota, phi, l_max=4, res=0, N_ext=2):
 
 
 def delayed_QNM(
-        mode,
-        t,
-        A,
-        phi,
-        dA_ratio=0.2,
-        A_delay=5,
-        A_sig=1,
-        dphi=-np.pi / 2,
-        phi_delay=5,
-        phi_sig=1):
-    omega = mode.omega
-    mode_clean = A * np.exp(-1.j * (omega * t + phi))
-    modulation = (1 - dA_ratio) + (dA_ratio) * \
-        (1 + np.tanh((t - A_delay) / A_sig)) / 2
-    phase_delay = dphi * (1 - np.tanh((t - phi_delay) / phi_sig)) / 2
-    return modulation * mode_clean * np.exp(1.j * phase_delay)
-
-
-def delayed_QNM_2(
         mode,
         t,
         A,
@@ -543,9 +616,9 @@ def make_eff_ringdown_waveform(
     A_fund, phi_fund = inj_dict[fund_string]
 
     if delay:
-        h_fund = delayed_QNM_2(mode_fund, time, A_fund, phi_fund,
-                               A_delay=0, A_sig=10,
-                               phi_delay=0, dphi=-np.pi, phi_sig=5)
+        h_fund = delayed_QNM(mode_fund, time, A_fund, phi_fund,
+                             A_delay=0, A_sig=10,
+                             phi_delay=0, dphi=-np.pi, phi_sig=5)
     else:
         h_fund = clean_QNM(mode_fund, time, A_fund, phi_fund)
     h0 = waveform(np.asarray(time), h_fund, remove_num=0, t_peak=0)
@@ -556,9 +629,9 @@ def make_eff_ringdown_waveform(
         omega = long_str_to_qnms(key, Mf, af)[0]
         A, phi = inj_dict[key]
         if delay:
-            h_mode = delayed_QNM_2(omega, h0.time, A, phi,
-                                   A_red_ratio=1, A_delay=5, A_sig=2,
-                                   phi_delay=0, dphi=-np.pi, phi_sig=2)
+            h_mode = delayed_QNM(omega, h0.time, A, phi,
+                                 A_red_ratio=1, A_delay=5, A_sig=2,
+                                 phi_delay=0, dphi=-np.pi, phi_sig=2)
         else:
             h_mode = clean_QNM(omega, h0.time, A, phi)
         h_effective += h_mode
@@ -566,7 +639,7 @@ def make_eff_ringdown_waveform(
     h_effective += np.asarray(noise_arr)
 
     h_eff = waveform(h0.time, h_effective, l=l, m=m,
-                     remove_num=0, t_peak=0, t1=t1)
+                     remove_num=0, t_peak=0, t_end=t1)
 
     return h_eff
 

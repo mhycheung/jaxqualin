@@ -8,6 +8,8 @@ import numpy as np
 from .qnmode import *
 from .selection import *
 from .postprocess import *
+from .fit import QNMFitVaryingStartingTimeResult, QNMFitVaryingStartingTimeResultVarMa
+from .waveforms import mode
 
 from bisect import bisect_right
 from adjustText import adjust_text
@@ -15,6 +17,8 @@ from scipy.odr import Model, ODR, RealData
 from scipy.optimize import curve_fit
 
 import os
+
+from typing import List, Tuple, Union, Optional, Dict, Any
 
 
 plt.rc('text', usetex=False)
@@ -50,18 +54,40 @@ PLOT_SAVE_PATH = os.path.join(ROOT_PATH, "plots")
 
 
 def plot_omega_free(
-        results_full,
-        ax=None,
-        plot_indxs=[],
-        t0_min=None,
-        t0_max=None,
-        indicate_start=False,
-        color=None,
-        line_alpha=0.3,
-        scatter_alpha=0.5,
-        scatter_size=1,
-        color_indicate=False,
-        color_indicate_list=[]):
+        results_full: Union[QNMFitVaryingStartingTimeResult, QNMFitVaryingStartingTimeResultVarMa],
+        ax: mpl.axes.Axes=None,
+        plot_indxs: List[int]=[],
+        t0_min: Optional[float]=None,
+        t0_max: Optional[float]=None,
+        indicate_start: bool=False,
+        color: Optional[str]=None,
+        line_alpha: float =0.3,
+        scatter_alpha: float =0.5,
+        scatter_size: float =1.0,
+        color_indicate: bool =False,
+        color_indicate_list: List[int]=[]) -> None:
+    """Plot the complex QNM frequencies as a function of starting time of the
+    fit.
+
+    Parameters:
+        results_full: The results object of the fit.
+        ax: The matplotlib axes to plot on. If None, a new figure and axes
+            will be created.
+        plot_indxs: The indices of the modes to plot. If empty, all modes
+            will be plotted.
+        t0_min: The minimum starting time to plot.
+        t0_max: The maximum starting time to plot.
+        indicate_start: Whether to indicate the starting point of the fit
+            with a marker.
+        color: The color of the scatter points and line.
+        line_alpha: The alpha value of the line.
+        scatter_alpha: The alpha value of the scatter points.
+        scatter_size: The size of the scatter points.
+        color_indicate: Whether to color the scatter points and line
+            according to `color_indicate_list`.
+        color_indicate_list: Which default color to use for each mode, if
+            `color_indicate` is `True`.
+    """
     omega_dict = results_full.omega_dict
     t0_arr = results_full.t0_arr
     if t0_min is not None:
@@ -104,31 +130,61 @@ def plot_omega_free(
 
 
 def plot_predicted_qnms(
-        ax,
-        predicted_qnm_list,
-        ellipse_x=0.05,
-        ellipse_y=0.05,
-        ellipse_edgecolor='gray',
-        ellipse_facecolor='lightgray',
-        ellipse_alpha=0.5,
-        fix_indx=[],
-        label_offset=(
+        ax: mpl.axes.Axes,
+        predicted_qnm_list: List[mode],
+        alpha_r: float=0.05,
+        alpha_i: float=0.05,
+        ellipse_edgecolor: str='gray',
+        ellipse_facecolor: str='lightgray',
+        ellipse_alpha: float=0.5,
+        fix_indx: List[int]=[],
+        label_offset: Tuple[float, float]=(
             0,
             0.),
-        change_lim=True,
-        facecolor="none",
-        edgecolor="gray",
-        cut_at_0=False,
-        pred_alpha=1,
-        present_modes=[],
-        edgecolor_present='k',
-        expand_points=(1.1, 1.7),
-        xminmin=-2,
-        xmaxmax=2,
-        yminmin=0.05,
-        ymaxmax=-0.7,
-        positive_y_alpha=0.5,
+        change_lim: bool=True,
+        facecolor: str="none",
+        edgecolor: str="gray",
+        cut_at_0: bool=False,
+        pred_alpha: float =1.0,
+        present_modes: List[str]=[],
+        edgecolor_present: str='k',
+        expand_points: Tuple[float, float]=(1.1, 1.7),
+        xminmin: float=-2,
+        xmaxmax: float=2,
+        yminmin: float=0.05,
+        ymaxmax: float=-0.7,
+        positive_y_alpha: float=0.5,
 ):
+    """Plot the expected QNM frequencies on the complex plane.
+
+    Parameters:
+        ax: The matplotlib axes to plot on.  
+        predicted_qnm_list: The list of expected QNM modes to plot in the
+            complex plane.  
+        alpha_r: The half width of the ellipse in the real direction.
+        alpha_i: The half width of the ellipse in the imaginary direction.
+        ellipse_edgecolor: The color of the ellipse edge.
+        ellipse_facecolor: The color of the ellipse face.
+        ellipse_alpha: The alpha value of the ellipse.
+        fix_indx: The indices of the modes included in the fit with fixed
+            frequencies. These modes will appear as solid black circles.
+        label_offset: The offset of the mode labels from the mode position.
+        change_lim: Whether to change the axes limits of the `ax` passed.
+        facecolor: The face color of the scatter points.
+        edgecolor: The edge color of the scatter points.
+        cut_at_0: Whether to cut the axes at `omegai = 0`.
+        pred_alpha: The alpha value of the scatter points and labels.
+        present_modes: The list of modes that are deemed present in the
+            waveform.
+        edgecolor_present: The edge color of the scatter points and labels
+            of the modes that are deemed present in the waveform.
+        expand_points: The expansion factor passed to
+            `adjustText.adjust_text`.
+        xminmin: The minimum value of the x-axis after adjusting.
+        xmaxmax: The maximum value of the x-axis after adjusting.
+        yminmin: The minimum value of the y-axis after adjusting.
+        ymaxmax: The maximum value of the y-axis after adjusting.
+    """
     ax.axvline(0, color='gray', ls='--')
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
@@ -186,7 +242,7 @@ def plot_predicted_qnms(
         omegar = mode.omegar
         if xmin < omegar < xmax and ymax < mode.omegai < ymin:  # remember that y-axis is flipped
             ells.append(Ellipse(xy=(omegar, mode.omegai),
-                                width=2 * ellipse_x, height=2 * ellipse_y,
+                                width=2 * alpha_r, height=2 * alpha_i,
                                 fill=True,
                                 facecolor=ellipse_facecolor,
                                 edgecolor=ellipse_edgecolor,
@@ -277,26 +333,64 @@ def plot_M_a(
 
 
 def plot_amplitudes(
-        results_full,
-        fixed_modes=None,
-        ax=None,
-        alpha=1,
-        ls="-",
-        use_label=True,
-        legend=True,
-        color_dict={},
-        lw=2,
-        bold_dict={},
-        lw_bold=4,
-        alpha_bold=1,
-        t_flat_start_dict={},
-        flat_start_s=20,
-        flat_start_marker='o',
-        plot_retro_pred=False,
-        iota=None,
-        af=None,
-        phi=0,
-        A_fac=1):
+        results_full: Union[QNMFitVaryingStartingTimeResult, 
+                            QNMFitVaryingStartingTimeResultVarMa],
+        fixed_modes: Optional[Union[QNMFitVaryingStartingTimeResult, 
+                                    QNMFitVaryingStartingTimeResultVarMa]]=None,
+        ax: mpl.axes.Axes =None,
+        alpha: float = 1.0,
+        ls: str ="-",
+        use_label: bool=True,
+        legend: bool=True,
+        color_dict: Dict[str, str]={},
+        lw: float =2.0,
+        bold_dict: Dict[str, Tuple[int, int]]={},
+        lw_bold: float =4.0,
+        alpha_bold: float =1.0,
+        t_flat_start_dict: Dict[str, float]={},
+        flat_start_s: float =20,
+        flat_start_marker: str ='o',
+        plot_mirror_pred: bool=False,
+        iota: Optional[float]=None,
+        psi: float =0.0,
+        af: Optional[float]=None,
+        A_fac: float =1.0):
+    """Plot the amplitudes of the QNM modes as a function of starting time of
+    the fit.
+
+    Parameters:
+        results_full: The results object of the fit.
+        fixed_modes: The list of fixed modes to plot.
+        ax: The matplotlib axes to plot on. If None, a new figure and axes
+            will be created.
+        alpha: The alpha value of the lines.
+        ls: The line style of the lines.
+        use_label: Whether to use the mode name as the legend label.
+        legend: Whether to include the legend.
+        color_dict: A dictionary of the colors of the mode names.
+        lw: The line width of the lines.
+        bold_dict: A dictionary of mode names to tuples of indices
+            indicating the starting and ending index of the region where the
+            amplitude is flat. The line between the indices will be plotted with
+            a larger line width.
+        lw_bold: The line width of the lines between the corresponding
+            indices in `bold_dict`.
+        alpha_bold: The alpha value of the lines corresponding to the
+            indices in `bold_dict`.
+        t_flat_start_dict: A dictionary of mode names to the optimal
+            starting times. A scatter point will be plotted at the starting time
+            of the fit for the corresponding mode.
+        flat_start_s: The size of the scatter points corresponding to the
+            indices in `t_flat_start_dict`.
+        flat_start_marker: The marker of the scatter points corresponding to
+            the indices in `t_flat_start_dict`.
+        plot_mirror_pred: Whether to plot the predicted amplitude of the
+            mirror modes.
+        iota: The inclination angle of the source.
+        psi: polarization angle of the source.
+        af: The remnant spin of the black hole.
+        A_fac: The factor by which to multiply the amplitudes.
+    """
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -326,11 +420,11 @@ def plot_amplitudes(
                 c=color,
                 alpha=alpha,
                 ls=ls)
-            if len(lmnx) == 1 and plot_retro_pred:
+            if len(lmnx) == 1 and plot_mirror_pred:
                 l, m, n = lmnx[0]
                 if l > 0:
                     S_fac = S_retro_fac(iota, af,
-                                        l, m, n, phi=phi)
+                                        l, m, n, phi=psi)
                     ax.semilogy(
                         t0_arr,
                         A_fac *
@@ -435,12 +529,65 @@ def plot_amplitudes_unadj(
     ax.set_ylabel(r"$A$")
 
 
-def plot_phases(results_full, fixed_modes=None, ax=None, alpha=1, ls="-",
-                use_label=True, shift_phase=True,
-                legend=True, color_dict={}, lw=2, bold_dict={},
-                lw_bold=4, alpha_bold=1,
-                t_flat_start_dict={}, flat_start_s=20, flat_start_marker='o',
-                plot_retro_pred=False, iota=None, af=None, phi=0):
+def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult, 
+                                    QNMFitVaryingStartingTimeResultVarMa],
+                fixed_modes: Optional[Union[QNMFitVaryingStartingTimeResult, 
+                                            QNMFitVaryingStartingTimeResultVarMa]] =None, 
+                ax: mpl.axes.Axes =None, 
+                alpha: float =1., 
+                ls: str="-",
+                use_label: bool =True, 
+                shift_phase: bool =True,
+                legend: bool =True, 
+                color_dict: Dict[str, str]={}, 
+                lw: float=2.0, 
+                bold_dict: Dict[str, Tuple[int, int]]={},
+                lw_bold: float =4.0, 
+                alpha_bold: float =1.0,
+                t_flat_start_dict: Dict[str, float]={}, 
+                flat_start_s: int=20, 
+                flat_start_marker: str='o',
+                plot_retro_pred: bool =False, 
+                iota: Optional[float]=None, 
+                psi: float =0.0,
+                af: Optional[float]=None):
+    """Plot the phases of the QNM modes as a function of starting time of the
+    fit.
+
+    Parameters:
+        results_full: The results object of the fit.
+        fixed_modes: The list of fixed modes to plot.
+        ax: The matplotlib axes to plot on. If None, a new figure and axes
+            will be created.
+        alpha: The alpha value of the lines.
+        ls: The line style of the lines.
+        use_label: Whether to use the mode name as the legend label.
+        shift_phase: Whether to shift the phase by `pi` if the amplitude is
+            negative.
+        legend: Whether to include the legend.
+        color_dict: A dictionary of the colors of the mode names.
+        lw: The line width of the lines.
+        bold_dict: A dictionary of mode names to tuples of indices
+            indicating the starting and ending index of the region where the
+            amplitude is flat. The line between the indices will be plotted with
+            a larger line width.
+        lw_bold: The line width of the lines corresponding to the indices in
+            `bold_dict`.
+        alpha_bold: The alpha value of the lines corresponding to the
+            indices in `bold_dict`.
+        t_flat_start_dict: A dictionary of mode names to the optimal
+            starting times. A scatter point will be plotted at the starting time
+            of the fit for the corresponding mode.
+        flat_start_s: The size of the scatter points corresponding to the
+            indices in `t_flat_start_dict`.
+        flat_start_marker: The marker of the scatter points corresponding to
+            the indices in `t_flat_start_dict`.
+        plot_retro_pred: Whether to plot the predicted phase of the mirror
+            modes.
+        iota: The inclination angle of the source.
+        psi: polarization angle of the source.
+        af: The remnant spin of the black hole.
+    """
     colori = 0
     if ax is None:
         fig, ax = plt.subplots()
@@ -466,7 +613,7 @@ def plot_phases(results_full, fixed_modes=None, ax=None, alpha=1, ls="-",
                 l, m, n = lmnx[0]
                 if l > 0:
                     S_phase_diff = S_retro_phase_diff(iota, af,
-                                                      l, m, n, phi=phi)
+                                                      l, m, n, phi=psi)
                     t_breaks_S, phi_breaks_S = phase_break_for_plot(
                         t0_arr, -phi_fix_dict[f"phi_{fixed_mode_string}"] + phase_shift)
             for j, (t_break, phi_break) in enumerate(
@@ -529,8 +676,8 @@ def plot_phases(results_full, fixed_modes=None, ax=None, alpha=1, ls="-",
                            c=color, s=flat_start_s, marker=flat_start_marker)
 
             colori += 1
-    for i, phi in enumerate(list(phi_free_dict.values())):
-        t_breaks, phi_breaks = phase_break_for_plot(t0_arr, phi)
+    for i, psi in enumerate(list(phi_free_dict.values())):
+        t_breaks, phi_breaks = phase_break_for_plot(t0_arr, psi)
         for t_break, phi_break in zip(t_breaks, phi_breaks):
             ax.plot(t_break, phi_break, lw=lw, c=f"C{colori + i}", ls=ls)
     ax.set_ylim(0, 2 * np.pi)
@@ -572,8 +719,8 @@ def plot_mode_distance(
         fig, ax = plt.subplots()
     for mode in fixed_modes:
         delta = closest_free_mode_distance(result_full, mode,
-                                           r_scale=omega_r_tol,
-                                           i_scale=omega_i_tol)
+                                           alpha_r=omega_r_tol,
+                                           alpha_i=omega_i_tol)
         ax.semilogy(t0_arr, delta, lw=2, label=mode.tex_string())
     ax.legend()
 
@@ -1422,12 +1569,21 @@ def visualize_outliers_individual_modes(df, l, m, outlier_SXS_nums, ax=None):
         ax.scatter(row["SXS_num"], row["mode_string"], c=c, s=s, alpha=alpha)
 
 
-def plot_mode_searcher_results(mode_searcher, axs=None):
+def plot_mode_searcher_results(mode_searcher_vary_N: ModeSearchAllFreeVaryingN, 
+                               axs: Optional[mpl.axes.Axes]=None):
+    """Plot the results of the best mode searcher in a
+    `ModeSearchAllFreeVaryingN` object, including the frequency evolution of the
+    free fit, and the amplitudes and phases of the final modes.
+
+    Parameters:
+        mode_searcher_vary_N: The `ModeSearchAllFreeVaryingN` object to plot
+            the results of.
+        axs: The axes to plot on. If None, a new figure and axes is created.
+    """
     if axs is None:
         fig, axs = plt.subplots(1, 3, figsize=(18, 5))
 
-    present_mode_strings = qnms_to_string(mode_searcher.found_modes_final)
-    mode_searcher_vary_N = mode_searcher.mode_searcher_vary_N
+    present_mode_strings = qnms_to_string(mode_searcher_vary_N.found_modes_final)
     best_run_indx = mode_searcher_vary_N.best_run_indx
     best_N = mode_searcher_vary_N.N_list[best_run_indx]
     best_mode_searcher = mode_searcher_vary_N.mode_searchers[best_run_indx]
@@ -1439,9 +1595,14 @@ def plot_mode_searcher_results(mode_searcher, axs=None):
     best_fluc_least_indx_list = best_flatness_checker.fluc_least_indx_list
     best_start_flat_indx_list = best_flatness_checker.start_flat_indx_list
 
+    alpha_r = best_mode_searcher.alpha_r
+    alpha_i = best_mode_searcher.alpha_i
+    tau_stable_length = best_flatness_checker.tau_stable_length
+
     plot_omega_free(best_N_free_result, ax=axs[0])
     plot_predicted_qnms(axs[0], potential_modes_list,
-                        present_modes=present_mode_strings)
+                        present_modes=present_mode_strings,
+                        alpha_r=alpha_r, alpha_i=alpha_i)
 
     axs[0].text(
         0.95,
@@ -1458,7 +1619,8 @@ def plot_mode_searcher_results(mode_searcher, axs=None):
     t_start_dict = {}
     for start_flat_indx, fluc_least_indx, found_mode_string in zip(
             best_start_flat_indx_list, best_fluc_least_indx_list, present_mode_strings):
-        bold_dict[found_mode_string] = (fluc_least_indx, fluc_least_indx + 100)
+        bold_dict[found_mode_string] = (
+            fluc_least_indx, fluc_least_indx + tau_stable_length)
         t_start_dict[found_mode_string] = result.t0_arr[start_flat_indx]
 
     for key in t_start_dict:
