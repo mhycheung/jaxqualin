@@ -10,7 +10,8 @@
   <a href="#key-features">Key Features</a> •
   <a href="#installation">Installation</a> •
   <a href="#usage">Usage</a> •
-  <a href="#coming-soon">Coming Soon</a>
+  <a href="#coming-soon">Coming Soon</a> •
+  <a href="#license">License</a> •
 </p>
 
 ## Key Features
@@ -34,6 +35,10 @@ Basic usage of the package are showcased under the Examples tab on the <a href="
 
 > **Note**
 > We did not extensively test and do not recommend running `jaxqualin` on a GPU
+
+## Paper Results
+
+Interactive plots of the methods paper can be found under the Results tab on the <a href="https://mhycheung.github.io/jaxqualin/">package homepage</a>.
 
 ## Coming Soon
 
