@@ -6,6 +6,8 @@ import json
 from scipy.interpolate import LinearNDInterpolator
 import numpy as np
 
+from typing import List, Tuple, Union, Optional, Dict, Any, Callable
+
 _full_data_url = 'https://mhycheung.github.io/jaxqualin/data/SXS_results_latest.csv'
 _hyperfit_url = 'https://mhycheung.github.io/jaxqualin/data/hyperfit_functions_latest.json'
 _interpolate_url = 'https://mhycheung.github.io/jaxqualin/data/interpolate_data_latest.json'
@@ -19,14 +21,32 @@ _default_interpolate_data_path = os.path.join(
     DATA_SAVE_PATH, 'interpolate_data_latest.json')
 
 
-def last_modified_time(url):
-    """Returns the last modified time of a url"""
+def last_modified_time(url: str) -> time.struct_time:
+    """
+    Returns the last modified time of a url
+    
+    Parameters:
+        url: The url to check the last modified time of
+
+    Returns:
+        The last modified time of the url as a time.struct_time object
+    
+    """
     response = urlopen(url)
     last_modified = response.headers['Last-Modified']
     return time.strptime(last_modified, "%a, %d %b %Y %H:%M:%S %Z")
 
 
-def download_file(filepath, url, overwrite='update'):
+def download_file(filepath: str, url: str, overwrite: str='update') -> None:
+    """
+    Downloads a file from a url to a filepath
+
+    Parameters:
+        filepath: The filepath to save the downloaded file to
+        url: The url to download the file from
+        overwrite: Whether to overwrite the file if it already exists. Can be one of 'force', 'update', or 'never'.
+    """
+
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     download = False
     if overwrite == 'force' or not os.path.exists(filepath):
@@ -72,7 +92,6 @@ def download_interpolate_data(
 
 
 def hyperfit_list_to_func(hyperfit_list, m, var='A', PN=True):
-    """Converts a hyperfit list to a function"""
     if PN:
         def hyperfit_func(eta, chi_p, chi_m):
             val = 0
@@ -113,7 +132,17 @@ def hyperfit_list_to_func(hyperfit_list, m, var='A', PN=True):
     return hyperfit_func
 
 
-def make_hyper_fit_functions(filepath=_default_hyperfit_data_path, PN=True):
+def make_hyper_fit_functions(filepath: str=_default_hyperfit_data_path, PN: bool=True) -> Dict[str, Dict[str, Callable[[float, float, float], float]]]:
+    """
+    Make a dictionary of hyperfit functions from a hyperfit data file.
+    
+    Parameters:
+        filepath: The filepath of the hyperfit data file.
+        PN: Whether to use Post Newtonian variables (`eta`, `chi_p`, `chi_m`) or the natural parameterization of the BBH simulations (`q`, `chi_1`, `chi_2`).
+
+    Returns:
+        A dictionary of hyperfit functions. The keys are the mode names, and the values are dictionaries with keys `A` and `phi` for the amplitude and phase hyperfit functions, respectively.
+    """
     with open(filepath, 'r') as f:
         hyperfit_data = json.load(f)
     hyperfit_func_dict = {}
@@ -128,7 +157,17 @@ def make_hyper_fit_functions(filepath=_default_hyperfit_data_path, PN=True):
     return hyperfit_func_dict
 
 
-def make_interpolators(filepath=_default_interpolate_data_path, PN=True):
+def make_interpolators(filepath: str=_default_interpolate_data_path, PN: bool=True) -> Dict[str, Dict[str, LinearNDInterpolator]]:
+    """
+    Make a dictionary of interpolators from a data file containing the extracted amplitude and phases of different modes from BBH simulations.
+
+    Parameters:
+        filepath: The filepath of the data file.
+        PN: Whether to use Post Newtonian variables (`eta`, `chi_p`, `chi_m`) or the natural parameterization of the BBH simulations (`q`, `chi_1`, `chi_2`).
+
+    Returns:
+        A dictionary of interpolators. The keys are the mode names, and the values are dictionaries with keys `A`, `dA`, `phi`, and `dphi` for the amplitude, amplitude fluctuation, phase, and phase fluctuation interpolators, respectively.
+    """
     with open(filepath, 'r') as f:
         interpolate_data = json.load(f)
     interpolate_func_dict = {}
