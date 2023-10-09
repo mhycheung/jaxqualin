@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -40,7 +40,7 @@ jobs:
       run: |
         pytest
     - name: Build and upload to PyPI
-      if: ${{ (matrix.python-version == '3.12') }}
+      if: ${{ (matrix.python-version == '3.11') }}
       run: |
         python -m build
         python -m twine upload dist/*
