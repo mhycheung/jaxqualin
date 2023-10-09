@@ -39,23 +39,29 @@ class waveform:
     A class representing a waveform containing a ringdown phase to be fitted.
 
     Attributes:
-        fulltime: The full time array of the waveform.
-        fullh: The full complex waveform.
-        peaktime: The time of peak strain `jnp.abs(h)` of the waveform.
-        peakindx: The array index of the time of peak strain of the waveform.
-        t_peak: The time of peak strain of the waveform. This can be defined by the user and overrides `peaktime`.
-        time: The time array of the waveform after the peak, starting at `t_peak` and time shifted such that `t_peak = 0`.
+        fulltime: The full time array of the waveform. 
+        fullh: The full complex waveform. 
+        peaktime: The time of peak strain `jnp.abs(h)` of the waveform. 
+        peakindx: The array index of the time of peak strain of the
+            waveform.
+        t_peak: The time of peak strain of the waveform. This can be defined
+            by the user and overrides `peaktime`.
+        time: The time array of the waveform after the peak, starting at
+            `t_peak` and time shifted such that `t_peak = 0`.
         hr: The real part of the waveform after the peak.
-        hi: The imaginary part of the waveform after the peak.
+        hi: The imaginary part of the waveform after the peak. 
         h: The complex waveform after the peak.
-        l: The spherical harmonic mode number l of the waveform.
+        l: The spherical harmonic mode number l of the waveform. 
         m: The spherical harmonic mode number m of the waveform.
 
     Methods:
-        update_peaktime: Sets `t_peak` to override the peak time.
-        argabsmax: Returns the array index of the time of peak strain of the waveform.
-        postmerger: Returns the time, real part, and imaginary part of the waveform after the peak.
-        set_lm: Sets the spherical harmonic mode numbers l and m of the waveform.
+        update_peaktime: Sets `t_peak` to override the peak time. 
+        argabsmax: Returns the array index of the time of peak strain of the 
+            waveform.
+        postmerger: Returns the time, real part, and imaginary part of the
+            waveform after the peak. 
+        set_lm: Sets the spherical harmonic mode numbers l and m of the 
+            waveform.
 
     """
 
@@ -87,12 +93,14 @@ class waveform:
         Parameters:
             fulltime: The full time array of the waveform.
             fullh: The full complex waveform.
-            t_peak: The time of peak strain of the waveform. This can be defined by the user and overrides `peaktime`.
+            t_peak: The time of peak strain of the waveform. This can be
+                defined by the user and overrides `peaktime`.
             t_start: The time after the peak to start the waveform.
             t_end: The time after the peak to end the waveform.
             l: The spherical harmonic mode number l of the waveform.
             m: The spherical harmonic mode number m of the waveform.
-            remove_num: The number of points to remove from the beginning of the waveform to avoid numerical artifacts.
+            remove_num: The number of points to remove from the beginning of
+                the waveform to avoid numerical artifacts.
         """
         self.fulltime = fulltime
         self.fullh = fullh
@@ -120,7 +128,8 @@ class waveform:
         Returns the array index of the time of peak strain of the waveform.
 
         Parameters:
-            remove_num: The number of points to remove from the beginning of the waveform to avoid numerical artifacts.
+            remove_num: The number of points to remove from the beginning of the
+                waveform to avoid numerical artifacts.
 
         Returns:
             The array index of the time of peak strain of the waveform.
@@ -134,14 +143,16 @@ class waveform:
                                                    jnp.ndarray,
                                                    jnp.ndarray]:
         """
-        Returns the time, real part, and imaginary part of the waveform after the peak.
+        Returns the time, real part, and imaginary part of the waveform after
+        the peak.
 
         Parameters:
-            t_start: The time after the peak to start the waveform.
-            t_end: The time after the peak to end the waveform.
+            t_start: The time after the peak to start the waveform. t_end: The
+                time after the peak to end the waveform.
 
         Returns:
-            The time, real part, and imaginary part of the waveform after the peak.
+            The time, real part, and imaginary part of the waveform after the
+            peak.
         """
         tstart = self.peaktime + t_start
         tend = self.peaktime + t_end

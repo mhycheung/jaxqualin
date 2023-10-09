@@ -5,15 +5,19 @@
 <h4 align="center"> A python package for extracting quasinormal modes from black-hole ringdown simulations.</h4>
 
 <p align="center">
+    <a href = ""><img src="https://img.shields.io/badge/arXiv-0000.00000-b31b1b.svg"></a>
     <a href="https://badge.fury.io/py/jaxqualin"><img src="https://badge.fury.io/py/jaxqualin.svg"></a>
     <a href="https://github.com/mhycheung/jaxqualin/actions/workflows/pytest.yml"><img src="https://github.com/mhycheung/jaxqualin/actions/workflows/pytest.yml/badge.svg"></a>
     <a href="https://github.com/mhycheung/jaxqualin/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+    <a href="https://mhycheung.github.io/jaxqualin/"><img src="https://badgen.net/badge/Read/the doc/blue" alt="doc"/>
+</a>
 </p>
 
 <p align="center">
   <a href="#key-features">Key Features</a> •
   <a href="#installation">Installation</a> •
   <a href="#usage">Usage</a> •
+  <a href="#paper-results">Paper Results</a> •
   <a href="#coming-soon">Coming Soon</a> •
   <a href="#license">License</a> •
 </p>
@@ -25,7 +29,7 @@
 * Agnostic identification of QNMs within the waveform
 * Saving and reusing results with pickle
 * Easy visualization of results
-* Call hyperfit models of amplitudes of QNMs in binary black hole (BBH) mergers
+* Call hyperfit models of QNM amplitudes in the ringdown of binary black hole (BBH) mergers
 
 ## Installation
 

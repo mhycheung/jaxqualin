@@ -44,7 +44,8 @@ def download_file(filepath: str, url: str, overwrite: str='update') -> None:
     Parameters:
         filepath: The filepath to save the downloaded file to
         url: The url to download the file from
-        overwrite: Whether to overwrite the file if it already exists. Can be one of 'force', 'update', or 'never'.
+        overwrite: Whether to overwrite the file if it already exists. Can
+            be one of 'force', 'update', or 'never'.
     """
 
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -138,10 +139,14 @@ def make_hyper_fit_functions(filepath: str=_default_hyperfit_data_path, PN: bool
     
     Parameters:
         filepath: The filepath of the hyperfit data file.
-        PN: Whether to use Post Newtonian variables (`eta`, `chi_p`, `chi_m`) or the natural parameterization of the BBH simulations (`q`, `chi_1`, `chi_2`).
+        PN: Whether to use Post Newtonian variables (`eta`, `chi_p`,
+            `chi_m`) or the natural parameterization of the BBH simulations
+            (`q`, `chi_1`, `chi_2`).
 
     Returns:
-        A dictionary of hyperfit functions. The keys are the mode names, and the values are dictionaries with keys `A` and `phi` for the amplitude and phase hyperfit functions, respectively.
+        A dictionary of hyperfit functions. The keys are the mode names, and
+            the values are dictionaries with keys `A` and `phi` for the
+            amplitude and phase hyperfit functions, respectively.
     """
     with open(filepath, 'r') as f:
         hyperfit_data = json.load(f)
@@ -159,14 +164,20 @@ def make_hyper_fit_functions(filepath: str=_default_hyperfit_data_path, PN: bool
 
 def make_interpolators(filepath: str=_default_interpolate_data_path, PN: bool=True) -> Dict[str, Dict[str, LinearNDInterpolator]]:
     """
-    Make a dictionary of interpolators from a data file containing the extracted amplitude and phases of different modes from BBH simulations.
+    Make a dictionary of interpolators from a data file containing the extracted
+    amplitude and phases of different modes from BBH simulations.
 
     Parameters:
         filepath: The filepath of the data file.
-        PN: Whether to use Post Newtonian variables (`eta`, `chi_p`, `chi_m`) or the natural parameterization of the BBH simulations (`q`, `chi_1`, `chi_2`).
+        PN: Whether to use Post Newtonian variables (`eta`, `chi_p`,
+            `chi_m`) or the natural parameterization of the BBH simulations
+            (`q`, `chi_1`, `chi_2`).
 
     Returns:
-        A dictionary of interpolators. The keys are the mode names, and the values are dictionaries with keys `A`, `dA`, `phi`, and `dphi` for the amplitude, amplitude fluctuation, phase, and phase fluctuation interpolators, respectively.
+        A dictionary of interpolators. The keys are the mode names, and the
+            values are dictionaries with keys `A`, `dA`, `phi`, and `dphi` for
+            the amplitude, amplitude fluctuation, phase, and phase fluctuation
+            interpolators, respectively.
     """
     with open(filepath, 'r') as f:
         interpolate_data = json.load(f)

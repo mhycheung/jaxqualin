@@ -18,17 +18,27 @@ class mode_free:
     A class representing a mode of a black hole.
 
     Attributes:
-        lmnx: A list of lists of integers representing the mode numbers, or a string equal to `constant`. Each list of integers represents a constituent linear mode, and the list of lists represents a nonlinear mode if `len(lmnx) > 1`. For example, `[[2, 2, 0], [3, 3, 0]]` represents the `2,2,0x3,3,0` quadratic mode.
-        spinseq_list: A list of `qnm.spinsequence.KerrSpinSeq` objects of the `qnm` package that maps the spin parameter `a` of the black hole into the QNM frequencies.
-        spinseq_list_neg_a: Same as `spinseq_list` but for the retrograde branch of the QNM solution.
-        omegar: The real part of the QNM , if fixed. `jaxlib.xla_extension.ArrayImpl` of a single `jnp.float64`.
-        omegai: The imaginary part of the QNM frequency, if fixed. `jaxlib.xla_extension.ArrayImpl` of a single `jnp.float64`.
-        omega: The complex QNM frequency, if fixed. `jaxlib.xla_extension.ArrayImpl` of a single `jnp.complex128`.
+        lmnx: A list of lists of integers representing the mode numbers, or
+            a string equal to `constant`. Each list of integers represents a
+            constituent linear mode, and the list of lists represents a
+            nonlinear mode if `len(lmnx) > 1`. For example, `[[2, 2, 0], [3, 3,
+            0]]` represents the `2,2,0x3,3,0` quadratic mode.
+        spinseq_list: A list of `qnm.spinsequence.KerrSpinSeq` objects of
+            the `qnm` package that maps the spin parameter `a` of the black hole
+            into the QNM frequencies.
+        spinseq_list_neg_a: Same as `spinseq_list` but for the retrograde
+            branch of the QNM solution.
+        omegar: The real part of the QNM , if fixed.
+            `jaxlib.xla_extension.ArrayImpl` of a single `jnp.float64`.
+        omegai: The imaginary part of the QNM frequency, if fixed.
+            `jaxlib.xla_extension.ArrayImpl` of a single `jnp.float64`.
+        omega: The complex QNM frequency, if fixed.
+            `jaxlib.xla_extension.ArrayImpl` of a single `jnp.complex128`.
         M: The mass of the black hole, if fixed.
         a: The spin parameter of the black hole, if fixed.
 
     Methods:
-        __init__: Initializes a mode_free object.
+        __init__: Initializes a mode_free object. 
         fix_mode: Fixes the complex frequency of the mode.
 
     """
@@ -46,7 +56,12 @@ class mode_free:
         Initializes a mode_free object.
 
         Parameters:
-            lmnx: A list of lists of integers representing the mode numbers, or a string equal to `constant`. Each list of integers represents a constituent linear mode, and the list of lists represents a nonlinear mode if `len(lmnx) > 1`. For example, `[[2, 2, 0], [3, 3, 0]]` represents the `2,2,0x3,3,0` quadratic mode.
+            lmnx: A list of lists of integers representing the mode numbers,
+                or a string equal to `constant`. Each list of integers
+                represents a constituent linear mode, and the list of lists
+                represents a nonlinear mode if `len(lmnx) > 1`. For example,
+                `[[2, 2, 0], [3, 3, 0]]` represents the `2,2,0x3,3,0` quadratic
+                mode.
             s: The spin weight of the mode. Defaults to -2.
         """
         self.spinseq_list = []
@@ -76,7 +91,9 @@ class mode_free:
         Parameters:
             M: The mass of the black hole.
             a: The spin parameter of the black hole.
-            retro_def_orbit: Whether to define retrograde modes with respect to the orbital frame (`True`) or remnant black hole frame (`False`). See the methods paper for details. Defaults to True.
+            retro_def_orbit: Whether to define retrograde modes with respect
+                to the orbital frame (`True`) or remnant black hole frame
+                (`False`). See the methods paper for details. Defaults to True.
         """
         if a > 0.99:
             a = 0.99
@@ -181,7 +198,9 @@ class mode(mode_free):
     Attributes:
         M: The mass of the black hole.
         a: The spin parameter of the black hole.
-        retro_def_orbit: Whether define retrograde modes with respect to the orbital frame (`True`) or remnant black hole frame (`False`). See the methods paper for details.
+        retro_def_orbit: Whether define retrograde modes with respect to the
+            orbital frame (`True`) or remnant black hole frame (`False`). See
+            the methods paper for details.
 
     """
 
