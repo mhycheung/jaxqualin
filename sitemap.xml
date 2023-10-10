@@ -2,132 +2,132 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/data/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/paper-results/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/references/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/api/data/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/api/fit/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/api/qnmode/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/api/selection/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/api/waveforms/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/-2.1.0/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/-2.2.0/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/2.1.0/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/2.1.1/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/2.2.0/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/2.2.1/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/3.2.0/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/3.3.0/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/3.3.1/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/4.4.0/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/mode_md/5.5.0/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/notebooks/example_custom_waveform/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/notebooks/example_fit/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/notebooks/example_hyperfit_load/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/notebooks/example_mode_selection/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/notebooks/fit_testing%20copy/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mhycheung.github.io/jaxqualin/notebooks/mode_selection_testing%20copy/</loc>
-         <lastmod>2023-10-09</lastmod>
+         <lastmod>2023-10-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
