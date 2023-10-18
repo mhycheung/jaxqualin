@@ -141,7 +141,7 @@ def qnm_fit_func_varMa_mirror(
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
-            S_fac = S_retro_fac(iota, a, l, m, n, phi=psi)
+            S_fac = S_mirror_fac(iota, a, l, m, n, phi=psi)
             mirror_ratio *= S_fac
         if part is None:
             Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
@@ -165,7 +165,7 @@ def qnm_fit_func_varMa_mirror(
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
-            S_fac = S_retro_fac(iota, a, l, m, n, phi=psi)
+            S_fac = S_mirror_fac(iota, a, l, m, n, phi=psi)
             mirror_ratio *= S_fac
         if part is None:
             Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
@@ -1249,7 +1249,7 @@ class QNMFitVaryingStartingTime:
             mirror_ratio = 1
             for lmn in lmnx:
                 l, m, n = tuple(lmn)
-                S_fac = S_retro_fac(self.iota, af, l, m, n, phi=self.psi)
+                S_fac = S_mirror_fac(self.iota, af, l, m, n, phi=self.psi)
                 if self.mirror_ignore_phase:
                     mirror_ratio *= S_fac
                 else:

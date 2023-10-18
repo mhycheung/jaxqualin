@@ -569,21 +569,26 @@ def qnm_string_l_reverse(str):
     return str_out
 
 
-def S_retro_fac(iota, af, l, m, n, phi=0.):
+def S_mirror_fac(iota, af, l, m, n, phi=0.):
     S = pykerr.spheroidal(iota, af, l, m, n, phi=phi)
     S_n = pykerr.spheroidal(iota, af, l, -m, n, phi=phi)
     return np.abs(S_n) / np.abs(S)
 
 
-def S_retro_fac_complex(iota, af, l, m, n, phi=0.):
+def S_mirror_fac_complex(iota, af, l, m, n, phi=0.):
     S = pykerr.spheroidal(iota, af, l, m, n, phi=phi)
     S_n = pykerr.spheroidal(iota, af, l, -m, n, phi=phi)
     return S_n / S
 
 
-def S_retro_phase_diff(iota, af, l, m, n, phi=0.):
+def S_mirror_phase_diff(iota, af, l, m, n, phi=0.):
     S = pykerr.spheroidal(iota, af, l, m, n, phi=phi)
     S_n = pykerr.spheroidal(iota, af, l, -m, n, phi=phi)
     if l % 2 != 0:
         return np.angle(S_n) - np.angle(S) + np.pi
     return np.angle(S_n) - np.angle(S)
+
+def A_pos_to_A_neg(A_pos, iota, af, l, m, n, psi = 0.):
+    S_conj = np.conj(pykerr.spheroidal(iota, af, l, m, n, phi=psi))
+    S_n = pykerr.spheroidal(iota, af, l, -m, n, phi=psi)
+    return np.conj(A_pos) * S_n / S_conj
