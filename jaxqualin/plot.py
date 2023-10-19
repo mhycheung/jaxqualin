@@ -427,7 +427,7 @@ def plot_amplitudes(
                 l, m, n = lmnx[0]
                 if m > 0:
                     S_fac = S_mirror_fac(iota, af,
-                                        l, m, n, phi=psi)
+                                        l, m, n, psi=psi)
                     ax.semilogy(
                         t0_arr,
                         A_fac *

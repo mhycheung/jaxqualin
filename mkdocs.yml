@@ -1,5 +1,5 @@
 site_name: jaxqualin
-site_url: https://mhycheung.github.io/jaxqualin/
+site_url: "https://mhycheung.github.io/jaxqualin/"
 site_author: Mark Ho-Yeuk Cheung
 repo_url: https://github.com/mhycheung/jaxqualin
 repo_name: GitHub
@@ -35,7 +35,6 @@ nav:
 
 plugins:
   - search
-  - social
   - mkdocs-jupyter:
       ignore_h1_titles: True
   - mkdocstrings:
