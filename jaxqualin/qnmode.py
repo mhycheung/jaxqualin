@@ -601,5 +601,5 @@ def make_mirror_ratio_list(qnm_list, iota, psi = 0.):
             raise NotImplementedError("Only linear modes allowed for now")
         l, m, n = tuple(mode.lmnx[0])
         mirror_ratio_list_complex.append(S_mirror_fac_complex(iota, af, l, m, n, psi = psi))
-    mirror_ratio_list = [(np.real(x), np.imag(x)) for x in mirror_ratio_list_complex]
+    mirror_ratio_list = [(np.abs(x), np.angle(x)) for x in mirror_ratio_list_complex]
     return mirror_ratio_list

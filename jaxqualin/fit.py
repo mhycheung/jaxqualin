@@ -37,27 +37,18 @@ def qnm_fit_func_mirror_fixed(
         A, phi = tuple(fix_mode_params)
         omegar = qnm_fixed.omegar
         omegai = qnm_fixed.omegai
-        Q += A * jnp.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
-        Q += (mirror_ratio[0] + 1.j*mirror_ratio[1]) * A * \
-            jnp.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi))
-    if part is None:
-        return Q
-    elif part == "real":
-        return jnp.real(Q)
-    elif part == "imag":
-        return jnp.imag(Q)
-        # if part is None:
-        #     Q += A * jnp.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
-        #     Q += (mirror_ratio[0] + 1.j*mirror_ratio[1]) * A * \
-        #         jnp.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi))
-        # elif part == "real":
-        #     Q += A * jnp.exp(omegai * t) * jnp.cos(omegar * t + phi)
-        #     Q += (mirror_ratio[0] + 1.j*mirror_ratio[1]) * A * \
-        #         jnp.exp(omegai * t) * jnp.cos(-omegar * t - phi)
-        # elif part == "imag":
-        #     Q += -A * jnp.exp(omegai * t) * jnp.sin(omegar * t + phi)
-        #     Q += - (mirror_ratio[0] + 1.j*mirror_ratio[1]) * A * \
-        #         jnp.exp(omegai * t) * jnp.sin(-omegar * t - phi)
+        if part is None:
+            Q += A * jnp.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
+            Q += mirror_ratio[0] * A * \
+                jnp.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi - mirror_ratio[1]))
+        elif part == "real":
+            Q += A * jnp.exp(omegai * t) * jnp.cos(omegar * t + phi)
+            Q += mirror_ratio[0] * A * \
+                jnp.exp(omegai * t) * jnp.cos(-omegar * t - phi - mirror_ratio[1])
+        elif part == "imag":
+            Q += -A * jnp.exp(omegai * t) * jnp.sin(omegar * t + phi)
+            Q += - mirror_ratio[0] * A * \
+                jnp.exp(omegai * t) * jnp.sin(-omegar * t - phi - mirror_ratio[1])
     return Q
 
 
