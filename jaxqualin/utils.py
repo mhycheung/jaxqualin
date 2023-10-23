@@ -60,3 +60,6 @@ def load_pickle_file(path):
     with open(path, 'rb') as f:
         data = pickle.load(f)
     return data
+
+def all_close_to(array, val):
+    return np.allclose(array, np.ones_like(array)*val)
