@@ -51,32 +51,6 @@
 
     
     
-      
-        <meta  property="og:type"  content="website" >
-      
-        <meta  property="og:title"  content="References - jaxqualin" >
-      
-        <meta  property="og:description"  content="None" >
-      
-        <meta  property="og:image"  content="https://mhycheung.github.io/jaxqualin/assets/images/social/references.png" >
-      
-        <meta  property="og:image:type"  content="image/png" >
-      
-        <meta  property="og:image:width"  content="1200" >
-      
-        <meta  property="og:image:height"  content="630" >
-      
-        <meta  property="og:url"  content="https://mhycheung.github.io/jaxqualin/references/" >
-      
-        <meta  name="twitter:card"  content="summary_large_image" >
-      
-        <meta  name="twitter:title"  content="References - jaxqualin" >
-      
-        <meta  name="twitter:description"  content="None" >
-      
-        <meta  name="twitter:image"  content="https://mhycheung.github.io/jaxqualin/assets/images/social/references.png" >
-      
-    
     
   </head>
   
@@ -342,6 +316,26 @@
   
   <span class="md-ellipsis">
     Custom waveform
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/example_summed_waveform/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Summed multipoles
   </span>
   
 
@@ -3487,7 +3481,7 @@ according to <code>color_indicate_list</code>.</p>
 
 
 <h5 id="jaxqualin.plot.plot_phases" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">plot_phases</span><span class="p">(</span><span class="n">results_full</span><span class="p">,</span> <span class="n">fixed_modes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">use_label</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">shift_phase</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">color_dict</span><span class="o">=</span><span class="p">{},</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">bold_dict</span><span class="o">=</span><span class="p">{},</span> <span class="n">lw_bold</span><span class="o">=</span><span class="mf">4.0</span><span class="p">,</span> <span class="n">alpha_bold</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">t_flat_start_dict</span><span class="o">=</span><span class="p">{},</span> <span class="n">flat_start_s</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">flat_start_marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">plot_retro_pred</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">iota</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">psi</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">af</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">plot_phases</span><span class="p">(</span><span class="n">results_full</span><span class="p">,</span> <span class="n">fixed_modes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">use_label</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">shift_phase</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">color_dict</span><span class="o">=</span><span class="p">{},</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">bold_dict</span><span class="o">=</span><span class="p">{},</span> <span class="n">lw_bold</span><span class="o">=</span><span class="mf">4.0</span><span class="p">,</span> <span class="n">alpha_bold</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">t_flat_start_dict</span><span class="o">=</span><span class="p">{},</span> <span class="n">flat_start_s</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">flat_start_marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">plot_mirror_pred</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">iota</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">psi</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">af</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h5>
 
@@ -3746,7 +3740,7 @@ the indices in <code>t_flat_start_dict</code>.</p>
           </td>
         </tr>
         <tr>
-          <td><code>plot_retro_pred</code></td>
+          <td><code>plot_mirror_pred</code></td>
           <td>
                 <code>bool</code>
           </td>
