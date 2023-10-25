@@ -543,7 +543,7 @@ def get_waveform_toy_no_exp(
     return h
 
 
-def get_SXS_waveform_summed(SXSnum, iota, phi, l_max=4, res=0, N_ext=2):
+def get_SXS_waveform_summed(SXSnum, iota, psi, l_max=4, res=0, N_ext=2):
 
     if not _has_pycbc:
         raise ImportError(
@@ -560,7 +560,7 @@ def get_SXS_waveform_summed(SXSnum, iota, phi, l_max=4, res=0, N_ext=2):
             hdict_complex[(l, m)] = np.array(
                 hdict[key][1] + 1.j * hdict[key][2])
 
-    h_sum = sum_modes(hdict_complex, iota, phi)
+    h_sum = sum_modes(hdict_complex, iota, psi)
 
     t = hdict["2,2"][0]
 

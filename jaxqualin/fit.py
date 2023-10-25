@@ -39,16 +39,16 @@ def qnm_fit_func_mirror_fixed(
         omegai = qnm_fixed.omegai
         if part is None:
             Q += A * jnp.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
-            Q += mirror_ratio * A * \
-                jnp.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi))
+            Q += mirror_ratio[0] * A * \
+                jnp.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi - mirror_ratio[1]))
         elif part == "real":
             Q += A * jnp.exp(omegai * t) * jnp.cos(omegar * t + phi)
-            Q += mirror_ratio * A * \
-                jnp.exp(omegai * t) * jnp.cos(-omegar * t - phi)
+            Q += mirror_ratio[0] * A * \
+                jnp.exp(omegai * t) * jnp.cos(-omegar * t - phi - mirror_ratio[1])
         elif part == "imag":
             Q += -A * jnp.exp(omegai * t) * jnp.sin(omegar * t + phi)
-            Q += - mirror_ratio * A * \
-                jnp.exp(omegai * t) * jnp.sin(-omegar * t - phi)
+            Q += - mirror_ratio[0] * A * \
+                jnp.exp(omegai * t) * jnp.sin(-omegar * t - phi - mirror_ratio[1])
     return Q
 
 
@@ -141,7 +141,7 @@ def qnm_fit_func_varMa_mirror(
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
-            S_fac = S_retro_fac(iota, a, l, m, n, phi=psi)
+            S_fac = S_mirror_fac(iota, a, l, m, n, psi=psi)
             mirror_ratio *= S_fac
         if part is None:
             Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
@@ -165,7 +165,7 @@ def qnm_fit_func_varMa_mirror(
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
-            S_fac = S_retro_fac(iota, a, l, m, n, phi=psi)
+            S_fac = S_mirror_fac(iota, a, l, m, n, psi=psi)
             mirror_ratio *= S_fac
         if part is None:
             Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
@@ -1225,7 +1225,7 @@ class QNMFitVaryingStartingTime:
         if self.include_mirror and (self.iota is None or self.psi is None):
             raise ValueError(
                 "Must specify iota and phi to include mirror mode")
-        self.mirror_ignore_phase = mirror_ignore_phase
+        # self.mirror_ignore_phase = mirror_ignore_phase
         if self.include_mirror and not self.var_M_a:
             self.mirror_ratio_list = self.get_mirror_ratio_list()
         else:
@@ -1242,19 +1242,7 @@ class QNMFitVaryingStartingTime:
             list of ratios between prograde and mirror mode amplitudes.
 
         """
-        self.mirror_ratio_list = []
-        for mode in self.qnm_fixed_list:
-            lmnx = mode.lmnx
-            af = mode.a
-            mirror_ratio = 1
-            for lmn in lmnx:
-                l, m, n = tuple(lmn)
-                S_fac = S_retro_fac(self.iota, af, l, m, n, phi=self.psi)
-                if self.mirror_ignore_phase:
-                    mirror_ratio *= S_fac
-                else:
-                    raise ValueError("mirror including phase not implemented")
-            self.mirror_ratio_list.append(mirror_ratio)
+        self.mirror_ratio_list = make_mirror_ratio_list(self.qnm_fixed_list, self.iota, psi = self.psi)
         return self.mirror_ratio_list
 
     def initial_guesses(self,

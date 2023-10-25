@@ -421,10 +421,13 @@ def plot_amplitudes(
                 alpha=alpha,
                 ls=ls)
             if len(lmnx) == 1 and plot_mirror_pred:
+                if af is None or iota is None or psi is None:
+                    raise ValueError(
+                        "af, iota, and psi must be specified to plot retrodicted phase of mirror modes.")
                 l, m, n = lmnx[0]
-                if l > 0:
-                    S_fac = S_retro_fac(iota, af,
-                                        l, m, n, phi=psi)
+                if m > 0:
+                    S_fac = S_mirror_fac(iota, af,
+                                        l, m, n, psi=psi)
                     ax.semilogy(
                         t0_arr,
                         A_fac *
@@ -547,7 +550,7 @@ def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
                 t_flat_start_dict: Dict[str, float]={}, 
                 flat_start_s: int=20, 
                 flat_start_marker: str='o',
-                plot_retro_pred: bool =False, 
+                plot_mirror_pred: bool =False, 
                 iota: Optional[float]=None, 
                 psi: float =0.0,
                 af: Optional[float]=None):
@@ -582,7 +585,7 @@ def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
             indices in `t_flat_start_dict`.
         flat_start_marker: The marker of the scatter points corresponding to
             the indices in `t_flat_start_dict`.
-        plot_retro_pred: Whether to plot the predicted phase of the mirror
+        plot_mirror_pred: Whether to plot the predicted phase of the mirror
             modes.
         iota: The inclination angle of the source.
         psi: polarization angle of the source.
@@ -609,13 +612,15 @@ def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
                 A_fix_dict[f"A_{fixed_mode_string}"] > 0, 0, np.pi)
             t_breaks, phi_breaks = phase_break_for_plot(
                 t0_arr, phi_fix_dict[f"phi_{fixed_mode_string}"] + phase_shift)
-            if len(lmnx) == 1 and plot_retro_pred:
+            if len(lmnx) == 1 and plot_mirror_pred:
+                if af is None or iota is None or psi is None:
+                    raise ValueError(
+                        "af, iota, and psi must be specified to plot retrodicted phase of mirror modes.")
                 l, m, n = lmnx[0]
-                if l > 0:
-                    S_phase_diff = S_retro_phase_diff(iota, af,
-                                                      l, m, n, phi=psi)
+                if m > 0:
+                    A_neg = A_pos_to_A_neg(np.exp(1.j*(phi_fix_dict[f"phi_{fixed_mode_string}"] + phase_shift)), iota, af, l, m, n, psi = psi)
                     t_breaks_S, phi_breaks_S = phase_break_for_plot(
-                        t0_arr, -phi_fix_dict[f"phi_{fixed_mode_string}"] + phase_shift)
+                        t0_arr, np.angle(A_neg))
             for j, (t_break, phi_break) in enumerate(
                     zip(t_breaks, phi_breaks)):
                 if use_label:
@@ -633,8 +638,8 @@ def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
                         c=color,
                         alpha=alpha,
                         ls=ls)
-            if len(lmnx) == 1 and plot_retro_pred:
-                if l > 0:
+            if len(lmnx) == 1 and plot_mirror_pred:
+                if m > 0:
                     for t_break_S, phi_break_S in zip(
                             t_breaks_S, phi_breaks_S):
                         ax.plot(
