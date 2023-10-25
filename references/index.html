@@ -1218,6 +1218,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#jaxqualin.waveforms.get_SXS_waveform_summed" class="md-nav__link">
+    get_SXS_waveform_summed()
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -6635,6 +6642,171 @@ time after the peak to end the waveform.</p>
 
 </div>
 
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h5 id="jaxqualin.waveforms.get_SXS_waveform_summed" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">get_SXS_waveform_summed</span><span class="p">(</span><span class="n">SXSnum</span><span class="p">,</span> <span class="n">iota</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">l_max</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">res</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">N_ext</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span></code>
+
+</h5>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Obtain the waveform of a SXS simulation summed over all modes up to l_max.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>SXSnum</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>The SXS simulation number.</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>iota</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>The inclination angle of the binary.</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>psi</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>The phase to use.</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>l_max</code></td>
+          <td>
+                <code>int</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>The maximum l mode to include in the waveform.</p>
+            </div>
+          </td>
+          <td>
+                <code>4</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>res</code></td>
+          <td>
+                <code>int</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>The level of the simulation, relative to the highest resolution level 
+(<code>res = 0</code> means highest resolution). Must be zero or negative.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>N_ext</code></td>
+          <td>
+                <code>int</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>The extrapolation order of the simulation.</p>
+            </div>
+          </td>
+          <td>
+                <code>2</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+
+
+  <p><strong>Returns:</strong></p>
+  <table>
+    <thead>
+      <tr>
+<th>Name</th>        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+<td><code>h</code></td>          <td>
+                <code><a class="autorefs autorefs-internal" title="jaxqualin.waveforms.waveform" href="../api/waveforms/#jaxqualin.waveforms.waveform">waveform</a></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>The waveform.</p>
+            </div>
+          </td>
+        </tr>
+        <tr>
+<td><code>Mf</code></td>          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>The final mass of the binary.</p>
+            </div>
+          </td>
+        </tr>
+        <tr>
+<td><code>af</code></td>          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>The final spin of the binary.</p>
+            </div>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+  </div>
+
+</div>
 
 
 
