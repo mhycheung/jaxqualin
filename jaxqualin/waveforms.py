@@ -543,7 +543,27 @@ def get_waveform_toy_no_exp(
     return h
 
 
-def get_SXS_waveform_summed(SXSnum, iota, psi, l_max=4, res=0, N_ext=2):
+def get_SXS_waveform_summed(SXSnum: str, iota: float, psi: float, 
+                            l_max: int =4, res: int =0, N_ext: int=2) -> Tuple[waveform, float, float]:
+    """
+    Obtain the waveform of a SXS simulation summed over all modes up to l_max, 
+    using `pycbc.waveform.waveform_modes.sum_modes`.
+
+    Parameters:
+        SXSnum: The SXS simulation number.
+        iota: The inclination angle of the binary.
+        psi: The phase to use.
+        l_max: The maximum l mode to include in the waveform.
+        res: The level of the simulation, relative to the highest resolution level 
+            (`res = 0` means highest resolution). Must be zero or negative.
+        N_ext: The extrapolation order of the simulation.
+
+    Returns:
+        h: The waveform.
+        Mf: The final mass of the binary.
+        af: The final spin of the binary.
+
+    """
 
     if not _has_pycbc:
         raise ImportError(
