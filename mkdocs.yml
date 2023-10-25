@@ -12,6 +12,7 @@ nav:
     - Fitting the ringdown: notebooks/example_fit.ipynb
     - Mode search: notebooks/example_mode_selection.ipynb
     - Custom waveform: notebooks/example_custom_waveform.ipynb
+    - Summed multipoles: notebooks/example_summed_waveform.ipynb
     - Loading hyperfits and interpolators: notebooks/example_hyperfit_load.ipynb
   - Results: 
     - 2,2,0 mode: mode_md/2.2.0.md
