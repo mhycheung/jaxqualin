@@ -9,6 +9,7 @@
     <a href="https://badge.fury.io/py/jaxqualin"><img src="https://badge.fury.io/py/jaxqualin.svg"></a>
     <a href="https://github.com/mhycheung/jaxqualin/actions/workflows/pytest.yml"><img src="https://github.com/mhycheung/jaxqualin/actions/workflows/pytest.yml/badge.svg"></a>
     <a href="https://github.com/mhycheung/jaxqualin/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+    <a href="https://pypi.org/project/jaxqualin/"><img src="https://img.shields.io/pypi/pyversions/jaxqualin"></a>
 </p>
 
 ## Key Features
@@ -42,7 +43,6 @@ Interactive plots of the methods paper results can be found under the Results ta
 * Full API
 * Support for real (Schwarzshild) ringdown waveforms
 * Fitting for the mass and spin of the remnant
-* Fitting the (noiseless) detector response 
 
 ## How to Cite
 Please cite the methods paper if you used our package to produce results in your publication.
