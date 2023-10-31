@@ -782,14 +782,16 @@ def plot_mode_vs_lin_mode_ampltiude(
     df_merged = df_merged_lin.merge(df_quad, on="SXS_num", how="inner")
     df_merged = df_merged.loc[~df_merged["SXS_num"].isin(skip_num)]
     df_merged.reset_index(drop=True, inplace=True)
-    xerr = np.sqrt((df_merged["A_hi_1"] - df_merged["A_low_1"])
-                   ** 2 + (df_merged["A_hi_2"] - df_merged["A_low_2"])**2)
-    yerr = df_merged["A_hi"] - df_merged["A_low"]
+    xerr = df_merged["A_med_1"] * df_merged["A_med_2"] * np.sqrt(
+        ((df_merged["A_hi_1"] - df_merged["A_low_1"])/df_merged["A_med_1"])** 2 + 
+        ((df_merged["A_hi_2"] - df_merged["A_low_2"])/df_merged["A_med_2"])**2
+        )/ df_merged["M_rem_1"]**2
+    yerr = (df_merged["A_hi"] - df_merged["A_low"]) / df_merged["M_rem_1"]
     errxlogs = xerr / (df_merged["A_med_1"] *
                        df_merged["A_med_2"]) / np.log(10)
     errylogs = yerr / df_merged["A_med"] / np.log(10)
-    xs = df_merged["A_med_1"] * df_merged["A_med_2"] * df_merged["M_rem_1"]**2
-    ys = df_merged["A_med"] * df_merged["M_rem_1"]
+    xs = df_merged["A_med_1"] * df_merged["A_med_2"] / df_merged["M_rem_1"]**2
+    ys = df_merged["A_med"] / df_merged["M_rem_1"]
     if fit:
         fitfunc = linfunc3
         beta0 = [0.]
@@ -975,7 +977,8 @@ def plot_mode_vs_mode_amplitude(
         fit=False,
         skip_num=[],
         norm=None,
-        alpha=1):
+        alpha=1,
+        M_rem_adjust = True):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) |
                   ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1) & (df["retro"]))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) |
@@ -993,10 +996,15 @@ def plot_mode_vs_mode_amplitude(
     xerr_hi = df_merged["A_hi_2"] - df_merged["A_med_2"]
     yerr_low = df_merged["A_med_1"] - df_merged["A_low_1"]
     yerr_hi = df_merged["A_hi_1"] - df_merged["A_med_1"]
-    xerr = xerr_low + xerr_hi
-    yerr = yerr_low + yerr_hi
-    xs = df_merged["A_med_2"]
-    ys = df_merged["A_med_1"]
+    if M_rem_adjust:
+        M_adjust = df_merged["M_rem_1"]
+    else:
+        M_adjust = 1
+        
+    xerr = (xerr_low + xerr_hi) / M_adjust
+    yerr = (yerr_low + yerr_hi) / M_adjust
+    xs = (df_merged["A_med_2"]) / M_adjust
+    ys = (df_merged["A_med_1"]) / M_adjust
 
     if fit:
         if fit_type == "linear":
@@ -1208,14 +1216,17 @@ def plot_mode_vs_lin_mode_ratio(
     df_merged = df_merged_lin.merge(df_quad, on="SXS_num", how="inner")
     df_merged = df_merged.loc[~df_merged["SXS_num"].isin(skip_num)]
     df_merged.reset_index(drop=True, inplace=True)
-    xerr = np.sqrt((df_merged["A_hi_1"] - df_merged["A_low_1"])
-                   ** 2 + (df_merged["A_hi_2"] - df_merged["A_low_2"])**2)
-    yerr = df_merged["A_hi"] - df_merged["A_low"]
+
+    xerr = df_merged["A_med_1"] * df_merged["A_med_2"] * np.sqrt(
+        ((df_merged["A_hi_1"] - df_merged["A_low_1"])/df_merged["A_med_1"])** 2 + 
+        ((df_merged["A_hi_2"] - df_merged["A_low_2"])/df_merged["A_med_2"])**2
+        )/ df_merged["M_rem_1"]**2
+    yerr = (df_merged["A_hi"] - df_merged["A_low"]) / df_merged["M_rem_1"]
     errxlogs = xerr / (df_merged["A_med_1"] *
                        df_merged["A_med_2"]) / np.log(10)
     errylogs = yerr / df_merged["A_med"] / np.log(10)
-    xs = df_merged["A_med_1"] * df_merged["A_med_2"] * df_merged["M_rem_1"]**2
-    ys = df_merged["A_med"] * df_merged["M_rem_1"]
+    xs = df_merged["A_med_1"] * df_merged["A_med_2"] / df_merged["M_rem_1"]**2
+    ys = df_merged["A_med"] / df_merged["M_rem_1"]
     chis = df_merged["chi_rem_1"]
     etas = df_merged["eta_1"]
     ratio = ys / xs
@@ -1296,7 +1307,8 @@ def plot_mode_vs_mode_amplitude_quad_ratio(
         color_string="eta",
         label_SXS=False,
         outlier_tol=0.4,
-        alpha=1):
+        alpha=1,
+        M_rem_adjust = True):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) |
                   ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1) & (df["retro"]))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) |
@@ -1314,10 +1326,16 @@ def plot_mode_vs_mode_amplitude_quad_ratio(
     xerr_hi = df_merged["A_hi_2"] - df_merged["A_med_2"]
     yerr_low = df_merged["A_med_1"] - df_merged["A_low_1"]
     yerr_hi = df_merged["A_hi_1"] - df_merged["A_med_1"]
-    xerr = xerr_low + xerr_hi
-    yerr = yerr_low + yerr_hi
-    xs = df_merged["A_med_2"]
-    ys = df_merged["A_med_1"]
+
+    if M_rem_adjust:
+        M_adjust = df_merged["M_rem_1"]
+    else:
+        M_adjust = 1
+
+    xerr = (xerr_low + xerr_hi) / M_adjust
+    yerr = (yerr_low + yerr_hi) / M_adjust
+    xs = df_merged["A_med_2"] / M_adjust
+    ys = df_merged["A_med_1"] / M_adjust
     chis = df_merged["chi_rem_1"]
     etas = df_merged["eta_1"]
     chi_ps = df_merged["chi_p_1"]
