@@ -1,7 +1,10 @@
 site_name: jaxqualin
 site_url: "https://mhycheung.github.io/jaxqualin/"
+site_author: Mark Ho-Yeuk Cheung
+repo_url: https://github.com/mhycheung/jaxqualin
+repo_name: GitHub
 
-theme: mkdocs    # This theme is mandatory for now, see below
+theme: material
 
 nav:
   - Home: index.md
@@ -9,25 +12,27 @@ nav:
     - Fitting the ringdown: notebooks/example_fit.ipynb
     - Mode search: notebooks/example_mode_selection.ipynb
     - Custom waveform: notebooks/example_custom_waveform.ipynb
+    - Summed multipoles: notebooks/example_summed_waveform.ipynb
     - Loading hyperfits and interpolators: notebooks/example_hyperfit_load.ipynb
   - Results: 
-    - 2,2,0: mode_md/2.2.0.md
-    - 2,2,1: mode_md/2.2.1.md
-    - 2,1,0: mode_md/2.1.0.md
-    - 2,1,1: mode_md/2.1.1.md
-    - 3,3,0: mode_md/3.3.0.md
-    - 3,3,1: mode_md/3.3.1.md
-    - 3,2,0: mode_md/3.2.0.md
-    - 4,4,0: mode_md/4.4.0.md
-    - 5,5,0: mode_md/5.5.0.md
-    - r2,2,0: mode_md/-2.2.0.md
-    - r2,1,0: mode_md/-2.1.0.md
+    - 2,2,0 mode: mode_md/2.2.0.md
+    - 2,2,1 mode: mode_md/2.2.1.md
+    - 2,1,0 mode: mode_md/2.1.0.md
+    - 2,1,1 mode: mode_md/2.1.1.md
+    - 3,3,0 mode: mode_md/3.3.0.md
+    - 3,3,1 mode: mode_md/3.3.1.md
+    - 3,2,0 mode: mode_md/3.2.0.md
+    - 4,4,0 mode: mode_md/4.4.0.md
+    - 5,5,0 mode: mode_md/5.5.0.md
+    - r2,2,0 mode: mode_md/-2.2.0.md
+    - r2,1,0 mode: mode_md/-2.1.0.md
   - Data: data.md
   - API: 
     - jaxqualin.qnmode: api/qnmode.md
     - jaxqualin.waveforms: api/waveforms.md
     - jaxqualin.fit: api/fit.md
     - jaxqualin.selection: api/selection.md
+    - jaxqualin.data: api/data.md
 
 plugins:
   - search
@@ -38,6 +43,8 @@ plugins:
         python:
           options:
             show_submodules: true
+            show_source: false
+            heading_level: 4
 
 markdown_extensions:
   - pymdownx.arithmatex:

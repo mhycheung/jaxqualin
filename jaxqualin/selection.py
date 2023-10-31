@@ -353,7 +353,8 @@ class ModeSearchAllFreeLM:
 
 class ModeSearchAllFreeVaryingN:
     """
-    A class that performs a mode search for a given waveform, varying the number of free modes used in the fit.
+    A class that performs a mode search for a given waveform, varying the number
+    of free modes used in the fit.
 
     Attributes:
         h: The waveform to be fit.
@@ -361,23 +362,36 @@ class ModeSearchAllFreeVaryingN:
         m: The harmonic number m of the waveform.
         M: The mass of the black hole.
         a: The dimensionless spin of the black hole.
-        relevant_lm_list: A list of tuples of the form (l, m) that specifies which recoil modes are relevant for the waveform.
+        relevant_lm_list: A list of tuples of the form (l, m) that specifies
+            which recoil modes are relevant for the waveform.
         t0_arr: array of starting times for fitting.
-        N_list: A list of integers that specifies the number of free modes to be used in each mode searcher in `mode_searchers`.
+        N_list: A list of integers that specifies the number of free modes
+            to be used in each mode searcher in `mode_searchers`.
         kwargs: A dictionary of keyword arguments.
-        flatness_checker_kwargs: A dictionary of keyword arguments for the `IterativeFlatnessChecker` class.
-        mode_searcher_kwargs: A dictionary of keyword arguments for the `ModeSearchAllFreeLM` class.
-        mode_searchers: A list of `ModeSearchAllFreeLM` objects for mode searching with different number of free modes.
-        found_modes_final: A list of `mode` objects that contains the final list of modes found by the best mode searcher.
-        run_string_prefix: A string that is used as a prefix for the run name for dumping the `pickle` file.
-        load_pickle: A boolean that specifies whether to load the `pickle` file.
-        CCE: A boolean that specifies whether the waveform is a CCE waveform. This is not implemented yet.
-        fixed_fitters: A list of `QNMFitVaryingStartingTime` objects that contains the final list of fitters used for the flatness checkers in each mode searcher.
-        flatness_checkers: A list of `IterativeFlatnessChecker` objects that contains the list of flatness checkers used for the mode searchers.
-        best_run_indx: An integer that specifies the index of the mode searcher that found the most number of modes.
+        flatness_checker_kwargs: A dictionary of keyword arguments for the
+            `IterativeFlatnessChecker` class.
+        mode_searcher_kwargs: A dictionary of keyword arguments for the
+            `ModeSearchAllFreeLM` class.
+        mode_searchers: A list of `ModeSearchAllFreeLM` objects for mode
+            searching with different number of free modes.
+        found_modes_final: A list of `mode` objects that contains the final
+            list of modes found by the best mode searcher.
+        run_string_prefix: A string that is used as a prefix for the run
+            name for dumping the `pickle` file.
+        load_pickle: A boolean that specifies whether to load the `pickle`
+            file.
+        CCE: A boolean that specifies whether the waveform is a CCE
+            waveform. This is not implemented yet.
+        fixed_fitters: A list of `QNMFitVaryingStartingTime` objects that
+            contains the final list of fitters used for the flatness checkers in
+            each mode searcher.
+        flatness_checkers: A list of `IterativeFlatnessChecker` objects that
+            contains the list of flatness checkers used for the mode searchers.
+        best_run_indx: An integer that specifies the index of the mode
+            searcher that found the most number of modes.
 
     Methods:
-        init_searchers: Initializes the mode searchers.
+        init_searchers: Initializes the mode searchers. 
         do_mode_searches: Performs the mode searches.
     """
 
@@ -421,10 +435,13 @@ class ModeSearchAllFreeVaryingN:
             h: The waveform to be fit.
             M: The mass of the black hole.
             a: The dimensionless spin of the black hole.
-            relevant_lm_list: A list of tuples of the form (l, m) that specifies which recoil modes are relevant for the waveform.
+            relevant_lm_list: A list of tuples of the form (l, m) that
+                specifies which recoil modes are relevant for the waveform.
             t0_arr: array of starting times for fitting.
-            flatness_checker_kwargs: A dictionary of keyword arguments for the `IterativeFlatnessChecker` class.
-            mode_searcher_kwargs: A dictionary of keyword arguments for the `ModeSearchAllFreeLM` class.
+            flatness_checker_kwargs: A dictionary of keyword arguments for
+                the `IterativeFlatnessChecker` class.
+            mode_searcher_kwargs: A dictionary of keyword arguments for the
+                `ModeSearchAllFreeLM` class.
             **kwargs_in: keyword arguments.
         """
         self.h = h
@@ -508,40 +525,63 @@ class ModeSearchAllFreeVaryingN:
 
 class ModeSearchAllFreeVaryingNSXS:
     """
-    A class that performs a mode search for a given SXS waveform, varying the number of free modes used in the fit.
+    A class that performs a mode search for a given SXS waveform, varying the
+    number of free modes used in the fit.
 
     Attributes:
-        SXSnum: The SXS number of the waveform.
-        l: The harmonic number l of the waveform.
-        m: The harmonic number m of the waveform.
-        t0_arr: array of starting times for fitting.
-        N_list: A list of integers that specifies the number of free modes to be used in each mode searcher in `mode_searchers`.
-        postfix_string: A string that is appended to the run name for dumping the `pickle` file.
-        CCE: A boolean that specifies whether the waveform is a CCE waveform. This is not implemented yet.
-        kwargs: A dictionary of keyword arguments.
-        retro_def_orbit: retro_def_orbit: Whether to define retrograde modes with respect to the orbital frame (`True`) or remnant black hole frame (`False`). See the methods paper for details. Defaults to True.
-        relevant_lm_list_override: A boolean that specifies whether to override the `relevant_lm_list` attribute of the `ModeSearchAllFreeVaryingN` class.
-        relevant_lm_list: A list of tuples of the form (l, m) that specifies which recoil modes are relevant for the waveform. Used if `relevant_lm_list_override` is `True`.
-        h: The waveform to be fit.
-        M: The mass of the black hole.
-        a: The dimensionless spin of the black hole.
-        Lev: The resolution level of the SXS simulation.
-        N_list_string: A string that is used as a suffix for the run name for dumping the `pickle` file.
-        run_string_fitter: A string that is used as a prefix for the run name for dumping the `pickle` file for the fitters.
-        run_string: A string that is used as a prefix for the run name for dumping the `pickle` file for the mode searcher.
-        run_string_full: A string that is used as a prefix for the run name for dumping the `pickle` file for the mode searcher, including the `postfix_string`.
-        file_path: The path to the `pickle` file.
-        load_pickle: A boolean that specifies whether to load the `pickle` file for the fitters.
-        mode_searcher_load_pickle: A boolean that specifies whether to load the `pickle` file for the mode searcher.
-        set_seed: An integer that specifies the seed for the random number generator.
-        save_mode_searcher: A boolean that specifies whether to save the mode searcher to a `pickle` file.
-        mode_searcher_vary_N: A `ModeSearchAllFreeVaryingN` object that performs the mode search.
-        found_modes_final: A list of `mode` objects that contains the final list of modes found by the best mode searcher.
+        SXSnum: The SXS number of the waveform. 
+        l: The harmonic number l of the
+        waveform. m: The harmonic number m of the waveform. 
+        t0_arr: array of starting times for fitting. 
+        N_list: A list of integers that specifies the number of free modes
+            to be used in each mode searcher in `mode_searchers`.
+        postfix_string: A string that is appended to the run name for
+            dumping the `pickle` file.
+        CCE: A boolean that specifies whether the waveform is a CCE
+            waveform. This is not implemented yet.
+        kwargs: A dictionary of keyword arguments. 
+        retro_def_orbit: Whether to define retrograde modes
+            with respect to the orbital frame (`True`) or remnant black hole
+            frame (`False`). See the methods paper for details. Defaults to
+            True.
+        relevant_lm_list_override: A boolean that specifies whether to
+            override the `relevant_lm_list` attribute of the
+            `ModeSearchAllFreeVaryingN` class.
+        relevant_lm_list: A list of tuples of the form (l, m) that specifies
+            which recoil modes are relevant for the waveform. Used if
+            `relevant_lm_list_override` is `True`.
+        h: The waveform to be fit. 
+        M: The mass of the black hole. 
+        a: The dimensionless spin of the black hole. 
+        Lev: The resolution level of the SXS simulation. 
+        N_list_string: A string that is used as a suffix for the run name for
+            dumping the `pickle` file.
+        run_string_fitter: A string that is used as a prefix for the run
+            name for dumping the `pickle` file for the fitters.
+        run_string: A string that is used as a prefix for the run name for
+            dumping the `pickle` file for the mode searcher.
+        run_string_full: A string that is used as a prefix for the run name
+            for dumping the `pickle` file for the mode searcher, including the
+            `postfix_string`.
+        file_path: The path to the `pickle` file. 
+        load_pickle: A boolean that specifies whether to load the `pickle`
+            file for the fitters.
+        mode_searcher_load_pickle: A boolean that specifies whether to load
+            the `pickle` file for the mode searcher.
+        set_seed: An integer that specifies the seed for the random number
+            generator.
+        save_mode_searcher: A boolean that specifies whether to save the
+            mode searcher to a `pickle` file.
+        mode_searcher_vary_N: A `ModeSearchAllFreeVaryingN` object that
+            performs the mode search.
+        found_modes_final: A list of `mode` objects that contains the final
+            list of modes found by the best mode searcher.
 
     Methods:
         mode_search_varying_N_sxs: Performs the mode searches.
-        do_mode_search_varying_N: Performs the mode searches and dumps the class instance to a `pickle` file.
-        get_waveform: Loads the waveform from the SXS catalog.
+        do_mode_search_varying_N: Performs the mode searches and dumps the
+            class instance to a `pickle` file. 
+        get_waveform: Loads the waveform from the SXS catalog. 
         pickle_save: Dumps the class instance to a `pickle` file.
         pickle_load: Check whether a `pickle` file exists and can be loaded.
 

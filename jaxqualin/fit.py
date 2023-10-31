@@ -39,16 +39,16 @@ def qnm_fit_func_mirror_fixed(
         omegai = qnm_fixed.omegai
         if part is None:
             Q += A * jnp.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
-            Q += mirror_ratio * A * \
-                jnp.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi))
+            Q += mirror_ratio[0] * A * \
+                jnp.exp(-1.j * ((-omegar + 1.j * omegai) * t - phi - mirror_ratio[1]))
         elif part == "real":
             Q += A * jnp.exp(omegai * t) * jnp.cos(omegar * t + phi)
-            Q += mirror_ratio * A * \
-                jnp.exp(omegai * t) * jnp.cos(-omegar * t - phi)
+            Q += mirror_ratio[0] * A * \
+                jnp.exp(omegai * t) * jnp.cos(-omegar * t - phi - mirror_ratio[1])
         elif part == "imag":
             Q += -A * jnp.exp(omegai * t) * jnp.sin(omegar * t + phi)
-            Q += - mirror_ratio * A * \
-                jnp.exp(omegai * t) * jnp.sin(-omegar * t - phi)
+            Q += - mirror_ratio[0] * A * \
+                jnp.exp(omegai * t) * jnp.sin(-omegar * t - phi - mirror_ratio[1])
     return Q
 
 
@@ -141,7 +141,7 @@ def qnm_fit_func_varMa_mirror(
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
-            S_fac = S_retro_fac(iota, a, l, m, n, phi=psi)
+            S_fac = S_mirror_fac(iota, a, l, m, n, psi=psi)
             mirror_ratio *= S_fac
         if part is None:
             Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
@@ -165,7 +165,7 @@ def qnm_fit_func_varMa_mirror(
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
-            S_fac = S_retro_fac(iota, a, l, m, n, phi=psi)
+            S_fac = S_mirror_fac(iota, a, l, m, n, psi=psi)
             mirror_ratio *= S_fac
         if part is None:
             Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
@@ -503,16 +503,18 @@ class QNMFit:
         if self.include_mirror:
             self.popt, self.pcov, self.res, _, _ = jcf.curve_fit(
                 lambda t, *params: qnm_fit_func_wrapper_complex_mirror(
-                    t, self.qnm_fixed_list, self.mirror_ratio_list, self.N_free, params, Schwarzschild=self.Schwarzschild), np.array(
-                    self._time_interweave), np.array(
-                    self._h_interweave), bounds=bounds, p0=self.params0, max_nfev=self.max_nfev,
+                    t, self.qnm_fixed_list, self.mirror_ratio_list, 
+                    self.N_free, params, Schwarzschild=self.Schwarzschild),
+                    np.array(self._time_interweave), 
+                    np.array(self._h_interweave), 
+                    bounds=bounds, p0=self.params0, max_nfev=self.max_nfev,
                 method="trf", sigma=sigma, **self.fit_kwargs, timeit=True)
         else:
             self.popt, self.pcov, self.res, _, _ = jcf.curve_fit(
                 lambda t, *params: qnm_fit_func_wrapper_complex(
-                    t, self.qnm_fixed_list, self.N_free, params, Schwarzschild=self.Schwarzschild), np.array(
-                    self._time_interweave), np.array(
-                    self._h_interweave), bounds=bounds, p0=self.params0, max_nfev=self.max_nfev,
+                    t, self.qnm_fixed_list, self.N_free, params, Schwarzschild=self.Schwarzschild), 
+                    np.array(self._time_interweave), np.array(self._h_interweave), 
+                    bounds=bounds, p0=self.params0, max_nfev=self.max_nfev,
                 method="trf", sigma=sigma, **self.fit_kwargs, timeit=True)
         try:
             self.cost = self.res.cost
@@ -985,44 +987,62 @@ class QNMFitVaryingStartingTime:
     A class for fitting the postmerger waveform with a varying starting time.
 
     Attributes:
-        t0_arr: array of starting times for fitting.
-        h: waveform object to be fitted.
-        var_M_a: fit for the mass and spin of the black hole. Warning: Not tested yet.
-        Schwarzschild: whether to fit for Schwarzschild black hole, i.e. real waveform.
-        N_free: number of frequency-free QNMs to include in the model. These modes are completely free, i.e. their mode numbers are not fixed like those in `qnm_free_list`.
+        t0_arr: array of starting times for fitting. 
+        h: waveform object to be fitted. 
+        var_M_a: fit for the mass and spin of the black hole. 
+        Warning: Not tested yet.
+        Schwarzschild: whether to fit for Schwarzschild black hole, i.e.
+            real waveform.
+        N_free: number of frequency-free QNMs to include in the model. These
+            modes are completely free, i.e. their mode numbers are not fixed
+            like those in `qnm_free_list`.
         qnm_fixed_list: list of fixed-frequency QNMs included in the model.
-        qnm_free_list: list of free-frequency QNMs of fixed mode numbers to include in the model, only used for fitting `M` and `a` when `var_M_a = True`.
-        N_free: number of free QNMs.
-        run_string_prefix: prefix of the run name for dumping the `pickle` file.
+        qnm_free_list: list of free-frequency QNMs of fixed mode numbers to
+            include in the model, only used for fitting `M` and `a` when
+            `var_M_a = True`.
+        N_free: number of free QNMs. 
+        run_string_prefix: prefix of the run name for dumping the `pickle`
+            file.
         nonconvergence_cut: whether to cut the nonconverged fits.
-        nonconvergence_indx: indices of the nonconverged fits.
-        initial_num: number of initial guesses to use for the first starting time for frequency-free fits.
-        include_mirror: whether to include the mirror modes, for fitting waveforms with both waveform polarizations.
-        mirror_ratio_list: list of ratios between prograde and mirror mode amplitudes.
-        iota: inclination angle of the source.
-        psi: polarization angle of the source.
-        save_results: whether to save the results.
-        params0: initial guess for the fit parameters, at least for the earliest `t0` fit.
+        nonconvergence_indx: indices of the nonconverged fits. 
+        initial_num: number of initial guesses to use for the first starting
+            time for frequency-free fits.
+        include_mirror: whether to include the mirror modes, for fitting
+            waveforms with both waveform polarizations.
+        mirror_ratio_list: list of ratios between prograde and mirror mode
+            amplitudes.
+        iota: inclination angle of the source. 
+        psi: polarization angle of the source. 
+        save_results: whether to save the results. 
+        params0: initial guess for the fit parameters, at least for the
+            earliest `t0` fit.
         max_nfev: maximum number of function evaluations for the fit.
-        sequential_guess: whether to use the previous fit as the initial guess for the next fit.
+        sequential_guess: whether to use the previous fit as the initial
+            guess for the next fit.
         load_pickle: whether to load the `pickle` file if it exists.
-        fit_save_prefix: prefix of the path to save the `pickle` file.
-        A_bound: maximum value of the amplitude.
+        fit_save_prefix: prefix of the path to save the `pickle` file. 
+        A_bound: maximum value of the amplitude. 
         jcf: `jaxfit` curve fit object.
         fit_kwargs: keyword arguments for the `jcf.curve_fit` method.
         initial_dict: key word arguments for `make_initial_guess` method.
-        A_guess_relative: whether to multiply the initial guess of the amplitude by the peak strain of the waveform.
-        set_seed: random seed for generating the initial guesses.
-        weighted: whether to perform a weighted fit.
-        double_skip: whether to skip the next `2^n` `t0` fits when a fit does not converge, where `n` is the number of times the fit did not converge consecutively.
-        skip_i_init: number of `t0` fits to skip for the first time a nonconvergent fit occured.
-        result_full: `QNMFitVaryingStartingTimeResult` object for storing the fit results.
+        A_guess_relative: whether to multiply the initial guess of the
+            amplitude by the peak strain of the waveform.
+        set_seed: random seed for generating the initial guesses. 
+        weighted: whether to perform a weighted fit. 
+        double_skip: whether to skip the next `2^n` `t0` fits when a fit
+            does not converge, where `n` is the number of times the fit did not
+            converge consecutively.
+        skip_i_init: number of `t0` fits to skip for the first time a
+            nonconvergent fit occured.
+        result_full: `QNMFitVaryingStartingTimeResult` object for storing
+            the fit results.
 
     Methods:
-        get_mirror_ratio_list: get `mirror_ratio_list` from `iota` and `psi`.
+        get_mirror_ratio_list: get `mirror_ratio_list` from `iota` and
+            `psi`.
         initial_guesses: generate initial guesses for the first `t0` fit.
-        make_nan_result: generate a `QNMFitVaryingStartingTimeResult` object with `nan` values.
-        do_fits: perform the fits.
+        make_nan_result: generate a `QNMFitVaryingStartingTimeResult` object
+        with `nan` values. do_fits: perform the fits.
 
     """
 
@@ -1097,33 +1117,52 @@ class QNMFitVaryingStartingTime:
         Parameters:
             h: waveform object to be fitted.
             t0_arr: array of starting times for fitting.
-            N_free: number of frequency-free QNMs to include in the model. These modes are completely free, i.e. their mode numbers are not fixed like those in `qnm_free_list`.
-            qnm_fixed_list: list of fixed-frequency QNMs included in the model.
-            qnm_free_list: list of free-frequency QNMs of fixed mode numbers to include in the model, only used for fitting `M` and `a` when `var_M_a = True`.
-            var_M_a: fit for the mass and spin of the black hole. Warning: Not tested yet.
-            Schwarzschild: whether to fit for Schwarzschild black hole, i.e. real waveform.
-            run_string_prefix: prefix of the run name for dumping the `pickle` file.
-            params0: initial guess for the fit parameters, at least for the earliest `t0` fit.
+            N_free: number of frequency-free QNMs to include in the model.
+                These modes are completely free, i.e. their mode numbers are not
+                fixed like those in `qnm_free_list`.
+            qnm_fixed_list: list of fixed-frequency QNMs included in the
+                model.
+            qnm_free_list: list of free-frequency QNMs of fixed mode numbers
+                to include in the model, only used for fitting `M` and `a` when
+                `var_M_a = True`.
+            var_M_a: fit for the mass and spin of the black hole. Warning:
+                Not tested yet.
+            Schwarzschild: whether to fit for Schwarzschild black hole, i.e.
+                real waveform.
+            run_string_prefix: prefix of the run name for dumping the
+                `pickle` file.
+            params0: initial guess for the fit parameters, at least for the
+                earliest `t0` fit.
             max_nfev: maximum number of function evaluations for the fit.
-            sequential_guess: whether to use the previous fit as the initial guess for the next fit.
+            sequential_guess: whether to use the previous fit as the initial
+                guess for the next fit.
             load_pickle: whether to load the `pickle` file if it exists.
             fit_save_prefix: prefix of the path to save the `pickle` file.
             nonconvergence_cut: whether to cut the nonconverged fits.
             A_bound: maximum value of the amplitude.
             jcf: `jaxfit` curve fit object.
             fit_kwargs: keyword arguments for the `jcf.curve_fit` method.
-            initial_num: number of initial guesses to use for the first starting time for frequency-free fits.
-            random_initial: whether to generate random initial guesses for the first starting time for frequency-free fits.
-            initial_dict: key word arguments for `make_initial_guess` method.
-            A_guess_relative: whether to multiply the initial guess of the amplitude by the peak strain of the waveform.
+            initial_num: number of initial guesses to use for the first
+                starting time for frequency-free fits.
+            random_initial: whether to generate random initial guesses for
+                the first starting time for frequency-free fits.
+            initial_dict: key word arguments for `make_initial_guess`
+                method.
+            A_guess_relative: whether to multiply the initial guess of the
+                amplitude by the peak strain of the waveform.
             set_seed: random seed for generating the initial guesses.
             weighted: whether to perform a weighted fit.
-            double_skip: whether to skip the next `2^n` `t0` fits when a fit does not converge, where `n` is the number of times the fit did not converge consecutively.
-            include_mirror: whether to include the mirror modes, for fitting waveforms with both waveform polarizations.
+            double_skip: whether to skip the next `2^n` `t0` fits when a fit
+                does not converge, where `n` is the number of times the fit did
+                not converge consecutively.
+            include_mirror: whether to include the mirror modes, for fitting
+                waveforms with both waveform polarizations.
             iota: inclination angle of the source.
             psi: polarization angle of the source.
-            mirror_ignore_phase: whether to ignore the phase difference between the prograde and mirror modes.
-            skip_i_init: number of `t0` fits to skip for the first time a nonconvergent fit occured.
+            mirror_ignore_phase: whether to ignore the phase difference
+                between the prograde and mirror modes.
+            skip_i_init: number of `t0` fits to skip for the first time a
+                nonconvergent fit occured.
             save_results: whether to save the results.
         """
         self.h = h
@@ -1186,7 +1225,7 @@ class QNMFitVaryingStartingTime:
         if self.include_mirror and (self.iota is None or self.psi is None):
             raise ValueError(
                 "Must specify iota and phi to include mirror mode")
-        self.mirror_ignore_phase = mirror_ignore_phase
+        # self.mirror_ignore_phase = mirror_ignore_phase
         if self.include_mirror and not self.var_M_a:
             self.mirror_ratio_list = self.get_mirror_ratio_list()
         else:
@@ -1203,19 +1242,7 @@ class QNMFitVaryingStartingTime:
             list of ratios between prograde and mirror mode amplitudes.
 
         """
-        self.mirror_ratio_list = []
-        for mode in self.qnm_fixed_list:
-            lmnx = mode.lmnx
-            af = mode.a
-            mirror_ratio = 1
-            for lmn in lmnx:
-                l, m, n = tuple(lmn)
-                S_fac = S_retro_fac(self.iota, af, l, m, n, phi=self.psi)
-                if self.mirror_ignore_phase:
-                    mirror_ratio *= S_fac
-                else:
-                    raise ValueError("mirror including phase not implemented")
-            self.mirror_ratio_list.append(mirror_ratio)
+        self.mirror_ratio_list = make_mirror_ratio_list(self.qnm_fixed_list, self.iota, psi = self.psi)
         return self.mirror_ratio_list
 
     def initial_guesses(self,
