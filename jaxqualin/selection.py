@@ -660,7 +660,7 @@ class ModeSearchAllFreeVaryingNSXS:
         self.kwargs = kwargs
         self.retro_def_orbit = self.kwargs['retro_def_orbit']
 
-        if len(self.kwargs['relevant_lm_list']) == 0:
+        if len(self.kwargs['relevant_lm_list']) != 0:
             self.relevant_lm_list_override = True
             self.relevant_lm_list = self.kwargs['relevant_lm_list']
         else:
@@ -830,11 +830,29 @@ def closest_free_mode_distance(result_full, mode, alpha_r=1, alpha_i=1):
     omega_i_dict = result_full.omega_dict["imag"]
     omega_r_arr = np.array(list(omega_r_dict.values()))
     omega_i_arr = np.array(list(omega_i_dict.values()))
-    scaled_distance_arr = ((omega_r_arr - mode.omegar) / \
-                           alpha_r)**2 + ((omega_i_arr - mode.omegai) / alpha_i)**2
+    scaled_distance_arr = np.sqrt(((omega_r_arr - mode.omegar) / \
+                           alpha_r)**2 + ((omega_i_arr - mode.omegai) / alpha_i)**2)
     min_distance = np.nanmin(scaled_distance_arr, axis=0)
     return min_distance
 
+def closest_free_mode_distance_cov(result_full, mode, cov, n_sig = 1):
+    omega_r_dict = result_full.omega_dict["real"]
+    omega_i_dict = result_full.omega_dict["imag"]
+    cov_inv = np.linalg.inv(cov)
+    scaled_omega_r_arr = []
+    scaled_omega_i_arr = []
+    for i in range(len(omega_r_dict)):
+        omega_arr = np.array([omega_r_dict[f'omega_r_free_{i}'] - mode.omegar,
+                              omega_i_dict[f'omega_i_free_{i}'] - mode.omegai])
+        omega_arr_adj = cov_inv @ omega_arr
+        scaled_omega_r_arr.append(omega_arr_adj[0])
+        scaled_omega_i_arr.append(omega_arr_adj[1])
+    scaled_omega_r_arr = np.array(scaled_omega_r_arr)
+    scaled_omega_i_arr = np.array(scaled_omega_i_arr)
+    scaled_distance_arr = np.sqrt(scaled_omega_r_arr**2 * cov[0,0] / n_sig**2 
+                                  + scaled_omega_i_arr**2 * cov[1,1] / n_sig**2)
+    min_distance = np.nanmin(scaled_distance_arr, axis=0)
+    return min_distance
 
 def flattest_region_quadrature(length, arr1, arr2, quantile_range=0.95,
                                normalize_1_by=None, normalize_2_by=2 * np.pi,
