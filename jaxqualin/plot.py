@@ -3,6 +3,7 @@ import matplotlib as mpl
 from matplotlib.ticker import (
     MultipleLocator, AutoMinorLocator, LogLocator, NullFormatter)
 from matplotlib.patches import Ellipse
+import matplotlib.transforms as transforms
 import numpy as np
 
 from .qnmode import *
@@ -743,19 +744,61 @@ def plot_mode_distance(
     ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
     ax.set_ylabel(r"$\tilde{\delta} \omega$")
 
+def plot_covariance_ellipse(cov, mode, ax, n_sig = 1, **kwargs):
+    pearson = cov[0, 1]/np.sqrt(cov[0, 0] * cov[1, 1])
+    # Using a special case to obtain the eigenvalues of this
+    # two-dimensional dataset.
+    ell_radius_x = np.sqrt(1 + pearson)
+    ell_radius_y = np.sqrt(1 - pearson)
+    ellipse = Ellipse((0, 0), width=2 * ell_radius_x, height=2 * ell_radius_y,
+                      **kwargs)
+
+    scale_x = np.sqrt(cov[0, 0]) * n_sig
+    mean_x = mode.omegar
+
+    # calculating the standard deviation of y ...
+    scale_y = np.sqrt(cov[1, 1]) * n_sig
+    mean_y = mode.omegai
+
+    transf = transforms.Affine2D() \
+        .rotate_deg(45) \
+        .scale(scale_x, scale_y) \
+        .translate(mean_x, mean_y)
+
+    ellipse.set_transform(transf + ax.transData)
+    return ax.add_patch(ellipse)
+
 def plot_mode_distance_cov(
         result_full,
         fixed_modes,
         cov_dict,
-        ax = None
+        ax = None,
+        n_sig = 1,
+        indicate_t_start = True,
+        tau_freq = 10,
+        t_start_marker = 'o',
+        t_start_s = 20
 ):
     t0_arr = result_full.t0_arr
+    dt = t0_arr[1] - t0_arr[0]
+    window_length = int(tau_freq/dt) + 1
+    t_start_dict = {}
     if ax is None:
         fig, ax = plt.subplots()
     for mode in fixed_modes:
         cov = cov_dict[mode.string()]
-        delta = closest_free_mode_distance_cov(result_full, mode, cov)
-        ax.semilogy(t0_arr, delta, lw=2, label=mode.tex_string())
+        delta = closest_free_mode_distance_cov(result_full, mode, 
+                                               cov, n_sig = n_sig)
+        p = ax.semilogy(t0_arr, delta, lw=2, label=mode.tex_string())
+        if indicate_t_start:
+            for i in range(0, len(delta) - window_length):
+                if np.all(delta[i:i+window_length] < 1.):
+                    t_start_dict[mode.string()] = t0_arr[i]
+                    ax.scatter(t0_arr[i], delta[i], 
+                               c = p[0].get_color(),
+                               marker = t_start_marker,
+                               s = t_start_s)
+                    break
     ax.legend()
 
     ymin, ymax = ax.get_ylim()
@@ -765,6 +808,9 @@ def plot_mode_distance_cov(
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
     ax.set_ylabel(r"$\tilde{\delta} \omega$")
+
+    if indicate_t_start:
+        return t_start_dict
 
 
 def plot_lm_row(

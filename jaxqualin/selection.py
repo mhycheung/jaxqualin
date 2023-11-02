@@ -835,7 +835,7 @@ def closest_free_mode_distance(result_full, mode, alpha_r=1, alpha_i=1):
     min_distance = np.nanmin(scaled_distance_arr, axis=0)
     return min_distance
 
-def closest_free_mode_distance_cov(result_full, mode, cov):
+def closest_free_mode_distance_cov(result_full, mode, cov, n_sig = 1):
     omega_r_dict = result_full.omega_dict["real"]
     omega_i_dict = result_full.omega_dict["imag"]
     cov_inv = np.linalg.inv(cov)
@@ -849,7 +849,8 @@ def closest_free_mode_distance_cov(result_full, mode, cov):
         scaled_omega_i_arr.append(omega_arr_adj[1])
     scaled_omega_r_arr = np.array(scaled_omega_r_arr)
     scaled_omega_i_arr = np.array(scaled_omega_i_arr)
-    scaled_distance_arr = np.sqrt(scaled_omega_r_arr**2 + scaled_omega_i_arr**2)
+    scaled_distance_arr = np.sqrt(scaled_omega_r_arr**2 * cov[0,0] / n_sig**2 
+                                  + scaled_omega_i_arr**2 * cov[1,1] / n_sig**2)
     min_distance = np.nanmin(scaled_distance_arr, axis=0)
     return min_distance
 
