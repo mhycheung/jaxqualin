@@ -3817,7 +3817,7 @@ modes.</p>
 
 
 <h5 id="jaxqualin.plot.plot_predicted_qnms" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">plot_predicted_qnms</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">predicted_qnm_list</span><span class="p">,</span> <span class="n">alpha_r</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">alpha_i</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">ellipse_edgecolor</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="n">ellipse_facecolor</span><span class="o">=</span><span class="s1">&#39;lightgray&#39;</span><span class="p">,</span> <span class="n">ellipse_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">fix_indx</span><span class="o">=</span><span class="p">[],</span> <span class="n">label_offset</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">change_lim</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="n">cut_at_0</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pred_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">present_modes</span><span class="o">=</span><span class="p">[],</span> <span class="n">edgecolor_present</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">expand_points</span><span class="o">=</span><span class="p">(</span><span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.7</span><span class="p">),</span> <span class="n">xminmin</span><span class="o">=-</span><span class="mi">2</span><span class="p">,</span> <span class="n">xmaxmax</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">yminmin</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">ymaxmax</span><span class="o">=-</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">positive_y_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">plot_predicted_qnms</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">predicted_qnm_list</span><span class="p">,</span> <span class="n">alpha_r</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">alpha_i</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">plot_ellipse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ellipse_edgecolor</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="n">ellipse_facecolor</span><span class="o">=</span><span class="s1">&#39;lightgray&#39;</span><span class="p">,</span> <span class="n">ellipse_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">fix_indx</span><span class="o">=</span><span class="p">[],</span> <span class="n">label_offset</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">change_lim</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="n">cut_at_0</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pred_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">present_modes</span><span class="o">=</span><span class="p">[],</span> <span class="n">edgecolor_present</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">expand_points</span><span class="o">=</span><span class="p">(</span><span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.7</span><span class="p">),</span> <span class="n">xminmin</span><span class="o">=-</span><span class="mi">2</span><span class="p">,</span> <span class="n">xmaxmax</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">yminmin</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">ymaxmax</span><span class="o">=-</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">positive_y_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span></code>
 
 </h5>
 
@@ -3894,6 +3894,20 @@ complex plane.  </p>
           </td>
           <td>
                 <code>0.05</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>plot_ellipse</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Whether to plot the ellipse.</p>
+            </div>
+          </td>
+          <td>
+                <code>True</code>
           </td>
         </tr>
         <tr>
