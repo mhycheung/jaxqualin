@@ -134,6 +134,7 @@ def plot_predicted_qnms(
         predicted_qnm_list: List[mode],
         alpha_r: float=0.05,
         alpha_i: float=0.05,
+        plot_ellipse: bool=True,
         ellipse_edgecolor: str='gray',
         ellipse_facecolor: str='lightgray',
         ellipse_alpha: float=0.5,
@@ -163,6 +164,7 @@ def plot_predicted_qnms(
             complex plane.  
         alpha_r: The half width of the ellipse in the real direction.
         alpha_i: The half width of the ellipse in the imaginary direction.
+        plot_ellipse: Whether to plot the ellipse.
         ellipse_edgecolor: The color of the ellipse edge.
         ellipse_facecolor: The color of the ellipse face.
         ellipse_alpha: The alpha value of the ellipse.
@@ -247,9 +249,11 @@ def plot_predicted_qnms(
                                 facecolor=ellipse_facecolor,
                                 edgecolor=ellipse_edgecolor,
                                 alpha=ellipse_alpha))
-    for e in ells:
-        ax.add_artist(e)
-        e.set_clip_box(ax.bbox)
+    
+    if plot_ellipse:
+        for e in ells:
+            ax.add_artist(e)
+            e.set_clip_box(ax.bbox)
 
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax)
@@ -699,12 +703,14 @@ def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
 
 
 def plot_mismatch(results_full, ax=None, c='k', make_ax=True,
-                  alpha=1):
+                  alpha=1, label = None, legend = False):
     if ax is None:
         fig, ax = plt.subplots()
     t0_arr = results_full.t0_arr
     mismatch_arr = results_full.mismatch_arr
-    ax.semilogy(t0_arr, mismatch_arr, c=c, alpha=alpha)
+    ax.semilogy(t0_arr, mismatch_arr, c=c, alpha=alpha, label = label)
+    if legend:
+        ax.legend()
 
     if make_ax:
         ax.set_xlim(t0_arr[0], t0_arr[-1])
@@ -726,6 +732,29 @@ def plot_mode_distance(
         delta = closest_free_mode_distance(result_full, mode,
                                            alpha_r=omega_r_tol,
                                            alpha_i=omega_i_tol)
+        ax.semilogy(t0_arr, delta, lw=2, label=mode.tex_string())
+    ax.legend()
+
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(ymin, ymax)
+    ax.axhspan(1, 1e20, color="gray", alpha=0.5)
+    ax.set_xlim(t0_arr[0], t0_arr[-1])
+    ax.xaxis.set_minor_locator(AutoMinorLocator())
+    ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
+    ax.set_ylabel(r"$\tilde{\delta} \omega$")
+
+def plot_mode_distance_cov(
+        result_full,
+        fixed_modes,
+        cov_dict,
+        ax = None
+):
+    t0_arr = result_full.t0_arr
+    if ax is None:
+        fig, ax = plt.subplots()
+    for mode in fixed_modes:
+        cov = cov_dict[mode.string()]
+        delta = closest_free_mode_distance_cov(result_full, mode, cov)
         ax.semilogy(t0_arr, delta, lw=2, label=mode.tex_string())
     ax.legend()
 
