@@ -3,6 +3,7 @@ import matplotlib as mpl
 from matplotlib.ticker import (
     MultipleLocator, AutoMinorLocator, LogLocator, NullFormatter)
 from matplotlib.patches import Ellipse
+import matplotlib.transforms as transforms
 import numpy as np
 
 from .qnmode import *
@@ -134,6 +135,7 @@ def plot_predicted_qnms(
         predicted_qnm_list: List[mode],
         alpha_r: float=0.05,
         alpha_i: float=0.05,
+        plot_ellipse: bool=True,
         ellipse_edgecolor: str='gray',
         ellipse_facecolor: str='lightgray',
         ellipse_alpha: float=0.5,
@@ -163,6 +165,7 @@ def plot_predicted_qnms(
             complex plane.  
         alpha_r: The half width of the ellipse in the real direction.
         alpha_i: The half width of the ellipse in the imaginary direction.
+        plot_ellipse: Whether to plot the ellipse.
         ellipse_edgecolor: The color of the ellipse edge.
         ellipse_facecolor: The color of the ellipse face.
         ellipse_alpha: The alpha value of the ellipse.
@@ -247,9 +250,11 @@ def plot_predicted_qnms(
                                 facecolor=ellipse_facecolor,
                                 edgecolor=ellipse_edgecolor,
                                 alpha=ellipse_alpha))
-    for e in ells:
-        ax.add_artist(e)
-        e.set_clip_box(ax.bbox)
+    
+    if plot_ellipse:
+        for e in ells:
+            ax.add_artist(e)
+            e.set_clip_box(ax.bbox)
 
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax)
@@ -699,12 +704,14 @@ def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
 
 
 def plot_mismatch(results_full, ax=None, c='k', make_ax=True,
-                  alpha=1):
+                  alpha=1, label = None, legend = False):
     if ax is None:
         fig, ax = plt.subplots()
     t0_arr = results_full.t0_arr
     mismatch_arr = results_full.mismatch_arr
-    ax.semilogy(t0_arr, mismatch_arr, c=c, alpha=alpha)
+    ax.semilogy(t0_arr, mismatch_arr, c=c, alpha=alpha, label = label)
+    if legend:
+        ax.legend()
 
     if make_ax:
         ax.set_xlim(t0_arr[0], t0_arr[-1])
@@ -736,6 +743,74 @@ def plot_mode_distance(
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
     ax.set_ylabel(r"$\tilde{\delta} \omega$")
+
+def plot_covariance_ellipse(cov, mode, ax, n_sig = 1, **kwargs):
+    pearson = cov[0, 1]/np.sqrt(cov[0, 0] * cov[1, 1])
+    # Using a special case to obtain the eigenvalues of this
+    # two-dimensional dataset.
+    ell_radius_x = np.sqrt(1 + pearson)
+    ell_radius_y = np.sqrt(1 - pearson)
+    ellipse = Ellipse((0, 0), width=2 * ell_radius_x, height=2 * ell_radius_y,
+                      **kwargs)
+
+    scale_x = np.sqrt(cov[0, 0]) * n_sig
+    mean_x = mode.omegar
+
+    # calculating the standard deviation of y ...
+    scale_y = np.sqrt(cov[1, 1]) * n_sig
+    mean_y = mode.omegai
+
+    transf = transforms.Affine2D() \
+        .rotate_deg(45) \
+        .scale(scale_x, scale_y) \
+        .translate(mean_x, mean_y)
+
+    ellipse.set_transform(transf + ax.transData)
+    return ax.add_patch(ellipse)
+
+def plot_mode_distance_cov(
+        result_full,
+        fixed_modes,
+        cov_dict,
+        ax = None,
+        n_sig = 1,
+        indicate_t_start = True,
+        tau_freq = 10,
+        t_start_marker = 'o',
+        t_start_s = 20
+):
+    t0_arr = result_full.t0_arr
+    dt = t0_arr[1] - t0_arr[0]
+    window_length = int(tau_freq/dt) + 1
+    t_start_dict = {}
+    if ax is None:
+        fig, ax = plt.subplots()
+    for mode in fixed_modes:
+        cov = cov_dict[mode.string()]
+        delta = closest_free_mode_distance_cov(result_full, mode, 
+                                               cov, n_sig = n_sig)
+        p = ax.semilogy(t0_arr, delta, lw=2, label=mode.tex_string())
+        if indicate_t_start:
+            for i in range(0, len(delta) - window_length):
+                if np.all(delta[i:i+window_length] < 1.):
+                    t_start_dict[mode.string()] = t0_arr[i]
+                    ax.scatter(t0_arr[i], delta[i], 
+                               c = p[0].get_color(),
+                               marker = t_start_marker,
+                               s = t_start_s)
+                    break
+    ax.legend()
+
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(ymin, ymax)
+    ax.axhspan(1, 1e20, color="gray", alpha=0.5)
+    ax.set_xlim(t0_arr[0], t0_arr[-1])
+    ax.xaxis.set_minor_locator(AutoMinorLocator())
+    ax.set_xlabel(r"$(t_0 - t_{\rm peak})/M$")
+    ax.set_ylabel(r"$\tilde{\delta} \omega$")
+
+    if indicate_t_start:
+        return t_start_dict
 
 
 def plot_lm_row(
@@ -934,14 +1009,16 @@ def plot_mode_vs_lin_mode_ampltiude(
     df_merged = df_merged_lin.merge(df_quad, on="SXS_num", how="inner")
     df_merged = df_merged.loc[~df_merged["SXS_num"].isin(skip_num)]
     df_merged.reset_index(drop=True, inplace=True)
-    xerr = np.sqrt((df_merged["A_hi_1"] - df_merged["A_low_1"])
-                   ** 2 + (df_merged["A_hi_2"] - df_merged["A_low_2"])**2)
-    yerr = df_merged["A_hi"] - df_merged["A_low"]
+    xerr = df_merged["A_med_1"] * df_merged["A_med_2"] * np.sqrt(
+        ((df_merged["A_hi_1"] - df_merged["A_low_1"])/df_merged["A_med_1"])** 2 + 
+        ((df_merged["A_hi_2"] - df_merged["A_low_2"])/df_merged["A_med_2"])**2
+        )/ df_merged["M_rem_1"]**2
+    yerr = (df_merged["A_hi"] - df_merged["A_low"]) / df_merged["M_rem_1"]
     errxlogs = xerr / (df_merged["A_med_1"] *
                        df_merged["A_med_2"]) / np.log(10)
     errylogs = yerr / df_merged["A_med"] / np.log(10)
-    xs = df_merged["A_med_1"] * df_merged["A_med_2"] * df_merged["M_rem_1"]**2
-    ys = df_merged["A_med"] * df_merged["M_rem_1"]
+    xs = df_merged["A_med_1"] * df_merged["A_med_2"] / df_merged["M_rem_1"]**2
+    ys = df_merged["A_med"] / df_merged["M_rem_1"]
     if fit:
         fitfunc = linfunc3
         beta0 = [0.]
@@ -1127,7 +1204,8 @@ def plot_mode_vs_mode_amplitude(
         fit=False,
         skip_num=[],
         norm=None,
-        alpha=1):
+        alpha=1,
+        M_rem_adjust = True):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) |
                   ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1) & (df["retro"]))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) |
@@ -1145,10 +1223,15 @@ def plot_mode_vs_mode_amplitude(
     xerr_hi = df_merged["A_hi_2"] - df_merged["A_med_2"]
     yerr_low = df_merged["A_med_1"] - df_merged["A_low_1"]
     yerr_hi = df_merged["A_hi_1"] - df_merged["A_med_1"]
-    xerr = xerr_low + xerr_hi
-    yerr = yerr_low + yerr_hi
-    xs = df_merged["A_med_2"]
-    ys = df_merged["A_med_1"]
+    if M_rem_adjust:
+        M_adjust = df_merged["M_rem_1"]
+    else:
+        M_adjust = 1
+        
+    xerr = (xerr_low + xerr_hi) / M_adjust
+    yerr = (yerr_low + yerr_hi) / M_adjust
+    xs = (df_merged["A_med_2"]) / M_adjust
+    ys = (df_merged["A_med_1"]) / M_adjust
 
     if fit:
         if fit_type == "linear":
@@ -1360,14 +1443,17 @@ def plot_mode_vs_lin_mode_ratio(
     df_merged = df_merged_lin.merge(df_quad, on="SXS_num", how="inner")
     df_merged = df_merged.loc[~df_merged["SXS_num"].isin(skip_num)]
     df_merged.reset_index(drop=True, inplace=True)
-    xerr = np.sqrt((df_merged["A_hi_1"] - df_merged["A_low_1"])
-                   ** 2 + (df_merged["A_hi_2"] - df_merged["A_low_2"])**2)
-    yerr = df_merged["A_hi"] - df_merged["A_low"]
+
+    xerr = df_merged["A_med_1"] * df_merged["A_med_2"] * np.sqrt(
+        ((df_merged["A_hi_1"] - df_merged["A_low_1"])/df_merged["A_med_1"])** 2 + 
+        ((df_merged["A_hi_2"] - df_merged["A_low_2"])/df_merged["A_med_2"])**2
+        )/ df_merged["M_rem_1"]**2
+    yerr = (df_merged["A_hi"] - df_merged["A_low"]) / df_merged["M_rem_1"]
     errxlogs = xerr / (df_merged["A_med_1"] *
                        df_merged["A_med_2"]) / np.log(10)
     errylogs = yerr / df_merged["A_med"] / np.log(10)
-    xs = df_merged["A_med_1"] * df_merged["A_med_2"] * df_merged["M_rem_1"]**2
-    ys = df_merged["A_med"] * df_merged["M_rem_1"]
+    xs = df_merged["A_med_1"] * df_merged["A_med_2"] / df_merged["M_rem_1"]**2
+    ys = df_merged["A_med"] / df_merged["M_rem_1"]
     chis = df_merged["chi_rem_1"]
     etas = df_merged["eta_1"]
     ratio = ys / xs
@@ -1448,7 +1534,8 @@ def plot_mode_vs_mode_amplitude_quad_ratio(
         color_string="eta",
         label_SXS=False,
         outlier_tol=0.4,
-        alpha=1):
+        alpha=1,
+        M_rem_adjust = True):
     df_1 = df.loc[((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_pro_1) & (df["retro"] == False)) |
                   ((df["l"] == l1) & (df["m"] == m1) & (df["mode_string"] == mode_string_retro_1) & (df["retro"]))]
     df_2 = df.loc[((df["l"] == l2) & (df["m"] == m2) & (df["mode_string"] == mode_string_pro_2) & (df["retro"] == False)) |
@@ -1466,10 +1553,16 @@ def plot_mode_vs_mode_amplitude_quad_ratio(
     xerr_hi = df_merged["A_hi_2"] - df_merged["A_med_2"]
     yerr_low = df_merged["A_med_1"] - df_merged["A_low_1"]
     yerr_hi = df_merged["A_hi_1"] - df_merged["A_med_1"]
-    xerr = xerr_low + xerr_hi
-    yerr = yerr_low + yerr_hi
-    xs = df_merged["A_med_2"]
-    ys = df_merged["A_med_1"]
+
+    if M_rem_adjust:
+        M_adjust = df_merged["M_rem_1"]
+    else:
+        M_adjust = 1
+
+    xerr = (xerr_low + xerr_hi) / M_adjust
+    yerr = (yerr_low + yerr_hi) / M_adjust
+    xs = df_merged["A_med_2"] / M_adjust
+    ys = df_merged["A_med_1"] / M_adjust
     chis = df_merged["chi_rem_1"]
     etas = df_merged["eta_1"]
     chi_ps = df_merged["chi_p_1"]
