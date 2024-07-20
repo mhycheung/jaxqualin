@@ -1,1 +1,3 @@
-1.827 - 1.306 \chi_- + 2.247 \chi_-^2 - 36.8 \eta \chi_-^2 - 2.713 \chi_+^3 + 3.122 \chi_+^2 \chi_- - 567 \eta^4 - 42.68 \eta^3 \chi_+ + 132.1 \eta^2 \chi_-^2 + 14.34 \eta \chi_+^3 - 17.75 \eta \chi_+^2 \chi_- - 17.01 \eta \chi_-^3 + 2031 \eta^5 - 636.3 \eta^4 \chi_- + 109.2 \eta^2 \chi_-^3 - 12.54 \eta \chi_+ \chi_-^3 + 9.589 \eta \chi_-^4
+6.697 - 148.3 \eta - 1.035 \chi_- + 1603 \eta^2 - 0.96 \eta \chi_+ + 3.022 \chi_+ \chi_- - 4.27 \chi_-^2 - 7388 \eta^3 - 37.87 \eta^2 \chi_- - 15.85 \eta \chi_+ \chi_- + 12060 \eta^4 - 13.17 \eta \chi_+ \chi_-^2 + 11.61 \eta \chi_-^3 - 2.666 \chi_+^2 \chi_-^2 + 4.661 \chi_-^4
+equal mass adjustment:
+0.9376 |\chi_-|

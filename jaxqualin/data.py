@@ -96,11 +96,15 @@ def hyperfit_list_to_func(hyperfit_list, m, var='A', PN=True):
     if PN:
         def hyperfit_func(eta, chi_p, chi_m):
             val = 0
+            chi_m_add_coef = 0
             for term_list in hyperfit_list:
-                val += term_list[3] * eta**term_list[0] * \
-                    chi_p**term_list[1] * chi_m**term_list[2]
+                if np.isnan(term_list[0]) and np.isnan(term_list[1]) and term_list[2] == 1:
+                    chi_m_add_coef = term_list[3] 
+                else:
+                    val += term_list[3] * eta**term_list[0] * \
+                        chi_p**term_list[1] * chi_m**term_list[2]
             if var == 'A':
-                if m % 2 == 0:
+                if chi_m_add_coef == 0:
                     adj = eta
                 else:
                     delta = np.sqrt(1 - 4 * eta)
@@ -109,7 +113,7 @@ def hyperfit_list_to_func(hyperfit_list, m, var='A', PN=True):
                 adj = 1
             else:
                 raise ValueError("var must be 'A' or 'phi'")
-            return adj * val
+            return adj * val + eta * chi_m_add_coef * np.abs(chi_m)
     else:
         def hyperfit_func(q, chi_1, chi_2):
             eta = q / (1 + q)**2

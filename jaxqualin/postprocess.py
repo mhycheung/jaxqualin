@@ -398,7 +398,8 @@ def df_get_mode_3D_full(
                     'phi_low',
                     'phi_hi',
                     'chi_rem',
-                    't_flat_start']]
+                    't_flat_start',
+                    'retro']]
 
 
 def NP_quantities(x):

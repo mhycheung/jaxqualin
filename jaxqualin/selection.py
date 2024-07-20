@@ -576,6 +576,8 @@ class ModeSearchAllFreeVaryingNSXS:
             performs the mode search.
         found_modes_final: A list of `mode` objects that contains the final
             list of modes found by the best mode searcher.
+        download: A boolean that specifies whether to download the waveform,
+            for `sxs.load`.
 
     Methods:
         mode_search_varying_N_sxs: Performs the mode searches.
@@ -613,6 +615,7 @@ class ModeSearchAllFreeVaryingNSXS:
     save_mode_searcher: bool
     mode_searcher_vary_N: ModeSearchAllFreeVaryingN
     found_modes_final: List[mode]
+    download: Optional[bool]
 
     def __init__(
             self,
@@ -650,7 +653,8 @@ class ModeSearchAllFreeVaryingNSXS:
                   'relevant_lm_list': [],
                   'retro_def_orbit': True,
                   'run_string_fitter': None,
-                  'run_string': None}
+                  'run_string': None,
+                  'download': None}
         kwargs.update(kwargs_in)
         self.N_list = kwargs['N_list']
         self.postfix_string = kwargs['postfix_string']
@@ -690,6 +694,7 @@ class ModeSearchAllFreeVaryingNSXS:
         else:
             self.set_seed = self.kwargs['default_seed']
         self.save_mode_searcher = self.kwargs['save_mode_searcher']
+        self.download = kwargs["download"]
 
     def mode_search_varying_N_sxs(self) -> None:
         """
@@ -736,7 +741,7 @@ class ModeSearchAllFreeVaryingNSXS:
         #     #     self.SXSnum, self.l, self.m)
         # else:
         self.h, self.M, self.a, self.Lev = get_waveform_SXS(
-            self.SXSnum, self.l, self.m)
+            self.SXSnum, self.l, self.m, download = self.download)
         self.h.update_peaktime(peaktime_dom)
 
     def pickle_save(self) -> None:

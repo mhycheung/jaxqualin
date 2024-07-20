@@ -173,14 +173,14 @@ class waveform:
         self.m = m
 
 
-def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1=120):
-    catalog = sxs.catalog.Catalog.load()
+def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1=120, download = None):
+    catalog = sxs.catalog.Catalog.load(download = download)
     waveformloadname = catalog.select(
         f"SXS:BBH:{SXSnum}/Lev./rhOverM")[-1 + res]
     metaloadname = catalog.select(
         f"SXS:BBH:{SXSnum}/Lev./metadata.json")[-1 + res]
-    hs = sxs.load(waveformloadname, extrapolation_order=N_ext)
-    metadata = sxs.load(metaloadname)
+    hs = sxs.load(waveformloadname, extrapolation_order=N_ext, download = download)
+    metadata = sxs.load(metaloadname, download = download)
     Level = metaloadname[metaloadname.find("Lev") + 3]
     indx = hs.index(l, m)
     h = waveform(hs[:, indx].time, hs[:, indx].real +
@@ -758,9 +758,9 @@ def mismatch_min_phase(t1, h1, t2, h2, guess=[0, 0], tnum=2000):
 
 def estimate_resolution_mismatch(
     SXS_num, l, m, t0s=np.linspace(
-        0, 50, num=51), remove_end=100):
-    h_hi, _, _, Level, _ = get_waveform_SXS(SXS_num, l, m, res=0)
-    h_low, _, _, Level, _ = get_waveform_SXS(SXS_num, l, m, res=-1)
+        0, 50, num=51), remove_end=100, download = None):
+    h_hi, _, _, Level, _ = get_waveform_SXS(SXS_num, l, m, res=0, download = download)
+    h_low, _, _, Level, _ = get_waveform_SXS(SXS_num, l, m, res=-1, download = download)
     t_low_more, h_low_more_r, h_low_more_i = h_low.postmerger(-10)
     h_low_more = h_low_more_r + 1.j * h_low_more_i
 
