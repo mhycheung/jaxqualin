@@ -262,7 +262,9 @@ class ModeSearchAllFreeLM:
             "initial_dict": {},
             "A_guess_relative": True,
             "set_seed": 1234,
-            'fit_save_prefix': FIT_SAVE_PATH}
+            'fit_save_prefix': FIT_SAVE_PATH,
+            'BBH_potential_modes': True,
+            'potential_modes_custom': []}
         kwargs.update(kwargs_in)
         self.kwargs = kwargs
         self.retro_def_orbit = self.kwargs["retro_def_orbit"]
@@ -273,17 +275,22 @@ class ModeSearchAllFreeLM:
         self.tau_agnostic = self.kwargs["tau_agnostic"]
         self.p_agnostic = self.kwargs["p_agnostic"]
         self.recoil_n_max = self.kwargs["recoil_n_max"]
-        if self.a >= self.a_recoil_tol:
-            self.potential_modes_full = potential_modes(
-                self.l,
-                self.m,
-                self.M,
-                self.a,
-                self.relevant_lm_list,
-                retro_def_orbit=self.retro_def_orbit)
+        if self.kwargs["BBH_potential_modes"]:
+            if self.a >= self.a_recoil_tol:
+                self.potential_modes_full = potential_modes(
+                    self.l,
+                    self.m,
+                    self.M,
+                    self.a,
+                    self.relevant_lm_list,
+                    retro_def_orbit=self.retro_def_orbit)
+            else:
+                self.potential_modes_full = potential_modes(self.l, self.m, self.M, self.a, [(
+                    self.l, self.m)], retro_def_orbit=self.retro_def_orbit, recoil_n_max=self.recoil_n_max)
         else:
-            self.potential_modes_full = potential_modes(self.l, self.m, self.M, self.a, [(
-                self.l, self.m)], retro_def_orbit=self.retro_def_orbit, recoil_n_max=self.recoil_n_max)
+            self.potential_modes_full = []
+        self.potential_modes_full.extend(self.kwargs["potential_modes_custom"])
+        self.potential_modes_full = remove_duplicated_modes(self.potential_modes_full)
         self.potential_modes = self.potential_modes_full.copy()
         self.load_pickle = self.kwargs["load_pickle"]
         self.fit_kwargs = self.kwargs["fit_kwargs"]
