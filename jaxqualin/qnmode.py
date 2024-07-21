@@ -543,6 +543,17 @@ def first_n_overtones_string(l, m, n):
     strings = [f"{l}.{m}.{i}" for i in range(n + 1)]
     return "_".join(strings)
 
+def remove_duplicated_modes(qnm_list):
+    qnm_list_clean = []
+    for mode in qnm_list:
+        duplicate = False
+        for mode_clean in qnm_list_clean:
+            if mode_clean.omega == mode.omega:
+                duplicate = True
+                break
+        if not duplicate:
+            qnm_list_clean.append(mode)
+    return qnm_list_clean
 
 def qnm_string_m_reverse(str):
     if str == 'constant':
