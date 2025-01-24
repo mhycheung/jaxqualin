@@ -677,7 +677,6 @@ class ModeSearchAllFreeVaryingNSXS:
         else:
             self.relevant_lm_list_override = False
 
-        self.get_waveform()
         self.N_list_string = '_'.join(list(map(str, self.N_list)))
         if kwargs["run_string_fitter"] is None:
             self.run_string_fitter = f"SXS{self.SXSnum}_lm_{self.l}.{self.m}"
@@ -702,6 +701,7 @@ class ModeSearchAllFreeVaryingNSXS:
             self.set_seed = self.kwargs['default_seed']
         self.save_mode_searcher = self.kwargs['save_mode_searcher']
         self.download = kwargs["download"]
+        self.get_waveform()
 
     def mode_search_varying_N_sxs(self) -> None:
         """
