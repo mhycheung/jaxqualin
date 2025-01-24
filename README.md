@@ -59,15 +59,19 @@ Interactive plots of the methods paper results can be found under the Results ta
 Please cite the methods paper if you used our package to produce results in your publication.
 Here is the BibTeX entry:
 ```
-@misc{cheung2023extracting,
-      title={Extracting linear and nonlinear quasinormal
-      modes from black hole merger simulations}, 
-      author={Mark Ho-Yeuk Cheung and Emanuele Berti and 
-      Vishal Baibhav and Roberto Cotesta},
-      year={2023},
-      eprint={2310.04489},
-      archivePrefix={arXiv},
-      primaryClass={gr-qc}
+@article{Cheung:2023vki,
+    author = "Cheung, Mark Ho-Yeuk and Berti, Emanuele and Baibhav, Vishal and Cotesta, Roberto",
+    title = "{Extracting linear and nonlinear quasinormal modes from black hole merger simulations}",
+    eprint = "2310.04489",
+    archivePrefix = "arXiv",
+    primaryClass = "gr-qc",
+    doi = "10.1103/PhysRevD.109.044069",
+    journal = "Phys. Rev. D",
+    volume = "109",
+    number = "4",
+    pages = "044069",
+    year = "2024",
+    note = "[Erratum: Phys.Rev.D 110, 049902 (2024)]"
 }
 ```
 
