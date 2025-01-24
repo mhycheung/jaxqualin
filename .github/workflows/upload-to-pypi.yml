@@ -39,7 +39,7 @@ jobs:
       run: |
         pytest
     - name: Build and upload to PyPI
-      if: ${{ (matrix.python-version == '3.11') }}
+      if: ${{ (matrix.python-version == '3.12') }}
       run: |
         python -m build
         python -m twine upload dist/*
