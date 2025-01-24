@@ -27,6 +27,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 pytest
         python -m pip install --upgrade build twine
+        sudo apt-get install -y libfftw3-dev
         pip install .
     - name: Lint with flake8
       run: |
