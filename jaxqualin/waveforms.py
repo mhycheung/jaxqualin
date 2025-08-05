@@ -172,16 +172,16 @@ class waveform:
         self.l = l
         self.m = m
 
+def get_SXS_lev(SXSnum, res=0, download = None):
+    sim = sxs.load(f"SXS:BBH:{SXSnum}", download = download)
+    lev_numbers = sim.lev_numbers
+    lev = lev_numbers[-1 + res]
+    return sim, lev
 
 def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1=120, download = None):
-    catalog = sxs.catalog.Catalog.load(download = download)
-    waveformloadname = catalog.select(
-        f"SXS:BBH:{SXSnum}/Lev./rhOverM")[-1 + res]
-    metaloadname = catalog.select(
-        f"SXS:BBH:{SXSnum}/Lev./metadata.json")[-1 + res]
-    hs = sxs.load(waveformloadname, extrapolation_order=N_ext, download = download)
-    metadata = sxs.load(metaloadname, download = download)
-    Level = metaloadname[metaloadname.find("Lev") + 3]
+    sim, lev = get_SXS_lev(SXSnum, res, download)
+    hs = sxs.load(f"SXS:BBH:{SXSnum}/Lev{lev}", extrapolation = f"N{N_ext}").h
+    metadata = sim.metadata
     indx = hs.index(l, m)
     h = waveform(hs[:, indx].time, hs[:, indx].real +
                  1.j * hs[:, indx].imag, l=l, m=m, t_end=t1)
@@ -189,7 +189,7 @@ def get_waveform_SXS(SXSnum, l, m, res=0, N_ext=2, t1=120, download = None):
     a_arr = metadata['remnant_dimensionless_spin']
     # TODO: deal with spins with x and y component
     af = np.linalg.norm(a_arr) * np.sign(a_arr[2])
-    return h, Mf, af, Level
+    return h, Mf, af, lev
 
 
 def get_waveform_CCE(CCEnum, l, m, Lev=5, t1=120):
@@ -215,26 +215,19 @@ def get_waveform_CCE(CCEnum, l, m, Lev=5, t1=120):
     # return h, Mf, af, Lev
 
 
-def get_M_a_SXS(SXSnum, res=0):
-    catalog = sxs.catalog.Catalog.load()
-    metaloadname = catalog.select(
-        f"SXS:BBH:{SXSnum}/Lev./metadata.json")[-1 + res]
-    metadata = sxs.load(metaloadname)
+def get_M_a_SXS(SXSnum, res=0, download = None):
+    sim, lev = get_SXS_lev(SXSnum, res, download)
+    metadata = sim.metadata
     Mf = metadata['remnant_mass']
     a_arr = metadata['remnant_dimensionless_spin']
     af = np.linalg.norm(a_arr)
     return Mf, af
 
 
-def get_SXS_waveform_dict(SXSnum, res=0, N_ext=2):
-    catalog = sxs.catalog.Catalog.load()
-    waveformloadname = catalog.select(
-        f"SXS:BBH:{SXSnum}/Lev./rhOverM")[-1 + res]
-    metaloadname = catalog.select(
-        f"SXS:BBH:{SXSnum}/Lev./metadata.json")[-1 + res]
-    h = sxs.load(waveformloadname, extrapolation_order=N_ext)
-    metadata = sxs.load(metaloadname)
-    Level = metaloadname[metaloadname.find("Lev") + 3]
+def get_SXS_waveform_dict(SXSnum, res=0, N_ext=2, download = None):
+    sim, lev = get_SXS_lev(SXSnum, res, download)
+    h = sxs.load(f"SXS:BBH:{SXSnum}/Lev{lev}", extrapolation = f"N{N_ext}").h
+    metadata = sim.metadata
     modes = h.LM
     hdict = {}
     for mode in modes:
@@ -247,7 +240,7 @@ def get_SXS_waveform_dict(SXSnum, res=0, N_ext=2):
     Mf = metadata['remnant_mass']
     a_arr = metadata['remnant_dimensionless_spin']
     af = np.linalg.norm(a_arr) * np.sign(a_arr[2])
-    return Mf, af, Level, hdict
+    return Mf, af, lev, hdict
 
 
 def get_CCE_waveform_dict(CCEnum, Lev=5):
@@ -351,11 +344,9 @@ def relevant_modes_dict_to_lm_tuple(relevant_modes_dict):
     return lm_string_list_to_tuple(lm_string_list)
 
 
-def get_chi_q_SXS(SXSnum, res=0):
-    catalog = sxs.catalog.Catalog.load()
-    metaloadname = catalog.select(
-        f"SXS:BBH:{SXSnum}/Lev./metadata.json")[-1 + res]
-    metadata = sxs.load(metaloadname)
+def get_chi_q_SXS(SXSnum, res=0, download = None):
+    sim, lev = get_SXS_lev(SXSnum, res, download)
+    metadata = sim.metadata
     q = metadata['reference_mass_ratio']
     chi_1_z = metadata['reference_dimensionless_spin1'][2]
     chi_2_z = metadata['reference_dimensionless_spin2'][2]
