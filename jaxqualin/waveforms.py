@@ -30,7 +30,7 @@ ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 # _CCE_radext_list = [292, 261, 250, 236, 274, 273, 270, 305, 270, 235, 222, 223, 237]
 
-ArrayImpl = jaxlib.xla_extension.ArrayImpl
+ArrayImpl = jax.Array
 
 
 class waveform:

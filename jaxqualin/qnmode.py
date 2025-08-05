@@ -8,9 +8,9 @@ from .utils import *
 import itertools
 
 from typing import List, Tuple, Union
-import jaxlib
+import jax
 
-ArrayImpl = jaxlib.xla_extension.ArrayImpl
+ArrayImpl = jax.Array
 
 
 class mode_free:
@@ -29,11 +29,11 @@ class mode_free:
         spinseq_list_neg_a: Same as `spinseq_list` but for the retrograde
             branch of the QNM solution.
         omegar: The real part of the QNM , if fixed.
-            `jaxlib.xla_extension.ArrayImpl` of a single `jnp.float64`.
+            `jax.Array` of a single `jnp.float64`.
         omegai: The imaginary part of the QNM frequency, if fixed.
-            `jaxlib.xla_extension.ArrayImpl` of a single `jnp.float64`.
+            `jax.Array` of a single `jnp.float64`.
         omega: The complex QNM frequency, if fixed.
-            `jaxlib.xla_extension.ArrayImpl` of a single `jnp.complex128`.
+            `jax.Array` of a single `jnp.complex128`.
         M: The mass of the black hole, if fixed.
         a: The spin parameter of the black hole, if fixed.
 
