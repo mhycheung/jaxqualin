@@ -20,11 +20,16 @@ import warnings
 from .waveforms import waveform
 
 from typing import List, Tuple, Union, Optional, Dict, Any
+from functools import partial
 
-from jax import config
+from jax import config, jit
 config.update("jax_enable_x64", True)
 
 FIT_SAVE_PATH = os.path.join(os.getcwd(), ".jaxqualin_cache/fits")
+
+
+# Module-level flag to track if full warmup has been done
+_FULL_WARMUP_DONE = False
 
 
 def CurveFit():
@@ -445,6 +450,132 @@ class QNMFitResult:
         self.status = status
 
 
+def model_func_optimized(nonlinear_params, t, omegar_fixed, omegai_fixed, mirror_ratio_list, N_free, N_fix, include_mirror):
+    omegar_arr = nonlinear_params[0:N_free]
+    omegai_arr = nonlinear_params[N_free:2*N_free]
+    
+    basis = []
+    # fixed modes
+    for i in range(N_fix):
+        omega = omegar_fixed[i] + 1.j * omegai_fixed[i]
+        basis.append(jnp.exp(-1.j * omega * t))
+        if include_mirror:
+            mirror_ratio = mirror_ratio_list[i]
+            basis.append(mirror_ratio[0] * jnp.exp(-1.j * (-omega.real + 1.j*omega.imag) * t - mirror_ratio[1]))
+
+    # free modes
+    for i in range(N_free):
+        omega = omegar_arr[i] + 1.j * omegai_arr[i]
+        basis.append(jnp.exp(-1.j * omega * t))
+
+    return jnp.array(basis).T
+
+def residual_func_optimized(nonlinear_params, args, N_free, N_fix, include_mirror):
+    t, y, sigma, omegar_fixed, omegai_fixed, mirror_ratio_list, mask = args
+    basis = model_func_optimized(nonlinear_params, t, omegar_fixed, omegai_fixed, mirror_ratio_list, N_free, N_fix, include_mirror)
+    
+    basis_masked = basis * mask[:, None]
+    y_masked = y * mask
+    
+    linear_params, _, _, _ = jnp.linalg.lstsq(basis_masked/sigma[:, None], y_masked/sigma)
+    
+    y_fit = jnp.dot(basis, linear_params)
+    residual = (y - y_fit) * mask
+    return jnp.concatenate([residual.real, residual.imag])
+
+
+def _do_optimization(params0, args, N_free, N_fix, include_mirror, max_nfev):
+    """JIT-compiled optimization function."""
+    residual = partial(residual_func_optimized, N_free=N_free, N_fix=N_fix, include_mirror=include_mirror)
+    solver = optx.LevenbergMarquardt(rtol=1e-8, atol=1e-8)
+    sol = optx.least_squares(residual, solver, params0, 
+                             args=args, max_steps=max_nfev,
+                             throw=False)
+    return sol.value
+
+
+def _compute_linear_params_and_popt(final_nonlinear_params, time, y, sigma, mask, 
+                                     omegar_fixed, omegai_fixed, mirror_ratio_arr,
+                                     N_free, N_fix, include_mirror):
+    """JIT-compiled function to compute linear parameters and assemble popt."""
+    # Compute final basis and linear parameters
+    final_basis = model_func_optimized(final_nonlinear_params, time, omegar_fixed, 
+                                       omegai_fixed, mirror_ratio_arr, N_free, N_fix, include_mirror)
+    final_basis_masked = final_basis * mask[:, None]
+    y_masked = y * mask
+    final_linear_params, _, _, _ = jnp.linalg.lstsq(final_basis_masked/sigma[:, None], y_masked/sigma)
+    
+    # Extract nonlinear parameters
+    omegar_final = final_nonlinear_params[0:N_free]
+    omegai_final = final_nonlinear_params[N_free:2*N_free]
+    
+    # Assemble popt array
+    popt = jnp.zeros(2*N_fix + 4*N_free)
+    A_fix = jnp.abs(final_linear_params[0:N_fix])
+    phi_fix = jnp.angle(final_linear_params[0:N_fix])
+    popt = popt.at[0:2*N_fix:2].set(A_fix)
+    popt = popt.at[1:2*N_fix:2].set(phi_fix)
+    
+    A_free = jnp.abs(final_linear_params[N_fix:])
+    phi_free = jnp.angle(final_linear_params[N_fix:])
+    popt = popt.at[2*N_fix::4].set(A_free)
+    popt = popt.at[2*N_fix+1::4].set(phi_free)
+    popt = popt.at[2*N_fix+2::4].set(omegar_final)
+    popt = popt.at[2*N_fix+3::4].set(omegai_final)
+    
+    return popt
+
+
+def _reconstruct_waveform(time, popt, omegar_fixed, omegai_fixed, N_free, N_fix):
+    """JIT-compiled waveform reconstruction for non-mirror case."""
+    fix_mode_params_list = []
+    for i in range(N_fix):
+        A = popt[2*i]
+        phi = popt[2*i + 1]
+        fix_mode_params_list.append([A, phi])
+    free_mode_params_list = []
+    for j in range(N_free):
+        A = popt[2*N_fix + 4*j]
+        phi = popt[2*N_fix + 4*j + 1]
+        omegar = popt[2*N_fix + 4*j + 2]
+        omegai = popt[2*N_fix + 4*j + 3]
+        free_mode_params_list.append([A, phi, omegar, omegai])
+    
+    Q = jnp.zeros(len(time), dtype=jnp.complex128)
+    for i in range(N_fix):
+        A, phi = fix_mode_params_list[i]
+        omegar = omegar_fixed[i]
+        omegai = omegai_fixed[i]
+        Q = Q + A * jnp.exp(-1.j * ((omegar + 1.j * omegai) * time + phi))
+    for free_params in free_mode_params_list:
+        A, phi, omegar, omegai = free_params
+        Q = Q + A * jnp.exp(-1.j * ((omegar + 1.j * omegai) * time + phi))
+    return Q
+
+
+def _prepare_fit_data(time, hr, hi, sigma, max_len):
+    """JIT-compiled function to prepare fit data with padding.
+    
+    Input arrays must be pre-padded to max_len with zeros.
+    This function creates the mask based on which elements are non-zero in sigma.
+    """
+    # The input arrays are already max_len size (pre-padded with zeros)
+    y = hr + 1.j * hi
+    
+    # Create mask: 1 where sigma is finite, 0 otherwise (padded regions have inf)
+    mask = jnp.where(jnp.isinf(sigma), 0.0, 1.0)
+    
+    return time, hr, hi, y, sigma, mask
+
+
+# Create JIT-compiled versions for common configurations
+# The static_argnums specify which arguments don't change and can be used for caching
+_do_optimization_jit = jit(_do_optimization, static_argnums=(2, 3, 4, 5))
+_compute_linear_params_and_popt_jit = jit(_compute_linear_params_and_popt, static_argnums=(8, 9, 10))
+_reconstruct_waveform_jit = jit(_reconstruct_waveform, static_argnums=(4, 5))
+_prepare_fit_data_jit = jit(_prepare_fit_data, static_argnums=(4,))
+
+
 class QNMFit:
 
     def __init__(
@@ -462,6 +593,7 @@ class QNMFit:
             mirror_ratio_list=None,
             guess_fixed=[1, 1],
             guess_free=[1, 1, 1, -1],
+            max_len=None,
             **fit_kwargs):
         self.h = h
         self.t0 = t0
@@ -482,6 +614,7 @@ class QNMFit:
         self.mirror_ratio_list = mirror_ratio_list
         self.guess_fixed = guess_fixed
         self.guess_free = guess_free
+        self.max_len = max_len
         if params0 is not None:
             omegar_initial = params0[2*self.N_fix+2::4]
             omegai_initial = params0[2*self.N_fix+3::4]
@@ -501,68 +634,65 @@ class QNMFit:
 
     def do_fit(self, return_jcf=False):
         
-        self.time, self.hr, self.hi = self.h.postmerger(self.t0)
-        y = self.hr + 1.j*self.hi
-
-        if self.weighted:
-            sigma = self.make_weights(self.hr, self.hi)
-        else:
-            sigma = jnp.ones_like(y)
-
-        def model_func(nonlinear_params, t):
-            
-            omegar_arr = nonlinear_params[0:self.N_free]
-            omegai_arr = nonlinear_params[self.N_free:2*self.N_free]
-
-            basis = []
-            # fixed modes
-            for i in range(self.N_fix):
-                omega = self.qnm_fixed_list[i].omegar + 1.j * self.qnm_fixed_list[i].omegai
-                basis.append(jnp.exp(-1.j * omega * t))
-                if self.include_mirror:
-                    mirror_ratio = self.mirror_ratio_list[i]
-                    basis.append(mirror_ratio[0] * jnp.exp(-1.j * (-omega.real + 1.j*omega.imag) * t - mirror_ratio[1]))
-
-            # free modes
-            for i in range(self.N_free):
-                omega = omegar_arr[i] + 1.j * omegai_arr[i]
-                basis.append(jnp.exp(-1.j * omega * t))
-
-            return jnp.array(basis).T
-
-        def residual_func(nonlinear_params, args):
-            t, y, sigma = args
-            basis = model_func(nonlinear_params, t)
-            linear_params, _, _, _ = jnp.linalg.lstsq(basis/sigma[:, None], y/sigma)
-            y_fit = jnp.dot(basis, linear_params)
-            residual = y - y_fit
-            # Split complex residuals into real and imaginary parts
-            return jnp.concatenate([residual.real, residual.imag])
-
-        solver = optx.LevenbergMarquardt(rtol=1e-8, atol=1e-8)
-        sol = optx.least_squares(residual_func, solver, self.params0, 
-                                 args=(self.time, y, sigma), max_steps=self.max_nfev,
-                                 throw=False)
-
-        final_nonlinear_params = sol.value
-        final_basis = model_func(final_nonlinear_params, self.time)
-        final_linear_params, _, _, _ = jnp.linalg.lstsq(final_basis/sigma[:, None], y/sigma)
-
-        omegar_final = final_nonlinear_params[0:self.N_free]
-        omegai_final = final_nonlinear_params[self.N_free:2*self.N_free]
-
-        popt = jnp.zeros(2*self.N_fix + 4*self.N_free)
-        A_fix = jnp.abs(final_linear_params[0:self.N_fix])
-        phi_fix = jnp.angle(final_linear_params[0:self.N_fix])
-        popt = popt.at[0:2*self.N_fix:2].set(A_fix)
-        popt = popt.at[1:2*self.N_fix:2].set(phi_fix)
+        time_raw, hr_raw, hi_raw = self.h.postmerger(self.t0)
         
-        A_free = jnp.abs(final_linear_params[self.N_fix:])
-        phi_free = jnp.angle(final_linear_params[self.N_fix:])
-        popt = popt.at[2*self.N_fix::4].set(A_free)
-        popt = popt.at[2*self.N_fix+1::4].set(phi_free)
-        popt = popt.at[2*self.N_fix+2::4].set(omegar_final)
-        popt = popt.at[2*self.N_fix+3::4].set(omegai_final)
+        if self.weighted:
+            sigma_raw = self.make_weights(hr_raw, hi_raw)
+        else:
+            sigma_raw = np.ones(len(hr_raw))
+
+        # Store original length for mismatch calculation
+        original_len = len(time_raw)
+
+        if self.max_len is not None:
+            # Pre-pad arrays to max_len using numpy (fast, no JIT tracing)
+            pad_len = self.max_len - original_len
+            if pad_len > 0:
+                # Use numpy pad which is fast and doesn't trigger JAX tracing
+                time_padded = np.pad(np.asarray(time_raw), (0, pad_len), constant_values=0)
+                hr_padded = np.pad(np.asarray(hr_raw), (0, pad_len), constant_values=0)
+                hi_padded = np.pad(np.asarray(hi_raw), (0, pad_len), constant_values=0)
+                sigma_padded = np.pad(np.asarray(sigma_raw), (0, pad_len), constant_values=np.inf)
+            else:
+                time_padded = np.asarray(time_raw)
+                hr_padded = np.asarray(hr_raw)
+                hi_padded = np.asarray(hi_raw)
+                sigma_padded = np.asarray(sigma_raw)
+            
+            # Convert to JAX arrays and create y and mask using JIT
+            self.time, self.hr, self.hi, y, sigma, mask = _prepare_fit_data_jit(
+                jnp.asarray(time_padded), jnp.asarray(hr_padded), 
+                jnp.asarray(hi_padded), jnp.asarray(sigma_padded), self.max_len
+            )
+        else:
+            self.time = time_raw
+            self.hr = hr_raw
+            self.hi = hi_raw
+            y = hr_raw + 1.j * hi_raw
+            sigma = jnp.asarray(sigma_raw)
+            mask = jnp.ones(len(self.time))
+
+        omegar_fixed = jnp.array([qnm.omegar for qnm in self.qnm_fixed_list])
+        omegai_fixed = jnp.array([qnm.omegai for qnm in self.qnm_fixed_list])
+        
+        if self.include_mirror:
+             mirror_ratio_arr = jnp.array(self.mirror_ratio_list)
+        else:
+             mirror_ratio_arr = jnp.array([])
+
+        args = (self.time, y, sigma, omegar_fixed, omegai_fixed, mirror_ratio_arr, mask)
+        
+        # Use JIT-compiled optimization function for better performance
+        final_nonlinear_params = _do_optimization_jit(
+            self.params0, args, self.N_free, self.N_fix, self.include_mirror, self.max_nfev
+        )
+        
+        # Use JIT-compiled post-processing for linear params and popt
+        popt = _compute_linear_params_and_popt_jit(
+            final_nonlinear_params, self.time, y, sigma, mask,
+            omegar_fixed, omegai_fixed, mirror_ratio_arr,
+            self.N_free, self.N_fix, self.include_mirror
+        )
         
         self.popt = popt
         self.pcov = jnp.full((len(popt), len(popt)), jnp.nan)
@@ -572,19 +702,30 @@ class QNMFit:
         self.nfev = None
         self.status = None
         
+        # Use JIT-compiled reconstruction for non-mirror, non-Schwarzschild case
         if self.Schwarzschild:
-            self.reconstruct_h = qnm_fit_func_wrapper(
+            reconstruct_h_padded = qnm_fit_func_wrapper(
                 self.time, self.qnm_fixed_list, self.N_free, self.popt, part="real")
         elif self.include_mirror:
-            self.reconstruct_h = qnm_fit_func_mirror_wrapper(
+            reconstruct_h_padded = qnm_fit_func_mirror_wrapper(
                 self.time, self.qnm_fixed_list, self.mirror_ratio_list, self.popt)
         else:
-            self.reconstruct_h = qnm_fit_func_wrapper(
-                self.time, self.qnm_fixed_list, self.N_free, self.popt)
+            # Use JIT-compiled reconstruction
+            reconstruct_h_padded = _reconstruct_waveform_jit(
+                self.time, self.popt, omegar_fixed, omegai_fixed, self.N_free, self.N_fix
+            )
 
-        self.h_true = self.hr + 1.j * self.hi
-        self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
-            np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
+        # Convert to numpy first, then slice - avoids JAX tracing for different original_len values
+        reconstruct_h_np = np.asarray(reconstruct_h_padded)
+        hr_np = np.asarray(self.hr)
+        hi_np = np.asarray(self.hi)
+        
+        # Slice to original length for mismatch calculation (numpy slicing, no JAX tracing)
+        self.reconstruct_h = reconstruct_h_np[:original_len]
+        h_true_unpadded = hr_np[:original_len] + 1.j * hi_np[:original_len]
+        self.h_true = h_true_unpadded
+        self.mismatch = 1 - (np.abs(np.vdot(h_true_unpadded, self.reconstruct_h) / (
+            np.linalg.norm(h_true_unpadded) * np.linalg.norm(self.reconstruct_h))))
         
         self.result = QNMFitResult(
             self.popt,
@@ -1303,6 +1444,7 @@ class QNMFitVaryingStartingTime:
                 weighted=self.weighted,
                 include_mirror=self.include_mirror,
                 mirror_ratio_list=self.mirror_ratio_list,
+                max_len=self._max_len_for_fit,
                 **self.fit_kwargs)
             try:
                 qnm_fit.do_fit()
@@ -1366,6 +1508,8 @@ class QNMFitVaryingStartingTime:
         self.not_converged = False
         self.nonconvergence_indx = []
         self._time_longest, _, _ = self.h.postmerger(self.t0_arr[0])
+        max_len = len(self._time_longest)
+        self._max_len_for_fit = max_len
         if self.var_M_a:
             self.result_full = QNMFitVaryingStartingTimeResultVarMa(
                 self.t0_arr,
@@ -1406,6 +1550,51 @@ class QNMFitVaryingStartingTime:
                 print("EOFError when loading pickle for fit. Doing new fit now...")
                 loaded_results = False
         if not loaded_results:
+            global _FULL_WARMUP_DONE
+            
+            # Full warmup: run multiple fits to fully initialize JAX/optimistix
+            # This only needs to happen once per session, regardless of N_free or h
+            if not _FULL_WARMUP_DONE and not self.var_M_a:
+                # Run warmup fits on first few t0 values to fully initialize the runtime
+                n_warmup = min(5, len(self.t0_arr))
+                for warmup_idx in range(n_warmup):
+                    warmup_fit = QNMFit(
+                        self.h, self.t0_arr[warmup_idx], self.N_free,
+                        qnm_fixed_list=self.qnm_fixed_list,
+                        Schwarzschild=self.Schwarzschild,
+                        params0=self.params0,
+                        max_nfev=self.max_nfev,
+                        A_bound=self.A_bound,
+                        weighted=self.weighted,
+                        include_mirror=self.include_mirror,
+                        mirror_ratio_list=self.mirror_ratio_list,
+                        max_len=max_len,
+                        **self.fit_kwargs)
+                    warmup_fit.do_fit()
+                    # Force completion
+                    _ = warmup_fit.popt.block_until_ready()
+                    if warmup_idx == 0:
+                        # Cache first result for reuse
+                        self._warmup_result = warmup_fit
+                _FULL_WARMUP_DONE = True
+            elif not self.var_M_a:
+                # Just do single warmup fit for result caching
+                warmup_fit = QNMFit(
+                    self.h, self.t0_arr[0], self.N_free,
+                    qnm_fixed_list=self.qnm_fixed_list,
+                    Schwarzschild=self.Schwarzschild,
+                    params0=self.params0,
+                    max_nfev=self.max_nfev,
+                    A_bound=self.A_bound,
+                    weighted=self.weighted,
+                    include_mirror=self.include_mirror,
+                    mirror_ratio_list=self.mirror_ratio_list,
+                    max_len=max_len,
+                    **self.fit_kwargs)
+                warmup_fit.do_fit()
+                # Cache the warmup result to use as the first actual result
+                self._warmup_result = warmup_fit
+            
             if self.random_initial:
                 best_guess_index, qnm_initial_fit_list, guess_list = self.initial_guesses()
                 if best_guess_index is None:
@@ -1462,6 +1651,7 @@ class QNMFitVaryingStartingTime:
                         weighted=self.weighted,
                         include_mirror=self.include_mirror,
                         mirror_ratio_list=self.mirror_ratio_list,
+                        max_len=max_len,
                         **self.fit_kwargs)
                 if self.nonconvergence_cut and self.not_converged:
                     qnm_fit.copy_from_result(qnm_fit_result_temp)
@@ -1472,6 +1662,9 @@ class QNMFitVaryingStartingTime:
                                 qnm_fit = qnm_initial_fit_list[best_guess_index]
                             else:
                                 raise RuntimeError
+                        elif i == 0 and not self.var_M_a and hasattr(self, '_warmup_result'):
+                            # Use the cached warmup result for first iteration
+                            qnm_fit = self._warmup_result
                         else:
                             if skip_consect < skip_i and self.double_skip:
                                 raise RuntimeError

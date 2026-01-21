@@ -157,8 +157,9 @@ class waveform:
         tend = self.peaktime + t_end
         startindx = bisect_left(self.fulltime, tstart)
         endindx = bisect_left(self.fulltime, tend)
-        return self.fulltime[startindx:endindx] - self.peaktime, jnp.real(
-            self.fullh[startindx:endindx]), jnp.imag(self.fullh[startindx:endindx])
+        # Use numpy for slicing to avoid JAX tracing overhead for each unique slice shape
+        h_slice = np.asarray(self.fullh[startindx:endindx])
+        return self.fulltime[startindx:endindx] - self.peaktime, np.real(h_slice), np.imag(h_slice)
 
     def set_lm(self, l: int, m: int) -> None:
         """
