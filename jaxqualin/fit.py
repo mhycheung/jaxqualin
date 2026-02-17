@@ -1055,7 +1055,13 @@ class QNMFit(QNMFitBase):
 
 
 
-class QNMFitVarMa(QNMFitBase):
+class QNMFitModel(QNMFitBase):
+    """Fit QNM waveform with a parametric frequency model.
+
+    When *model* is ``None`` (default), falls back to the Kerr M/a path.
+    For a custom model, pass a :class:`QNMModel` instance together with
+    *model_params_guess* and optionally *model_params_bounds*.
+    """
 
     def __init__(
             self,
@@ -1246,6 +1252,48 @@ class QNMFitVarMa(QNMFitBase):
             self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
 
 
+class QNMFitVarMa(QNMFitModel):
+    """Backward-compatible convenience wrapper that uses the Kerr M/a model.
+
+    This is equivalent to ``QNMFitModel`` with ``model=None`` (the default
+    Kerr-specific code path).  The ``model``, ``model_params_guess``, and
+    ``model_params_bounds`` parameters are **not** accepted here; use
+    :class:`QNMFitModel` directly for custom models.
+    """
+
+    def __init__(
+            self,
+            h,
+            t0,
+            qnm_free_list,
+            qnm_fixed_list=[],
+            retro_def_orbit=True,
+            Schwarzschild=False,
+            params0=None,
+            max_nfev=DEFAULT_MAX_NFEV,
+            include_mirror=False,
+            iota=None,
+            psi=None,
+            guess_fixed=[1, 1],
+            guess_free=[1, 1],
+            guess_M_a=[1, 0.5],
+            a_bound=0.99,
+            **fit_kwargs):
+        super().__init__(
+            h=h, t0=t0, qnm_free_list=qnm_free_list,
+            qnm_fixed_list=qnm_fixed_list,
+            retro_def_orbit=retro_def_orbit,
+            Schwarzschild=Schwarzschild,
+            params0=params0, max_nfev=max_nfev,
+            include_mirror=include_mirror,
+            iota=iota, psi=psi,
+            guess_fixed=guess_fixed, guess_free=guess_free,
+            guess_M_a=guess_M_a, a_bound=a_bound,
+            model=None, model_params_guess=None,
+            model_params_bounds=None,
+            **fit_kwargs)
+
+
 def make_initial_guess(
         N_free,
         guess_num,
@@ -1416,7 +1464,7 @@ class QNMFitVaryingStartingTimeResult:
         return Q_fix_list, Q_free_list
 
 
-class QNMFitVaryingStartingTimeResultVarMa:
+class QNMFitVaryingStartingTimeResultModel:
 
     def __init__(
             self,
@@ -1492,17 +1540,19 @@ class QNMFitVaryingStartingTimeResultVarMa:
             self.phi_free_dict[f"phi_free_{(i-2*self.N_fix)//2}"] = self.popt_full[i + 1]
         j = 2 * self.N_fix + 2 * self.N_free
         if self.model is not None:
-            self.Ma_dict = {}
+            self.model_params_dict = {}
             for k, name in enumerate(self.model.param_names):
-                self.Ma_dict[name] = self.popt_full[j + k]
+                self.model_params_dict[name] = self.popt_full[j + k]
         else:
             M_arr = self.popt_full[j]
             if not self.Schwarzschild:
                 a_arr = self.popt_full[j + 1]
             if self.Schwarzschild:
-                self.Ma_dict = {"M": M_arr}
+                self.model_params_dict = {"M": M_arr}
             else:
-                self.Ma_dict = {"M": M_arr, "a": a_arr}
+                self.model_params_dict = {"M": M_arr, "a": a_arr}
+        # Backward-compatible alias
+        self.Ma_dict = self.model_params_dict
         self.A_dict = {**self.A_fix_dict, **self.A_free_dict}
         self.phi_dict = {**self.phi_fix_dict, **self.phi_free_dict}
         self.results_dict = {
@@ -1510,7 +1560,7 @@ class QNMFitVaryingStartingTimeResultVarMa:
             **self.A_free_dict,
             **self.phi_fix_dict,
             **self.phi_free_dict,
-            **self.Ma_dict}
+            **self.model_params_dict}
         self.result_processed = True
         if self.save_results:
             self.pickle_save()
@@ -1523,6 +1573,10 @@ class QNMFitVaryingStartingTimeResultVarMa:
 
     def pickle_exists(self):
         return os.path.exists(self.file_path)
+
+
+# Backward-compatible alias
+QNMFitVaryingStartingTimeResultVarMa = QNMFitVaryingStartingTimeResultModel
 
 
 class QNMFitVaryingStartingTime:
@@ -1952,21 +2006,35 @@ class QNMFitVaryingStartingTime:
         max_len = self._max_len_for_fit
 
         if self.var_M_a:
-            qnm_fit = QNMFitVarMa(
-                self.h,
-                _t0,
-                self.qnm_free_list,
-                qnm_fixed_list=self.qnm_fixed_list,
-                Schwarzschild=self.Schwarzschild,
-                params0=self._current_params0,
-                max_nfev=self.max_nfev,
-                include_mirror=self.include_mirror,
-                iota=self.iota,
-                psi=self.psi,
-                model=self.model,
-                model_params_guess=self.model_params_guess,
-                model_params_bounds=self.model_params_bounds,
-                **self.fit_kwargs)
+            if self.model is not None:
+                qnm_fit = QNMFitModel(
+                    self.h,
+                    _t0,
+                    self.qnm_free_list,
+                    qnm_fixed_list=self.qnm_fixed_list,
+                    Schwarzschild=self.Schwarzschild,
+                    params0=self._current_params0,
+                    max_nfev=self.max_nfev,
+                    include_mirror=self.include_mirror,
+                    iota=self.iota,
+                    psi=self.psi,
+                    model=self.model,
+                    model_params_guess=self.model_params_guess,
+                    model_params_bounds=self.model_params_bounds,
+                    **self.fit_kwargs)
+            else:
+                qnm_fit = QNMFitVarMa(
+                    self.h,
+                    _t0,
+                    self.qnm_free_list,
+                    qnm_fixed_list=self.qnm_fixed_list,
+                    Schwarzschild=self.Schwarzschild,
+                    params0=self._current_params0,
+                    max_nfev=self.max_nfev,
+                    include_mirror=self.include_mirror,
+                    iota=self.iota,
+                    psi=self.psi,
+                    **self.fit_kwargs)
         else:
             qnm_fit = QNMFit(
                 self.h,
@@ -2039,7 +2107,10 @@ class QNMFitVaryingStartingTime:
         max_len = len(self._time_longest)
         self._max_len_for_fit = max_len
         if self.var_M_a:
-            self.result_full = QNMFitVaryingStartingTimeResultVarMa(
+            _ResultClass = (QNMFitVaryingStartingTimeResultModel
+                            if self.model is not None
+                            else QNMFitVaryingStartingTimeResultVarMa)
+            self.result_full = _ResultClass(
                 self.t0_arr,
                 self.qnm_fixed_list,
                 self.qnm_free_list,

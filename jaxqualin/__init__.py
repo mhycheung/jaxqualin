@@ -31,9 +31,12 @@ from .fit import (
     InitialGuessConfig,
     QNMFitResult,
     QNMFit,
+    QNMFitModel,
     QNMFitVarMa,
     QNMFitVaryingStartingTime,
     QNMFitVaryingStartingTimeResult,
+    QNMFitVaryingStartingTimeResultModel,
+    QNMFitVaryingStartingTimeResultVarMa,
     FIT_SAVE_PATH,
 )
 
@@ -94,9 +97,12 @@ __all__ = [
     "InitialGuessConfig",
     "QNMFitResult",
     "QNMFit",
+    "QNMFitModel",
     "QNMFitVarMa",
     "QNMFitVaryingStartingTime",
     "QNMFitVaryingStartingTimeResult",
+    "QNMFitVaryingStartingTimeResultModel",
+    "QNMFitVaryingStartingTimeResultVarMa",
     "FIT_SAVE_PATH",
     # waveforms
     "waveform",

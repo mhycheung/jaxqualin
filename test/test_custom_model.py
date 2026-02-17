@@ -1,4 +1,4 @@
-"""Integration tests for QNMFitVarMa with custom QNMModel and backward compat."""
+"""Integration tests for QNMFitModel with custom QNMModel and backward compat."""
 import numpy as np
 import pytest
 
@@ -8,7 +8,7 @@ from jaxqualin.qnmode import (
     mode_list, long_str_to_qnms_free,
 )
 from jaxqualin.waveforms import waveform, clean_QNM
-from jaxqualin.fit import QNMFit, QNMFitVarMa, QNMFitVaryingStartingTime
+from jaxqualin.fit import QNMFit, QNMFitModel, QNMFitVarMa, QNMFitVaryingStartingTime
 
 
 def _make_clean_waveform(modes, A_list, phi_list, t_arr):
@@ -86,7 +86,7 @@ class TestBackwardCompat:
 class TestExplicitKerrModel:
 
     def test_explicit_kerr_matches_default(self):
-        """QNMFitVarMa(model=KerrModel()) should give same result as default."""
+        """QNMFitModel(model=KerrModel()) should give same result as default."""
         Mf, af = 1.0, 0.7
         modes = mode_list(['2.2.0'], Mf, af)
         A, phi = 2.0, 0.5
@@ -96,7 +96,7 @@ class TestExplicitKerrModel:
         km = KerrModel()
         qnm_free_model = [model_mode_free([[2, 2, 0]], model=km)]
 
-        fitter = QNMFitVarMa(
+        fitter = QNMFitModel(
             h, t0=0.0, qnm_free_list=qnm_free_model,
             model=km,
             model_params_guess={"M": Mf * 0.9, "a": af * 0.9})
@@ -121,7 +121,7 @@ class TestExplicitKerrModel:
         km = KerrModel()
         qnm_free_model = [model_mode_free([[2, 2, 0]], model=km)]
 
-        fitter = QNMFitVarMa(
+        fitter = QNMFitModel(
             h, t0=0.0, qnm_free_list=qnm_free_model,
             model=km,
             model_params_guess={"M": Mf * 0.9, "a": af * 0.9})
@@ -159,7 +159,7 @@ class TestCustomModel:
         sm = SimpleShiftModel()
         modes = [model_mode_free([[2, 2, 0]], model=sm)]
 
-        fitter = QNMFitVarMa(
+        fitter = QNMFitModel(
             h, t0=0.0, qnm_free_list=modes,
             model=sm,
             model_params_guess={"alpha": 0.4, "beta": -0.1})
@@ -184,7 +184,7 @@ class TestCustomModel:
         sm = SimpleShiftModel()
         modes = [model_mode_free([[2, 2, 0]], model=sm)]
 
-        fitter = QNMFitVarMa(
+        fitter = QNMFitModel(
             h, t0=0.0, qnm_free_list=modes,
             model=sm,
             model_params_guess={"alpha": 0.4, "beta": -0.1})
@@ -203,7 +203,7 @@ class TestCustomModel:
         sm = SimpleShiftModel()
         modes = [model_mode_free([[2, 2, 0]], model=sm)]
 
-        fitter = QNMFitVarMa(
+        fitter = QNMFitModel(
             h, t0=0.0, qnm_free_list=modes,
             model=sm,
             model_params_guess={"alpha": 0.4, "beta": -0.1})
@@ -249,7 +249,7 @@ class TestAugmentedKerrModel:
         model = KerrPlusDelta()
         modes = [model_mode_free([[2, 2, 0]], model=model)]
 
-        fitter = QNMFitVarMa(
+        fitter = QNMFitModel(
             h, t0=0.0, qnm_free_list=modes,
             model=model,
             model_params_guess={"M": Mf * 0.95, "a": af * 0.95, "delta": 0.0})
@@ -273,7 +273,7 @@ class TestAugmentedKerrModel:
         model = KerrPlusDelta()
         modes = [model_mode_free([[2, 2, 0]], model=model)]
 
-        fitter = QNMFitVarMa(
+        fitter = QNMFitModel(
             h, t0=0.0, qnm_free_list=modes,
             model=model,
             model_params_guess={"M": Mf * 0.9, "a": af * 0.9, "delta": 0.0})
@@ -313,10 +313,12 @@ class TestVaryingStartingTimeCustomModel:
         fitter.do_fits()
         result = fitter.result_full
 
-        assert "M" in result.Ma_dict
-        assert "a" in result.Ma_dict
-        M_arr = np.array(result.Ma_dict["M"])
-        a_arr = np.array(result.Ma_dict["a"])
+        assert "M" in result.model_params_dict
+        assert "a" in result.model_params_dict
+        # backward-compat alias still works
+        assert result.Ma_dict is result.model_params_dict
+        M_arr = np.array(result.model_params_dict["M"])
+        a_arr = np.array(result.model_params_dict["a"])
         assert np.allclose(M_arr, Mf, rtol=0.05)
         assert np.allclose(a_arr, af, rtol=0.05)
 
@@ -346,10 +348,10 @@ class TestVaryingStartingTimeCustomModel:
         fitter.do_fits()
         result = fitter.result_full
 
-        assert "alpha" in result.Ma_dict
-        assert "beta" in result.Ma_dict
-        alpha_arr = np.array(result.Ma_dict["alpha"])
-        beta_arr = np.array(result.Ma_dict["beta"])
+        assert "alpha" in result.model_params_dict
+        assert "beta" in result.model_params_dict
+        alpha_arr = np.array(result.model_params_dict["alpha"])
+        beta_arr = np.array(result.model_params_dict["beta"])
         assert np.allclose(alpha_arr, alpha_true, atol=0.05)
         assert np.allclose(beta_arr, beta_true, atol=0.05)
 
@@ -377,7 +379,7 @@ class TestMixedFixedFreeModel:
         h = waveform(t, h_arr, t_peak=0)
 
         qnm_free = [model_mode_free([[2, 2, 1]], model=km)]
-        fitter = QNMFitVarMa(
+        fitter = QNMFitModel(
             h, t0=0.0,
             qnm_free_list=qnm_free,
             qnm_fixed_list=[mode_fixed],
