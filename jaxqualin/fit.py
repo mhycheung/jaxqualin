@@ -541,14 +541,26 @@ def _compute_linear_params_and_popt(final_nonlinear_params, time, y, sigma, mask
     omegai_final = final_nonlinear_params[N_free:2*N_free]
     
     # Assemble popt array
+    # The fit convention is h(t) = A * exp(-i*(omega*t + phi)), so the complex
+    # coefficient c = A * exp(-i*phi), meaning phi = -angle(c).
+    # When include_mirror=True, the basis columns are interleaved:
+    #   [prograde_0, mirror_0, prograde_1, mirror_1, ...],
+    # so prograde coefficients are at even indices (0, 2, 4, ...).
     popt = jnp.zeros(2*N_fix + 4*N_free)
-    A_fix = jnp.abs(final_linear_params[0:N_fix])
-    phi_fix = jnp.angle(final_linear_params[0:N_fix])
+    if include_mirror:
+        prograde_params = final_linear_params[0::2][:N_fix]
+        n_basis_fixed = 2 * N_fix
+    else:
+        prograde_params = final_linear_params[0:N_fix]
+        n_basis_fixed = N_fix
+    A_fix = jnp.abs(prograde_params)
+    phi_fix = -jnp.angle(prograde_params)
     popt = popt.at[0:2*N_fix:2].set(A_fix)
     popt = popt.at[1:2*N_fix:2].set(phi_fix)
     
-    A_free = jnp.abs(final_linear_params[N_fix:])
-    phi_free = jnp.angle(final_linear_params[N_fix:])
+    free_params = final_linear_params[n_basis_fixed:]
+    A_free = jnp.abs(free_params)
+    phi_free = -jnp.angle(free_params)
     popt = popt.at[2*N_fix::4].set(A_free)
     popt = popt.at[2*N_fix+1::4].set(phi_free)
     popt = popt.at[2*N_fix+2::4].set(omegar_final)
