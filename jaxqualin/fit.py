@@ -182,6 +182,10 @@ def qnm_fit_func_varMa_mirror(
         omegar = qnm_fixed.omegar
         omegai = qnm_fixed.omegai
         lmnx = qnm_fixed.lmnx
+        if lmnx is None:
+            raise ValueError(
+                "Mirror mode fitting requires modes with lmnx quantum numbers. "
+                "custom_mode objects cannot be used with include_mirror=True.")
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
@@ -206,6 +210,10 @@ def qnm_fit_func_varMa_mirror(
         omegar = qnm_free.omegar
         omegai = qnm_free.omegai
         lmnx = qnm_free.lmnx
+        if lmnx is None:
+            raise ValueError(
+                "Mirror mode fitting requires modes with lmnx quantum numbers. "
+                "custom_mode objects cannot be used with include_mirror=True.")
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
@@ -461,6 +469,108 @@ def qnm_fit_func_wrapper_complex_varMa_mirror(
         iota,
         psi,
         retro_def_orbit,
+        *args,
+        part="imag")
+    h_riffle = interweave(h_real, h_imag)
+    return h_riffle
+
+
+# ---------------------------------------------------------------------------
+# Generalised wrappers for arbitrary QNMModel parameters
+# ---------------------------------------------------------------------------
+
+
+def qnm_fit_func_var_model(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        fix_mode_params_list,
+        free_mode_params_list,
+        model_params,
+        part=None):
+    """Like ``qnm_fit_func_varMa`` but with an arbitrary parameter dict."""
+    Q = 0
+    for qnm_fixed, fix_mode_params in zip(
+            qnm_fixed_list, fix_mode_params_list):
+        A, phi = tuple(fix_mode_params)
+        omegar = qnm_fixed.omegar
+        omegai = qnm_fixed.omegai
+        if part is None:
+            Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
+        elif part == "real":
+            Q += A * np.exp(omegai * t) * np.cos(omegar * t + phi)
+        elif part == "imag":
+            Q += -A * np.exp(omegai * t) * np.sin(omegar * t + phi)
+    for free_mode_params, qnm_free in zip(
+            free_mode_params_list, qnm_free_list):
+        A, phi = tuple(free_mode_params)
+        qnm_free.fix_mode(**model_params)
+        omegar = qnm_free.omegar
+        omegai = qnm_free.omegai
+        if part is None:
+            Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
+        elif part == "real":
+            Q += A * np.exp(omegai * t) * np.cos(omegar * t + phi)
+        elif part == "imag":
+            Q += -A * np.exp(omegai * t) * np.sin(omegar * t + phi)
+    return Q
+
+
+def qnm_fit_func_wrapper_var_model(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        model,
+        *args,
+        part=None):
+    """Wrapper that unpacks optimisation vector for a generic QNMModel."""
+    N_fix = len(qnm_fixed_list)
+    N_free = len(qnm_free_list)
+    fix_mode_params_list = []
+    for i in range(N_fix):
+        A = args[0][2 * i]
+        phi = args[0][2 * i + 1]
+        fix_mode_params_list.append([A, phi])
+    free_mode_params_list = []
+    for j in range(N_free):
+        A = args[0][2 * N_fix + 2 * j]
+        phi = args[0][2 * N_fix + 2 * j + 1]
+        free_mode_params_list.append([A, phi])
+    model_params = {}
+    for k, name in enumerate(model.param_names):
+        model_params[name] = args[0][2 * (N_fix + N_free) + k]
+    return qnm_fit_func_var_model(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        fix_mode_params_list,
+        free_mode_params_list,
+        model_params,
+        part=part)
+
+
+def qnm_fit_func_wrapper_complex_var_model(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        model,
+        *args):
+    """Complex-interweaved wrapper for a generic QNMModel."""
+    N = len(t)
+    t_real = t[0::2]
+    t_imag = t[1::2]
+    h_real = qnm_fit_func_wrapper_var_model(
+        t_real,
+        qnm_fixed_list,
+        qnm_free_list,
+        model,
+        *args,
+        part="real")
+    h_imag = qnm_fit_func_wrapper_var_model(
+        t_imag,
+        qnm_fixed_list,
+        qnm_free_list,
+        model,
         *args,
         part="imag")
     h_riffle = interweave(h_real, h_imag)
@@ -964,6 +1074,9 @@ class QNMFitVarMa(QNMFitBase):
             guess_free=[1, 1],
             guess_M_a=[1, 0.5],
             a_bound=0.99,
+            model=None,
+            model_params_guess=None,
+            model_params_bounds=None,
             **fit_kwargs):
         super().__init__(
             h=h, t0=t0, qnm_fixed_list=qnm_fixed_list,
@@ -977,8 +1090,69 @@ class QNMFitVarMa(QNMFitBase):
         self.guess_free = guess_free
         self.guess_M_a = guess_M_a
         self.a_bound = a_bound
+        self.model = model
+        self.model_params_guess = model_params_guess
+        self.model_params_bounds = model_params_bounds
+
+    # -----------------------------------------------------------------
+    # Generalised do_fit for an arbitrary QNMModel
+    # -----------------------------------------------------------------
+
+    def _do_fit_model(self):
+        """Fit using a user-supplied :class:`QNMModel`."""
+        model = self.model
+        self.time, self.hr, self.hi = self.h.postmerger(self.t0)
+        self._h_interweave = interweave(self.hr, self.hi)
+        self._time_interweave = interweave(self.time, self.time)
+
+        # Build initial-guess vector
+        if not hasattr(self.params0, "__iter__"):
+            guess_model = [self.model_params_guess[n]
+                           for n in model.param_names]
+            self.params0 = np.array(
+                self.guess_fixed * self.N_fix
+                + self.guess_free * self.N_free
+                + guess_model)
+
+        # Build bounds
+        default_bounds = model.param_bounds()
+        if self.model_params_bounds is not None:
+            default_bounds.update(self.model_params_bounds)
+        lower_bound = [-np.inf] * (2 * self.N_fix + 2 * self.N_free)
+        upper_bound = [np.inf] * (2 * self.N_fix + 2 * self.N_free)
+        for name in model.param_names:
+            lo, hi = default_bounds.get(name, (-np.inf, np.inf))
+            lower_bound.append(lo)
+            upper_bound.append(hi)
+        bounds = (np.array(lower_bound), np.array(upper_bound))
+
+        fit_func = lambda t, *params: qnm_fit_func_wrapper_complex_var_model(
+            t, self.qnm_fixed_list, self.qnm_free_list, model, params)
+
+        self.popt, self.pcov = curve_fit(
+            fit_func, np.array(self._time_interweave),
+            np.array(self._h_interweave), p0=self.params0,
+            bounds=bounds, max_nfev=self.max_nfev,
+            method="trf", **self.fit_kwargs)
+
+        self.reconstruct_h = qnm_fit_func_wrapper_var_model(
+            self.time, self.qnm_fixed_list, self.qnm_free_list,
+            model, self.popt)
+
+        self.h_true = self.hr + 1.j * self.hi
+        self.mismatch = 1 - (np.abs(np.vdot(
+            self.h_true, self.reconstruct_h) / (
+            np.linalg.norm(self.h_true)
+            * np.linalg.norm(self.reconstruct_h))))
+        self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
+        self.fit_done = True
+
+    # -----------------------------------------------------------------
 
     def do_fit(self):
+        if self.model is not None:
+            return self._do_fit_model()
+
         self.time, self.hr, self.hi = self.h.postmerger(self.t0)
         self._h_interweave = interweave(self.hr, self.hi)
         self._time_interweave = interweave(self.time, self.time)
@@ -1257,19 +1431,23 @@ class QNMFitVaryingStartingTimeResultVarMa:
             iota=None,
             psi=None,
             fit_save_prefix=FIT_SAVE_PATH,
-            save_results=True):
+            save_results=True,
+            model=None):
         self.t0_arr = t0_arr
         self.qnm_fixed_list = qnm_fixed_list
         self.qnm_free_list = qnm_free_list
         self.N_fix = len(self.qnm_fixed_list)
         self.N_free = len(qnm_free_list)
         self.Schwarzschild = Schwarzschild
-        if Schwarzschild:
-            M_a_len = 1
+        self.model = model
+        if model is not None:
+            model_param_len = model.n_params
+        elif Schwarzschild:
+            model_param_len = 1
         else:
-            M_a_len = 2
+            model_param_len = 2
         self._popt_full = np.zeros(
-            (2 * self.N_fix + 2 * self.N_free + M_a_len, len(self.t0_arr)), dtype=float)
+            (2 * self.N_fix + 2 * self.N_free + model_param_len, len(self.t0_arr)), dtype=float)
         self._mismatch_arr = np.zeros(len(self.t0_arr), dtype=float)
         self.result_processed = False
         _qnm_free_string_list = sorted(qnms_to_string(qnm_fixed_list))
@@ -1313,15 +1491,20 @@ class QNMFitVaryingStartingTimeResultVarMa:
             self.A_free_dict[f"A_free_{(i-2*self.N_fix)//2}"] = self.popt_full[i]
             self.phi_free_dict[f"phi_free_{(i-2*self.N_fix)//2}"] = self.popt_full[i + 1]
         j = 2 * self.N_fix + 2 * self.N_free
-        M_arr = self.popt_full[j]
-        if not self.Schwarzschild:
-            a_arr = self.popt_full[j + 1]
+        if self.model is not None:
+            self.Ma_dict = {}
+            for k, name in enumerate(self.model.param_names):
+                self.Ma_dict[name] = self.popt_full[j + k]
+        else:
+            M_arr = self.popt_full[j]
+            if not self.Schwarzschild:
+                a_arr = self.popt_full[j + 1]
+            if self.Schwarzschild:
+                self.Ma_dict = {"M": M_arr}
+            else:
+                self.Ma_dict = {"M": M_arr, "a": a_arr}
         self.A_dict = {**self.A_fix_dict, **self.A_free_dict}
         self.phi_dict = {**self.phi_fix_dict, **self.phi_free_dict}
-        if self.Schwarzschild:
-            self.Ma_dict = {"M": M_arr}
-        else:
-            self.Ma_dict = {"M": M_arr, "a": a_arr}
         self.results_dict = {
             **self.A_fix_dict,
             **self.A_free_dict,
@@ -1468,7 +1651,10 @@ class QNMFitVaryingStartingTime:
             mirror_ignore_phase: bool = True,
             skip_i_init: int = 1,
             save_results: bool = True,
-            fit_config: Optional[FitConfig] = None) -> None:
+            fit_config: Optional[FitConfig] = None,
+            model=None,
+            model_params_guess=None,
+            model_params_bounds=None) -> None:
         """
         Initialize the `QNMFitVaryingStartingTime` object.
 
@@ -1524,6 +1710,9 @@ class QNMFitVaryingStartingTime:
             fit_config: optional FitConfig dataclass. If provided, overrides
                 the individual max_nfev, weighted, Schwarzschild,
                 include_mirror, iota, and psi parameters.
+            model: optional QNMModel instance for custom parametric models.
+            model_params_guess: dict of initial guesses for model params.
+            model_params_bounds: dict overriding default model param bounds.
         """
         if fit_config is not None:
             self.fit_config = fit_config
@@ -1563,7 +1752,12 @@ class QNMFitVaryingStartingTime:
         self.params0 = params0
         self.max_nfev = max_nfev
         if not hasattr(self.params0, "__iter__"):
-            if var_M_a:
+            if model is not None:
+                guess_model = [model_params_guess[n]
+                               for n in model.param_names]
+                self.params0 = jnp.array(
+                    [A_rel, 1] * self.N_fix + [A_rel, 1] * self.N_free + guess_model)
+            elif var_M_a:
                 if Schwarzschild:
                     self.params0 = jnp.array(
                         [A_rel, 1] * self.N_fix + [A_rel, 1] * self.N_free + [1])
@@ -1607,6 +1801,11 @@ class QNMFitVaryingStartingTime:
 
         self.skip_i_init = skip_i_init
         self.save_results = save_results
+        self.model = model
+        self.model_params_guess = model_params_guess
+        self.model_params_bounds = model_params_bounds
+        if self.model is not None:
+            self.var_M_a = True
 
     def get_mirror_ratio_list(self) -> List[float]:
         """
@@ -1764,6 +1963,9 @@ class QNMFitVaryingStartingTime:
                 include_mirror=self.include_mirror,
                 iota=self.iota,
                 psi=self.psi,
+                model=self.model,
+                model_params_guess=self.model_params_guess,
+                model_params_bounds=self.model_params_bounds,
                 **self.fit_kwargs)
         else:
             qnm_fit = QNMFit(
@@ -1848,7 +2050,8 @@ class QNMFitVaryingStartingTime:
                 iota=self.iota,
                 psi=self.psi,
                 fit_save_prefix=self.fit_save_prefix,
-                save_results=self.save_results)
+                save_results=self.save_results,
+                model=self.model)
         else:
             self.result_full = QNMFitVaryingStartingTimeResult(
                 self.t0_arr,

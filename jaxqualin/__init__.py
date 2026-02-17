@@ -15,6 +15,12 @@ from .qnmode import (
     qnms_to_string,
     potential_modes,
     make_mirror_ratio_list,
+    custom_mode,
+    custom_mode_list,
+    QNMModel,
+    KerrModel,
+    model_mode_free,
+    model_mode,
 )
 
 # ---------------------------------------------------------------------------
@@ -77,6 +83,12 @@ __all__ = [
     "qnms_to_string",
     "potential_modes",
     "make_mirror_ratio_list",
+    "custom_mode",
+    "custom_mode_list",
+    "QNMModel",
+    "KerrModel",
+    "model_mode_free",
+    "model_mode",
     # fit
     "FitConfig",
     "InitialGuessConfig",
