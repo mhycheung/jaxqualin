@@ -4,7 +4,6 @@ from jaxqualin.fit import QNMFitVaryingStartingTime
 
 import numpy as np
 
-#TODO: make this less boilerplatey by reading the settings from the results json file
 def test_fit_free(test_waveform_tuple, test_results_free):
     h, Mf, af = test_waveform_tuple
     t0_arr = np.linspace(0, 10, num = 11)

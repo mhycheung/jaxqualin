@@ -1,6 +1,6 @@
-.gitignore
 .ipynb_checkpoints/
 __pycache__/
+*.pyc
 test.ipynb
 gitignore_untracked.sh
 pickle/fits/*
@@ -15,3 +15,6 @@ data/
 *.ipynb
 ./*.ipynb
 json/*
+.jaxqualin_cache/
+.pixi/
+pixi.lock

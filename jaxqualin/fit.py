@@ -2,12 +2,11 @@ import numpy as np
 import jax.numpy as jnp
 from jax.numpy.linalg import pinv
 import optimistix as optx
-# from jaxfit import CurveFit
 import scipy
 from scipy.optimize import curve_fit
 
-from .utils import *
-from .qnmode import *
+from .utils import interweave
+from .qnmode import S_mirror_fac, qnms_to_string, make_mirror_ratio_list, mode, mode_free
 
 from tqdm.auto import tqdm
 import os
@@ -19,21 +18,55 @@ import warnings
 
 from .waveforms import waveform
 
+from dataclasses import dataclass, field
 from typing import List, Tuple, Union, Optional, Dict, Any
 from functools import partial
+
+import logging
 
 from jax import config, jit
 config.update("jax_enable_x64", True)
 
+logger = logging.getLogger(__name__)
+
 FIT_SAVE_PATH = os.path.join(os.getcwd(), ".jaxqualin_cache/fits")
+
+DEFAULT_SEED = 1234
+DEFAULT_MAX_NFEV = 200000
+DEFAULT_FIT_TOL = 1e-13
+
+
+@dataclass
+class FitConfig:
+    """Configuration for QNM fitting."""
+    max_nfev: int = DEFAULT_MAX_NFEV
+    sigma: float = 1.
+    weight_by_amplitude: bool = False
+    Schwarzschild: bool = False
+    include_mirror: bool = False
+    iota: float = None
+    psi: float = None
+
+
+@dataclass
+class InitialGuessConfig:
+    """Configuration for initial guess generation."""
+    guess_num: int = 100
+    A_log_low: float = -1
+    A_log_hi: float = 1
+    phi_low: float = 0
+    phi_hi: float = 6.283185307179586  # 2*pi
+    omega_r_low: float = -2
+    omega_r_hi: float = 2
+    omega_i_low: float = 0
+    omega_i_hi: float = -1
+    seed: int = DEFAULT_SEED
+    A_val: float = None
+    A_guess_relative: float = None
 
 
 # Module-level flag to track if full warmup has been done
 _FULL_WARMUP_DONE = False
-
-
-def CurveFit():
-    return
 
 
 def qnm_fit_func_mirror_fixed(
@@ -211,8 +244,6 @@ def qnm_fit_func_wrapper(t, qnm_fixed_list, N_free, *args, part=None):
             omegai = args[0][2 * N_fix + 4 * j + 3]
             free_mode_params_list.append([A, phi, omegar, omegai])
         except BaseException:
-            print(args)
-            print(2 * N_fix + 4 * j)
             raise ValueError
     return qnm_fit_func(t, qnm_fixed_list, fix_mode_params_list,
                         free_mode_params_list, part=part)
@@ -576,7 +607,49 @@ _reconstruct_waveform_jit = jit(_reconstruct_waveform, static_argnums=(4, 5))
 _prepare_fit_data_jit = jit(_prepare_fit_data, static_argnums=(4,))
 
 
-class QNMFit:
+class QNMFitBase:
+    """Base class for QNM fitting with shared initialization and utilities."""
+
+    def __init__(
+            self,
+            h,
+            t0,
+            qnm_fixed_list=[],
+            N_free=0,
+            Schwarzschild=False,
+            max_nfev=DEFAULT_MAX_NFEV,
+            include_mirror=False,
+            iota=None,
+            psi=None,
+            weight_by_amplitude=False,
+            sigma=1.,
+            **fit_kwargs):
+        self.h = h
+        self.t0 = t0
+        self.qnm_fixed_list = qnm_fixed_list
+        self.N_fix = len(qnm_fixed_list)
+        self.N_free = N_free
+        self.Schwarzschild = Schwarzschild
+        self.max_nfev = max_nfev
+        self.include_mirror = include_mirror
+        self.iota = iota
+        self.psi = psi
+        self.weight_by_amplitude = weight_by_amplitude
+        self.sigma = sigma
+        self.fit_kwargs = fit_kwargs
+        self.fit_done = False
+        self.popt = None
+        self.pcov = None
+        self.mismatch = None
+        self.result = None
+
+    def make_weights(self, hr, hi):
+        habs = np.abs(hr + 1.j * hi)
+        weight = interweave(habs, habs)
+        return np.array(weight)
+
+
+class QNMFit(QNMFitBase):
 
     def __init__(
             self,
@@ -586,7 +659,7 @@ class QNMFit:
             qnm_fixed_list=[],
             Schwarzschild=False,
             params0=None,
-            max_nfev=200000,
+            max_nfev=DEFAULT_MAX_NFEV,
             A_bound=np.inf,
             weighted=False,
             include_mirror=False,
@@ -595,18 +668,13 @@ class QNMFit:
             guess_free=[1, 1, 1, -1],
             max_len=None,
             **fit_kwargs):
-        self.h = h
-        self.t0 = t0
-        self.N_free = N_free
-        self.qnm_fixed_list = qnm_fixed_list
-        self.N_fix = len(qnm_fixed_list)
-        self.Schwarzschild = Schwarzschild
-        self.max_nfev = max_nfev
-        self.fit_done = False
+        super().__init__(
+            h=h, t0=t0, qnm_fixed_list=qnm_fixed_list, N_free=N_free,
+            Schwarzschild=Schwarzschild, max_nfev=max_nfev,
+            include_mirror=include_mirror, weight_by_amplitude=weighted,
+            **fit_kwargs)
         self.A_bound = A_bound
-        self.fit_kwargs = fit_kwargs
         self.weighted = weighted
-        self.include_mirror = include_mirror
         if self.include_mirror and self.N_free != 0:
             raise ValueError("Mirror is only allowed for fixed modes.")
         if self.include_mirror and mirror_ratio_list is None:
@@ -626,11 +694,6 @@ class QNMFit:
                 self.params0 = jnp.array(omegar_guesses + omegai_guesses)
             else:
                 self.params0 = jnp.array([])
-
-    def make_weights(self, hr, hi):
-        habs = np.abs(hr + 1.j * hi)
-        weight = interweave(habs, habs)
-        return np.array(weight)
 
     def do_fit(self, return_jcf=False):
         
@@ -742,7 +805,7 @@ class QNMFit:
 
 
 
-class QNMFitVarMa:
+class QNMFitVarMa(QNMFitBase):
 
     def __init__(
             self,
@@ -752,9 +815,8 @@ class QNMFitVarMa:
             qnm_fixed_list=[],
             retro_def_orbit=True,
             Schwarzschild=False,
-            jcf=CurveFit(),
             params0=None,
-            max_nfev=200000,
+            max_nfev=DEFAULT_MAX_NFEV,
             include_mirror=False,
             iota=None,
             psi=None,
@@ -763,23 +825,14 @@ class QNMFitVarMa:
             guess_M_a=[1, 0.5],
             a_bound=0.99,
             **fit_kwargs):
-        self.h = h
-        self.t0 = t0
-        self.N_free = len(qnm_free_list)
+        super().__init__(
+            h=h, t0=t0, qnm_fixed_list=qnm_fixed_list,
+            N_free=len(qnm_free_list), Schwarzschild=Schwarzschild,
+            max_nfev=max_nfev, include_mirror=include_mirror,
+            iota=iota, psi=psi, **fit_kwargs)
         self.qnm_free_list = qnm_free_list
-        self.qnm_fixed_list = qnm_fixed_list
         self.params0 = params0
-        self.N_fix = len(qnm_fixed_list)
-        # self.jcf = jcf
-        self.max_nfev = max_nfev
-        self.fit_done = False
         self.retro_def_orbit = retro_def_orbit
-        self.Schwarzschild = Schwarzschild
-        self.fit_kwargs = fit_kwargs
-        self.include_mirror = include_mirror
-        if self.include_mirror:
-            self.iota = iota
-            self.psi = psi
         self.guess_fixed = guess_fixed
         self.guess_free = guess_free
         self.guess_M_a = guess_M_a
@@ -890,7 +943,7 @@ def make_initial_guess(
         omega_r_hi=2,
         omega_i_low=0,
         omega_i_hi=-1,
-        seed=1234,
+        seed=DEFAULT_SEED,
         A_val=1,
         A_guess_relative=True):
     if not A_guess_relative:
@@ -974,9 +1027,6 @@ class QNMFitVaryingStartingTimeResult:
     def fill_result(self, i, result):
         self._popt_full[:, i] = result.popt
         self._mismatch_arr[i] = result.mismatch
-        # self.cost_arr[i] = result.cost
-        # self.nfev_arr[i] = result.nfev
-        # self.status_arr[i] = result.status
 
     def fill_initial_guess(self, i, result):
         self.popt_initial[:, i] = result.popt
@@ -1192,8 +1242,7 @@ class QNMFitVaryingStartingTime:
         load_pickle: whether to load the `pickle` file if it exists.
         fit_save_prefix: prefix of the path to save the `pickle` file. 
         A_bound: maximum value of the amplitude. 
-        jcf: `jaxfit` curve fit object.
-        fit_kwargs: keyword arguments for the `jcf.curve_fit` method.
+        fit_kwargs: keyword arguments for curve fitting.
         initial_dict: key word arguments for `make_initial_guess` method.
         A_guess_relative: whether to multiply the initial guess of the
             amplitude by the peak strain of the waveform.
@@ -1259,7 +1308,7 @@ class QNMFitVaryingStartingTime:
             Schwarzschild: bool = False,
             run_string_prefix: str = "Default",
             params0: Optional[np.ndarray] = None,
-            max_nfev: int = 200000,
+            max_nfev: int = DEFAULT_MAX_NFEV,
             sequential_guess: bool = True,
             load_pickle: bool = True,
             fit_save_prefix: str = FIT_SAVE_PATH,
@@ -1270,7 +1319,7 @@ class QNMFitVaryingStartingTime:
             random_initial: bool = False,
             initial_dict: Dict = {},
             A_guess_relative: bool = True,
-            set_seed: int = 1234,
+            set_seed: int = DEFAULT_SEED,
             weighted: bool = False,
             double_skip: bool = True,
             include_mirror: bool = False,
@@ -1278,7 +1327,8 @@ class QNMFitVaryingStartingTime:
             psi: Optional[float] = None,
             mirror_ignore_phase: bool = True,
             skip_i_init: int = 1,
-            save_results: bool = True) -> None:
+            save_results: bool = True,
+            fit_config: Optional[FitConfig] = None) -> None:
         """
         Initialize the `QNMFitVaryingStartingTime` object.
 
@@ -1308,7 +1358,7 @@ class QNMFitVaryingStartingTime:
             fit_save_prefix: prefix of the path to save the `pickle` file.
             nonconvergence_cut: whether to cut the nonconverged fits.
             A_bound: maximum value of the amplitude.
-            fit_kwargs: keyword arguments for the `jcf.curve_fit` method.
+            fit_kwargs: keyword arguments for curve fitting.
             initial_num: number of initial guesses to use for the first
                 starting time for frequency-free fits.
             random_initial: whether to generate random initial guesses for
@@ -1331,7 +1381,28 @@ class QNMFitVaryingStartingTime:
             skip_i_init: number of `t0` fits to skip for the first time a
                 nonconvergent fit occured.
             save_results: whether to save the results.
+            fit_config: optional FitConfig dataclass. If provided, overrides
+                the individual max_nfev, weighted, Schwarzschild,
+                include_mirror, iota, and psi parameters.
         """
+        if fit_config is not None:
+            self.fit_config = fit_config
+        else:
+            self.fit_config = FitConfig(
+                max_nfev=max_nfev,
+                weight_by_amplitude=weighted,
+                Schwarzschild=Schwarzschild,
+                include_mirror=include_mirror,
+                iota=iota,
+                psi=psi,
+            )
+        max_nfev = self.fit_config.max_nfev
+        weighted = self.fit_config.weight_by_amplitude
+        Schwarzschild = self.fit_config.Schwarzschild
+        include_mirror = self.fit_config.include_mirror
+        iota = self.fit_config.iota
+        psi = self.fit_config.psi
+
         self.h = h
         if A_guess_relative:
             A_rel = np.abs(h.h[0])
@@ -1391,7 +1462,6 @@ class QNMFitVaryingStartingTime:
         if self.include_mirror and (self.iota is None or self.psi is None):
             raise ValueError(
                 "Must specify iota and phi to include mirror mode")
-        # self.mirror_ignore_phase = mirror_ignore_phase
         if self.include_mirror and not self.var_M_a:
             self.mirror_ratio_list = self.get_mirror_ratio_list()
         else:
@@ -1414,9 +1484,6 @@ class QNMFitVaryingStartingTime:
     def initial_guesses(self) -> Tuple[int, List[QNMFit], List[np.ndarray]]:
         """
         Generate initial guesses for the first `t0` fit.
-
-        Parameters:
-            jcf: `jaxfit` curve fit object.
 
         Returns:
             best_guess_index: index of the best initial guess.
@@ -1449,7 +1516,7 @@ class QNMFitVaryingStartingTime:
             try:
                 qnm_fit.do_fit()
             except RuntimeError:
-                print(f"{j}-th initial guess fit did not reach tolerance.\n")
+                logger.warning(f"{j}-th initial guess fit did not reach tolerance.")
                 qnm_fit = None
             qnm_fit_list.append(qnm_fit)
 
@@ -1497,14 +1564,135 @@ class QNMFitVaryingStartingTime:
 
         return nan_result
 
+    def _run_warmup(self):
+        """Handle the warmup fit logic to initialize JAX/optimistix."""
+        global _FULL_WARMUP_DONE
+        max_len = self._max_len_for_fit
+
+        if not _FULL_WARMUP_DONE and not self.var_M_a:
+            n_warmup = min(5, len(self.t0_arr))
+            for warmup_idx in range(n_warmup):
+                warmup_fit = QNMFit(
+                    self.h, self.t0_arr[warmup_idx], self.N_free,
+                    qnm_fixed_list=self.qnm_fixed_list,
+                    Schwarzschild=self.Schwarzschild,
+                    params0=self.params0,
+                    max_nfev=self.max_nfev,
+                    A_bound=self.A_bound,
+                    weighted=self.weighted,
+                    include_mirror=self.include_mirror,
+                    mirror_ratio_list=self.mirror_ratio_list,
+                    max_len=max_len,
+                    **self.fit_kwargs)
+                warmup_fit.do_fit()
+                _ = warmup_fit.popt.block_until_ready()
+                if warmup_idx == 0:
+                    self._warmup_result = warmup_fit
+            _FULL_WARMUP_DONE = True
+        elif not self.var_M_a:
+            warmup_fit = QNMFit(
+                self.h, self.t0_arr[0], self.N_free,
+                qnm_fixed_list=self.qnm_fixed_list,
+                Schwarzschild=self.Schwarzschild,
+                params0=self.params0,
+                max_nfev=self.max_nfev,
+                A_bound=self.A_bound,
+                weighted=self.weighted,
+                include_mirror=self.include_mirror,
+                mirror_ratio_list=self.mirror_ratio_list,
+                max_len=max_len,
+                **self.fit_kwargs)
+            warmup_fit.do_fit()
+            self._warmup_result = warmup_fit
+
+    def _run_fit_at_t0(self, i, _t0):
+        """Handle fitting at a single t0 value.
+
+        Uses and updates instance state: _skip_i, _skip_consect,
+        _current_params0, _qnm_fit_result_temp, not_converged,
+        nonconvergence_indx.
+        """
+        max_len = self._max_len_for_fit
+
+        if self.var_M_a:
+            qnm_fit = QNMFitVarMa(
+                self.h,
+                _t0,
+                self.qnm_free_list,
+                qnm_fixed_list=self.qnm_fixed_list,
+                Schwarzschild=self.Schwarzschild,
+                params0=self._current_params0,
+                max_nfev=self.max_nfev,
+                include_mirror=self.include_mirror,
+                iota=self.iota,
+                psi=self.psi,
+                **self.fit_kwargs)
+        else:
+            qnm_fit = QNMFit(
+                self.h,
+                _t0,
+                self.N_free,
+                qnm_fixed_list=self.qnm_fixed_list,
+                Schwarzschild=self.Schwarzschild,
+                params0=self._current_params0,
+                max_nfev=self.max_nfev,
+                A_bound=self.A_bound,
+                weighted=self.weighted,
+                include_mirror=self.include_mirror,
+                mirror_ratio_list=self.mirror_ratio_list,
+                max_len=max_len,
+                **self.fit_kwargs)
+
+        if self.nonconvergence_cut and self.not_converged:
+            qnm_fit.copy_from_result(self._qnm_fit_result_temp)
+        else:
+            try:
+                if i == 0 and self.random_initial:
+                    if self._initial_converged:
+                        qnm_fit = self._qnm_initial_fit_list[self._best_guess_index]
+                    else:
+                        raise RuntimeError
+                elif i == 0 and not self.var_M_a and hasattr(self, '_warmup_result'):
+                    qnm_fit = self._warmup_result
+                else:
+                    if self._skip_consect < self._skip_i and self.double_skip:
+                        raise RuntimeError
+                    else:
+                        qnm_fit.do_fit()
+            except RuntimeError:
+                if self._skip_consect < self._skip_i:
+                    logger.debug(f"skipped t0 = {_t0}.")
+                else:
+                    logger.debug(
+                        f"fit did not reach tolerance at t0 = {_t0}.")
+                qnm_fit.result = self.make_nan_result()
+                self.nonconvergence_indx.append(i)
+                self.not_converged = True
+                if self.double_skip:
+                    if self._skip_consect >= self._skip_i:
+                        self._skip_consect = 0
+                        if self._skip_i == 0:
+                            self._skip_i = self.skip_i_init
+                        else:
+                            self._skip_i *= 2
+                    self._skip_consect += 1
+            else:
+                self._skip_consect = 0
+                self._skip_i = 0
+                if self.sequential_guess:
+                    self._current_params0 = qnm_fit.result.popt
+
+        self.result_full.fill_result(i, qnm_fit.result)
+        self._qnm_fit_result_temp = qnm_fit.result
+
     def do_fits(self):
         """
         Perform the fits.
 
         """
 
-        skip_i = 0
-        skip_consect = 0
+        self._skip_i = 0
+        self._skip_consect = 0
         self.not_converged = False
         self.nonconvergence_indx = []
         self._time_longest, _, _ = self.h.postmerger(self.t0_arr[0])
@@ -1543,72 +1731,35 @@ class QNMFitVaryingStartingTime:
                 _file_path = self.result_full.file_path
                 with open(_file_path, "rb") as f:
                     self.result_full = pickle.load(f)
-                print(
+                logger.info(
                     f"Loaded fit {self.result_full.run_string} from an old run.")
                 loaded_results = True
             except EOFError:
-                print("EOFError when loading pickle for fit. Doing new fit now...")
+                logger.warning("EOFError when loading pickle for fit. Doing new fit now...")
                 loaded_results = False
         if not loaded_results:
-            global _FULL_WARMUP_DONE
-            
-            # Full warmup: run multiple fits to fully initialize JAX/optimistix
-            # This only needs to happen once per session, regardless of N_free or h
-            if not _FULL_WARMUP_DONE and not self.var_M_a:
-                # Run warmup fits on first few t0 values to fully initialize the runtime
-                n_warmup = min(5, len(self.t0_arr))
-                for warmup_idx in range(n_warmup):
-                    warmup_fit = QNMFit(
-                        self.h, self.t0_arr[warmup_idx], self.N_free,
-                        qnm_fixed_list=self.qnm_fixed_list,
-                        Schwarzschild=self.Schwarzschild,
-                        params0=self.params0,
-                        max_nfev=self.max_nfev,
-                        A_bound=self.A_bound,
-                        weighted=self.weighted,
-                        include_mirror=self.include_mirror,
-                        mirror_ratio_list=self.mirror_ratio_list,
-                        max_len=max_len,
-                        **self.fit_kwargs)
-                    warmup_fit.do_fit()
-                    # Force completion
-                    _ = warmup_fit.popt.block_until_ready()
-                    if warmup_idx == 0:
-                        # Cache first result for reuse
-                        self._warmup_result = warmup_fit
-                _FULL_WARMUP_DONE = True
-            elif not self.var_M_a:
-                # Just do single warmup fit for result caching
-                warmup_fit = QNMFit(
-                    self.h, self.t0_arr[0], self.N_free,
-                    qnm_fixed_list=self.qnm_fixed_list,
-                    Schwarzschild=self.Schwarzschild,
-                    params0=self.params0,
-                    max_nfev=self.max_nfev,
-                    A_bound=self.A_bound,
-                    weighted=self.weighted,
-                    include_mirror=self.include_mirror,
-                    mirror_ratio_list=self.mirror_ratio_list,
-                    max_len=max_len,
-                    **self.fit_kwargs)
-                warmup_fit.do_fit()
-                # Cache the warmup result to use as the first actual result
-                self._warmup_result = warmup_fit
-            
+            self._run_warmup()
+
+            self._initial_converged = None
+            self._qnm_initial_fit_list = None
+            self._best_guess_index = None
             if self.random_initial:
-                best_guess_index, qnm_initial_fit_list, guess_list = self.initial_guesses()
-                if best_guess_index is None:
-                    initial_converged = False
+                self._best_guess_index, self._qnm_initial_fit_list, guess_list = self.initial_guesses()
+                if self._best_guess_index is None:
+                    self._initial_converged = False
                 else:
                     self.result_full.guess_list = guess_list
-                    for i, qnm_initial_fit in enumerate(qnm_initial_fit_list):
+                    for i, qnm_initial_fit in enumerate(self._qnm_initial_fit_list):
                         if qnm_initial_fit is None:
                             fit_result = self.make_nan_result()
                         else:
                             fit_result = qnm_initial_fit.result
                         self.result_full.fill_initial_guess(i, fit_result)
-                    initial_converged = True
-            _params0 = self.params0
+                    self._initial_converged = True
+
+            self._current_params0 = self.params0
+            self._qnm_fit_result_temp = None
+
             if self.N_free == 0:
                 desc = f"Runname: {self.run_string_prefix}, fitting with the following modes: "
                 mode_string_list = qnms_to_string(self.qnm_fixed_list)
@@ -1625,75 +1776,7 @@ class QNMFitVaryingStartingTime:
                 enumerate(
                     self.t0_arr), desc=desc, total=len(
                     self.t0_arr)):
-                if self.var_M_a:
-                    qnm_fit = QNMFitVarMa(
-                        self.h,
-                        _t0,
-                        self.qnm_free_list,
-                        qnm_fixed_list=self.qnm_fixed_list,
-                        Schwarzschild=self.Schwarzschild,
-                        params0=_params0,
-                        max_nfev=self.max_nfev,
-                        include_mirror=self.include_mirror,
-                        iota=self.iota,
-                        psi=self.psi,
-                        **self.fit_kwargs)
-                else:
-                    qnm_fit = QNMFit(
-                        self.h,
-                        _t0,
-                        self.N_free,
-                        qnm_fixed_list=self.qnm_fixed_list,
-                        Schwarzschild=self.Schwarzschild,
-                        params0=_params0,
-                        max_nfev=self.max_nfev,
-                        A_bound=self.A_bound,
-                        weighted=self.weighted,
-                        include_mirror=self.include_mirror,
-                        mirror_ratio_list=self.mirror_ratio_list,
-                        max_len=max_len,
-                        **self.fit_kwargs)
-                if self.nonconvergence_cut and self.not_converged:
-                    qnm_fit.copy_from_result(qnm_fit_result_temp)
-                else:
-                    try:
-                        if i == 0 and self.random_initial:
-                            if initial_converged:
-                                qnm_fit = qnm_initial_fit_list[best_guess_index]
-                            else:
-                                raise RuntimeError
-                        elif i == 0 and not self.var_M_a and hasattr(self, '_warmup_result'):
-                            # Use the cached warmup result for first iteration
-                            qnm_fit = self._warmup_result
-                        else:
-                            if skip_consect < skip_i and self.double_skip:
-                                raise RuntimeError
-                            else:
-                                qnm_fit.do_fit()
-                    except RuntimeError:
-                        if skip_consect < skip_i:
-                            print(f"skipped t0 = {_t0}.")
-                        else:
-                            print(
-                                f"fit did not reach tolerance at t0 = {_t0}.")
-                        qnm_fit.result = self.make_nan_result()
-                        self.nonconvergence_indx.append(i)
-                        self.not_converged = True
-                        if self.double_skip:
-                            if skip_consect >= skip_i:
-                                skip_consect = 0
-                                if skip_i == 0:
-                                    skip_i = self.skip_i_init
-                                else:
-                                    skip_i *= 2
-                            skip_consect += 1
-                    else:
-                        skip_consect = 0
-                        skip_i = 0
-                        if self.sequential_guess:
-                            _params0 = qnm_fit.result.popt
-                self.result_full.fill_result(i, qnm_fit.result)
-                qnm_fit_result_temp = qnm_fit.result
+                self._run_fit_at_t0(i, _t0)
             self.result_full.nonconvergence_indx = self.nonconvergence_indx
             self.result_full.process_results()
 

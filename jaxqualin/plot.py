@@ -6,11 +6,11 @@ from matplotlib.patches import Ellipse
 import matplotlib.transforms as transforms
 import numpy as np
 
-from .qnmode import *
-from .selection import *
-from .postprocess import *
+from .qnmode import qnms_to_string, qnms_to_tex_string, S_mirror_fac, A_pos_to_A_neg, mode
+from .selection import closest_free_mode_distance, closest_free_mode_distance_cov, ModeSearchAllFreeVaryingN
+from .postprocess import get_df_for_coexisting_modes
 from .fit import QNMFitVaryingStartingTimeResult, QNMFitVaryingStartingTimeResultVarMa
-from .waveforms import mode
+from .utils import linfunc, linfunc2
 
 from bisect import bisect_right
 from adjustText import adjust_text
@@ -52,6 +52,20 @@ mpl.rcParams.update(params)
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 PLOT_SAVE_PATH = os.path.join(ROOT_PATH, "plots")
+
+
+def _get_or_create_ax(ax=None, figsize=None):
+    """Return existing axes or create a new figure with axes."""
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    return ax
+
+
+def _add_colorbar(ax, cmap, norm, label=""):
+    """Add a colorbar to the axes."""
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    plt.colorbar(sm, ax=ax, label=label)
 
 
 def plot_omega_free(
@@ -100,8 +114,7 @@ def plot_omega_free(
     else:
         t0_max_indx = len(t0_arr)
 
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     omega_r_dict = omega_dict["real"]
     omega_i_dict = omega_dict["imag"]
     omega_r_list = list(omega_r_dict.values())
@@ -285,8 +298,7 @@ def plot_M(
     else:
         t0_max_indx = len(t0_arr)
 
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     M = Ma_dict["M"]
     ax.plot(t0_arr[t0_min_indx:t0_max_indx],
             M[t0_min_indx:t0_max_indx], alpha=0.3)
@@ -318,8 +330,7 @@ def plot_M_a(
     else:
         t0_max_indx = len(t0_arr)
 
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     M = Ma_dict["M"]
     a = Ma_dict["a"]
     if indicate_start:
@@ -397,8 +408,7 @@ def plot_amplitudes(
         A_fac: The factor by which to multiply the amplitudes.
     """
     colori = 0
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     A_fix_dict = results_full.A_fix_dict
     A_free_dict = results_full.A_free_dict
     t0_arr = results_full.t0_arr
@@ -492,8 +502,7 @@ def plot_amplitudes_unadj(
         use_label=True,
         legend=True):
     colori = 0
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     A_fix_dict = results_full.A_fix_dict
     A_free_dict = results_full.A_free_dict
     t0_arr = results_full.t0_arr
@@ -597,8 +606,7 @@ def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
         af: The remnant spin of the black hole.
     """
     colori = 0
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     phi_fix_dict = results_full.phi_fix_dict
     phi_free_dict = results_full.phi_free_dict
     A_fix_dict = results_full.A_fix_dict
@@ -705,8 +713,7 @@ def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
 
 def plot_mismatch(results_full, ax=None, c='k', make_ax=True,
                   alpha=1, label = None, legend = False):
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     t0_arr = results_full.t0_arr
     mismatch_arr = results_full.mismatch_arr
     ax.semilogy(t0_arr, mismatch_arr, c=c, alpha=alpha, label = label)
@@ -727,8 +734,7 @@ def plot_mode_distance(
         omega_i_tol,
         ax=None):
     t0_arr = result_full.t0_arr
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     for mode in fixed_modes:
         delta = closest_free_mode_distance(result_full, mode,
                                            alpha_r=omega_r_tol,
@@ -783,8 +789,7 @@ def plot_mode_distance_cov(
     dt = t0_arr[1] - t0_arr[0]
     window_length = int(tau_freq/dt) + 1
     t_start_dict = {}
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     for mode in fixed_modes:
         cov = cov_dict[mode.string()]
         delta = closest_free_mode_distance_cov(result_full, mode, 
@@ -880,7 +885,7 @@ def plot_relevant_mode_search_full(
     fig.tight_layout()
     save_file_path = os.path.join(
         PLOT_SAVE_PATH,
-        f"lmplots/{mode_search_complete.SXSnum}_{postfix_string}.pdf")
+        f"lmplots/{mode_search_complete.SXS_num}_{postfix_string}.pdf")
 
     plt.savefig(save_file_path)
 
@@ -928,19 +933,9 @@ def phase_break_for_plot(times, phis_in):
     return timeslist, phislist
 
 
-def linfunc(p, x):
-    m, c = p
-    return m * x + c
-
-
 def linfunc1(p, x):
     c = p
     return x + c
-
-
-def linfunc2(p, x):
-    c = p
-    return 2 * x + c
 
 
 def linfunc3(p, x):
@@ -963,7 +958,7 @@ def adjust_phase_for_fit(xs, ys):
     return xs_2pi, ys_adj_2
 
 
-def plot_mode_vs_lin_mode_ampltiude(
+def plot_mode_vs_lin_mode_amplitude(
         df,
         l_quad,
         m_quad,
@@ -1027,8 +1022,7 @@ def plot_mode_vs_lin_mode_ampltiude(
                         sx=xerr, sy=yerr)
         odr = ODR(data, lin_model, beta0=beta0)
         out = odr.run()
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 5))
+    ax = _get_or_create_ax(ax, figsize=(8, 5))
     sc = ax.scatter(
         xs,
         ys,
@@ -1051,8 +1045,7 @@ def plot_mode_vs_lin_mode_ampltiude(
                         i], (xs[i], ys[i]), fontsize=8, alpha=alpha)
 
     if colorbar:
-        cb = fig.colorbar(sc, ax=ax)
-        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+        _add_colorbar(ax, "cividis", norm, label=r"$\chi_{\rm rem}$")
 
     x_lim = ax.get_xlim()
 
@@ -1136,8 +1129,7 @@ def plot_mode_vs_lin_mode_phase(
         odr = ODR(data, lin_model, beta0=beta0)
         out = odr.run()
 
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 5))
+    ax = _get_or_create_ax(ax, figsize=(8, 5))
     sc = ax.scatter(
         fit_fac * xs % (2 * np.pi),
         ys % (2 * np.pi),
@@ -1156,8 +1148,7 @@ def plot_mode_vs_lin_mode_phase(
             fmt="None",
             alpha=alpha)
     if colorbar:
-        cb = fig.colorbar(sc)
-        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+        _add_colorbar(ax, "cividis", norm, label=r"$\chi_{\rm rem}$")
     ax.set_xlim(0, 2 * np.pi)
     ax.set_ylim(0, 2 * np.pi)
     ax.set_xticks([0, np.pi / 2, np.pi, 3 * np.pi / 2, 2 * np.pi])
@@ -1173,7 +1164,6 @@ def plot_mode_vs_lin_mode_phase(
         ax.plot(xsfit, ysfit, c="k", ls="--")
         ax.plot(xsfit, ysfit + 2 * np.pi, c="k", ls="--")
         ax.plot(xsfit, ysfit - 2 * np.pi, c="k", ls="--")
-    # ax.plot(xsfit, ysfit, c = "k", ls = ":")
     xlabel_string = r"$\phi_{{{}}} + \phi_{{{}}}$".format(
         mode_string_pro_1, mode_string_pro_2)
     ylabel_string = r"$\phi_{{{}}}$".format(mode_string_pro_quad)
@@ -1251,8 +1241,7 @@ def plot_mode_vs_mode_amplitude(
         odr = ODR(data, lin_model, beta0=beta0)
         out = odr.run()
 
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 5))
+    ax = _get_or_create_ax(ax, figsize=(8, 5))
     sc = ax.scatter(
         xs,
         ys,
@@ -1261,14 +1250,12 @@ def plot_mode_vs_mode_amplitude(
         norm=norm,
         alpha=alpha)
     plt.draw()
-    xerr_max = 0
     for i in range(len(sc.get_facecolors())):
         ax.errorbar(xs[i], ys[i], xerr=xerr[i],
                     yerr=yerr[i], ecolor=sc.get_facecolors()[i].tolist(),
                     fmt="None", alpha=alpha)
     if colorbar:
-        cb = fig.colorbar(sc, ax=ax)
-        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+        _add_colorbar(ax, "cividis", norm, label=r"$\chi_{\rm rem}$")
     x_lim = ax.get_xlim()
     if fit:
         xsfit = np.linspace(*x_lim, num=100)
@@ -1344,8 +1331,7 @@ def plot_mode_vs_mode_phase(
         odr = ODR(data, lin_model, beta0=beta0)
         out = odr.run()
 
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 5))
+    ax = _get_or_create_ax(ax, figsize=(8, 5))
     sc = ax.scatter(
         fit_fac * xs % (2 * np.pi),
         ys % (2 * np.pi),
@@ -1364,8 +1350,7 @@ def plot_mode_vs_mode_phase(
             fmt="None",
             alpha=alpha)
     if colorbar:
-        cb = fig.colorbar(sc)
-        cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+        _add_colorbar(ax, "cividis", norm, label=r"$\chi_{\rm rem}$")
 
     x_lim = ax.get_xlim()
 
@@ -1384,7 +1369,6 @@ def plot_mode_vs_mode_phase(
     ax.set_yticklabels(["0", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"])
     xsfit = np.linspace(0, 2 * np.pi, num=100)
     ysfit = xsfit
-    # ax.plot(xsfit, ysfit, c = "k", ls = ":")
     xlabel_string = r"${}\phi_{{{}}}$".format(fit_fac, mode_string_pro_2)
     ylabel_string = r"$\phi_{{{}}}$".format(mode_string_pro_1)
     ax.set_xlabel(xlabel_string.replace('x', r" \times "))
@@ -1459,10 +1443,7 @@ def plot_mode_vs_lin_mode_ratio(
     ratio = ys / xs
     ratio_err = ratio * np.sqrt((yerr / ys)**2 + (xerr / xs)**2)
 
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 5))
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 5))
+    ax = _get_or_create_ax(ax, figsize=(8, 5))
     if eta_color:
         sc = ax.scatter(chis, ratio, c=etas, alpha=alpha)
     else:
@@ -1483,11 +1464,8 @@ def plot_mode_vs_lin_mode_ratio(
             fmt="None",
             alpha=alpha)
     if colorbar:
-        cb = fig.colorbar(sc, ax=ax)
-        if eta_color:
-            cb.ax.set_ylabel(r"$\eta$")
-        else:
-            cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+        cb_label = r"$\eta$" if eta_color else r"$\chi_{\rm rem}$"
+        _add_colorbar(ax, sc.get_cmap(), sc.norm, label=cb_label)
 
     x_lim = ax.get_xlim()
 
@@ -1570,8 +1548,7 @@ def plot_mode_vs_mode_amplitude_quad_ratio(
     ratio = ys / xs**2
     ratio_err = ratio * np.sqrt((yerr / ys)**2 + (2 * xerr / xs)**2)
 
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 5))
+    ax = _get_or_create_ax(ax, figsize=(8, 5))
 
     if color_string == "eta":
         sc = ax.scatter(chis, ratio, c=etas, alpha=alpha)
@@ -1603,15 +1580,9 @@ def plot_mode_vs_mode_amplitude_quad_ratio(
                 df_merged["SXS_num"].to_numpy()[i],
                 fontsize=8)
     if colorbar:
-        cb = fig.colorbar(sc, ax=ax)
-        if color_string == "eta":
-            cb.ax.set_ylabel(r"$\eta$")
-        elif color_string == "chi_p":
-            cb.ax.set_ylabel(r"$\chi_+$")
-        elif color_string == "chi_m":
-            cb.ax.set_ylabel(r"$\chi_-$")
-        else:
-            cb.ax.set_ylabel(r"$\chi_{\rm rem}$")
+        cb_labels = {"eta": r"$\eta$", "chi_p": r"$\chi_+$", "chi_m": r"$\chi_-$"}
+        cb_label = cb_labels.get(color_string, r"$\chi_{\rm rem}$")
+        _add_colorbar(ax, sc.get_cmap(), sc.norm, label=cb_label)
 
     x_lim = ax.get_xlim()
 
@@ -1645,16 +1616,14 @@ def visualize_outliers_n_modes(df, l, m, outlier_SXS_nums, ax=None):
     df_lm = df.loc[(df["l"] == l) & (df["m"] == m)]
     counts = df_lm['SXS_num'].value_counts()
     counts_outliers = counts.loc[outlier_SXS_nums]
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     ax.hist(counts, bins=20)
     ax.hist(counts_outliers, bins=20)
 
 
 def visualize_outliers_individual_modes(df, l, m, outlier_SXS_nums, ax=None):
     df_lm = df.loc[(df["l"] == l) & (df["m"] == m)]
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
     for _, row in df_lm.iterrows():
         if row["SXS_num"] in outlier_SXS_nums:
             c = 'r'
@@ -1765,8 +1734,7 @@ def plot_mode_relationship(df, mode_tuple_list, run_type, fit=False, cmap=None,
     ratio = A2 / A1
     ratio_err = ratio * np.sqrt((A1_err / A1)**2 + (A2_err / A2)**2)
 
-    if ax is None:
-        fig, ax = plt.subplots()
+    ax = _get_or_create_ax(ax)
 
     if run_type == 'chi_rem':
         chi = df_coexist['chi_rem_1']

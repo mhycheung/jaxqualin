@@ -1,8 +1,9 @@
-from .utils import *
-from .qnmode import *
-from .fit import *
-from .waveforms import *
+from .utils import max_consecutive_trues
+from .qnmode import mode, potential_modes, qnms_to_string, remove_duplicated_modes, lower_overtone_present, lower_l_mode_present
+from .fit import QNMFitVaryingStartingTime, FIT_SAVE_PATH
+from .waveforms import waveform, get_waveform_SXS, get_relevant_lm_waveforms_SXS, relevant_modes_dict_to_lm_tuple, make_eff_ringdown_waveform_from_param
 
+import logging
 import numpy as np
 import pickle
 import json
@@ -10,9 +11,29 @@ import os
 
 from typing import List, Tuple, Union, Optional, Dict, Any
 
+logger = logging.getLogger(__name__)
+
 SETTING_PATH = os.getcwd()
 MODE_SEARCHERS_SAVE_PATH = os.path.join(
     os.getcwd(), ".jaxqualin_cache/mode_searchers")
+
+DEFAULT_N_LIST = [5, 6, 7, 8, 9, 10]
+DEFAULT_ALPHA = 0.05
+DEFAULT_TAU_AGNOSTIC = 10
+DEFAULT_P_AGNOSTIC = 0.95
+
+
+def _merge_kwargs(defaults, overrides):
+    """Merge default kwargs with user overrides."""
+    result = dict(defaults)
+    result.update(overrides)
+    return result
+
+
+def _check_no_cce(cce_flag):
+    """Raise if CCE mode is requested (not yet supported)."""
+    if cce_flag:
+        raise NotImplementedError("CCE is not yet supported")
 
 
 class IterativeFlatnessChecker:
@@ -26,7 +47,7 @@ class IterativeFlatnessChecker:
         self.a = a
         self.found_modes = found_modes
         self.fitter_list = []
-        kwargs = {
+        self.kwargs = _merge_kwargs({
             "run_string_prefix": "Default",
             "epsilon_stable": 0.2,
             "tau_stable": 10,
@@ -38,9 +59,7 @@ class IterativeFlatnessChecker:
             "beta_A": 1.0,
             "beta_phi": 1.5,
             "CCE": False,
-            "fit_save_prefix": FIT_SAVE_PATH}
-        kwargs.update(kwargs_in)
-        self.kwargs = kwargs
+            "fit_save_prefix": FIT_SAVE_PATH}, kwargs_in)
         self.run_string_prefix = self.kwargs["run_string_prefix"]
         self.epsilon_stable = self.kwargs["epsilon_stable"]
         self.confusion_tol = self.kwargs["confusion_tol"]
@@ -52,8 +71,7 @@ class IterativeFlatnessChecker:
         self.beta_A = self.kwargs["beta_A"]
         self.beta_phi = self.kwargs["beta_phi"]
         self.CCE = self.kwargs["CCE"]
-        if self.CCE:
-            raise NotImplementedError
+        _check_no_cce(self.CCE)
         self.fit_save_prefix = self.kwargs["fit_save_prefix"]
 
         self.retro_def_orbit = self.kwargs["retro_def_orbit"]
@@ -165,12 +183,12 @@ class IterativeFlatnessChecker:
                             sacrifice_mode_indx = jj
             if discard_mode:
                 if sacrifice_mode:
-                    print(
+                    logger.info(
                         f"Although the {current_modes[worst_mode_indx].string()} mode fluctuates the most, "
                         f"the {current_modes[sacrifice_mode_indx].string()} mode is sacrificed instead.")
                     del current_modes[sacrifice_mode_indx]
                 else:
-                    print(
+                    logger.info(
                         f"discarding {current_modes[worst_mode_indx].string()} mode because it failed flatness test.")
                     del current_modes[worst_mode_indx]
             more_than_one_mode = len(current_modes) > 1
@@ -185,10 +203,10 @@ class ModeSelectorAllFree:
             self,
             result_full,
             potential_mode_list,
-            alpha_r=0.05,
-            alpha_i=0.05,
-            tau_agnostic=10,
-            p_agnostic=0.95,
+            alpha_r=DEFAULT_ALPHA,
+            alpha_i=DEFAULT_ALPHA,
+            tau_agnostic=DEFAULT_TAU_AGNOSTIC,
+            p_agnostic=DEFAULT_P_AGNOSTIC,
             N_max=10):
         self.result_full = result_full
         self.potential_mode_list = potential_mode_list
@@ -246,16 +264,16 @@ class ModeSearchAllFreeLM:
         self.relevant_lm_list = relevant_lm_list
         self.t0_arr = t0_arr
         self.N = N
-        kwargs = {
+        self.kwargs = _merge_kwargs({
             "retro_def_orbit": True,
             "run_string_prefix": "Default",
             "load_pickle": True,
             "a_recoil_tol": 0.,
             "recoil_n_max": 0,
-            "alpha_r": 0.05,
-            "alpha_i": 0.05,
-            "tau_agnostic": 10,
-            "p_agnostic": 0.95,
+            "alpha_r": DEFAULT_ALPHA,
+            "alpha_i": DEFAULT_ALPHA,
+            "tau_agnostic": DEFAULT_TAU_AGNOSTIC,
+            "p_agnostic": DEFAULT_P_AGNOSTIC,
             'fit_kwargs': {},
             "initial_num": 1,
             "random_initial": False,
@@ -264,9 +282,7 @@ class ModeSearchAllFreeLM:
             "set_seed": 1234,
             'fit_save_prefix': FIT_SAVE_PATH,
             'BBH_potential_modes': True,
-            'potential_modes_custom': []}
-        kwargs.update(kwargs_in)
-        self.kwargs = kwargs
+            'potential_modes_custom': []}, kwargs_in)
         self.retro_def_orbit = self.kwargs["retro_def_orbit"]
         self.run_string_prefix = self.kwargs["run_string_prefix"]
         self.a_recoil_tol = self.kwargs["a_recoil_tol"]
@@ -328,7 +344,6 @@ class ModeSearchAllFreeLM:
             p_agnostic=self.p_agnostic,
             N_max=N)
         self.mode_selector.do_selection()
-        # print(qnms_to_string(self.mode_selector.passed_mode_list))
         jump_mode_indx = []
         for j in range(len(self.mode_selector.passed_mode_list)):
             if not lower_overtone_present(
@@ -343,14 +358,13 @@ class ModeSearchAllFreeLM:
                     self.mode_selector.passed_mode_list +
                     self.found_modes):
                 jump_mode_indx.append(j)
-        # print(list(set(_jump_mode_indx)))
         for k in sorted(list(set(jump_mode_indx)), reverse=True):
             del self.mode_selector.passed_mode_list[k]
         self.found_modes.extend(self.mode_selector.passed_mode_list)
         print_string = f"Runname: {self.run_string_prefix}, N_free = {N}, potential modes: "
         print_string += ', '.join(qnms_to_string(
             self.mode_selector.passed_mode_list))
-        print(print_string)
+        logger.info(print_string)
         for j in sorted(self.mode_selector.passed_mode_indx, reverse=True):
             del self.potential_modes[j]
 
@@ -458,12 +472,11 @@ class ModeSearchAllFreeVaryingN:
         self.a = a
         self.relevant_lm_list = relevant_lm_list
         self.t0_arr = t0_arr
-        kwargs = {'run_string_prefix': 'Default',
+        kwargs = _merge_kwargs({'run_string_prefix': 'Default',
                   'load_pickle': True,
-                  'N_list': [5, 6, 7, 8, 9, 10],
+                  'N_list': DEFAULT_N_LIST,
                   'CCE': False,
-                  'retro_def_orbit': True}
-        kwargs.update(kwargs_in)
+                  'retro_def_orbit': True}, kwargs_in)
         self.N_list = kwargs['N_list']
         self.kwargs = kwargs
         self.flatness_checker_kwargs = flatness_checker_kwargs
@@ -474,8 +487,7 @@ class ModeSearchAllFreeVaryingN:
         self.run_string_prefix = kwargs["run_string_prefix"]
         self.load_pickle = self.kwargs["load_pickle"]
         self.CCE = self.kwargs["CCE"]
-        if self.CCE:
-            raise NotImplementedError
+        _check_no_cce(self.CCE)
 
     def init_searchers(self) -> None:
         """
@@ -517,7 +529,7 @@ class ModeSearchAllFreeVaryingN:
                     **self.flatness_checker_kwargs,
                     **self.kwargs))
             flatness_checker = self.flatness_checkers[i]
-            print(
+            logger.info(
                 f'Performing amplitude and phase flatness check for N_free = {self.N_list[i]}')
             flatness_checker.do_iterative_flatness_check()
             flatness_checker.found_modes_screened
@@ -525,9 +537,9 @@ class ModeSearchAllFreeVaryingN:
             if len(mode_searcher.found_modes) >= len(self.found_modes_final):
                 self.best_run_indx = i
                 self.found_modes_final = mode_searcher.found_modes
-            print(
-                f"Runname: {self.run_string_prefix}, N_free = {self.N_list[i]}, found the following {len(mode_searcher.found_modes)} modes: ")
-            print(', '.join(qnms_to_string(mode_searcher.found_modes)))
+            logger.info(
+                f"Runname: {self.run_string_prefix}, N_free = {self.N_list[i]}, found the following {len(mode_searcher.found_modes)} modes: "
+                + ', '.join(qnms_to_string(mode_searcher.found_modes)))
 
 
 class ModeSearchAllFreeVaryingNSXS:
@@ -536,7 +548,7 @@ class ModeSearchAllFreeVaryingNSXS:
     number of free modes used in the fit.
 
     Attributes:
-        SXSnum: The SXS number of the waveform. 
+        SXS_num: The SXS number of the waveform. 
         l: The harmonic number l of the
         waveform. m: The harmonic number m of the waveform. 
         t0_arr: array of starting times for fitting. 
@@ -596,7 +608,7 @@ class ModeSearchAllFreeVaryingNSXS:
 
     """
 
-    SXSnum: str
+    SXS_num: str
     l: int
     m: int
     t0_arr: np.ndarray
@@ -626,7 +638,7 @@ class ModeSearchAllFreeVaryingNSXS:
 
     def __init__(
             self,
-            SXSnum: str,
+            SXS_num: str,
             l: int,
             m: int,
             t0_arr: np.ndarray = np.linspace(
@@ -638,36 +650,34 @@ class ModeSearchAllFreeVaryingNSXS:
         Initialize the `ModeSearchAllFreeVaryingNSXS` class.
 
         Parameters:
-            SXSnum: The SXS number of the waveform.
+            SXS_num: The SXS number of the waveform.
             l: The harmonic number l of the waveform.
             m: The harmonic number m of the waveform.
             t0_arr: array of starting times for fitting.
             **kwargs_in: keyword arguments.
         """
-        self.SXSnum = SXSnum
+        self.SXS_num = SXS_num
         self.l = l
         self.m = m
         self.t0_arr = t0_arr
-        kwargs = {'load_pickle': True,
+        kwargs = _merge_kwargs({'load_pickle': True,
                   'mode_searcher_load_pickle': True,
                   'save_mode_searcher': True,
-                  'N_list': [5, 6, 7, 8, 9, 10],
+                  'N_list': DEFAULT_N_LIST,
                   'postfix_string': '',
                   'mode_searchers_save_path': MODE_SEARCHERS_SAVE_PATH,
                   'set_seed_SXS': True,
-                  'default_seed': 1234,
+                  'default_seed': DEFAULT_SEED,
                   'CCE': False,
                   'relevant_lm_list': [],
                   'retro_def_orbit': True,
                   'run_string_fitter': None,
                   'run_string': None,
-                  'download': None}
-        kwargs.update(kwargs_in)
+                  'download': None}, kwargs_in)
         self.N_list = kwargs['N_list']
         self.postfix_string = kwargs['postfix_string']
         self.CCE = kwargs['CCE']
-        if self.CCE:
-            raise NotImplementedError
+        _check_no_cce(self.CCE)
         self.kwargs = kwargs
         self.retro_def_orbit = self.kwargs['retro_def_orbit']
 
@@ -679,11 +689,11 @@ class ModeSearchAllFreeVaryingNSXS:
 
         self.N_list_string = '_'.join(list(map(str, self.N_list)))
         if kwargs["run_string_fitter"] is None:
-            self.run_string_fitter = f"SXS{self.SXSnum}_lm_{self.l}.{self.m}"
+            self.run_string_fitter = f"SXS{self.SXS_num}_lm_{self.l}.{self.m}"
         else:
             self.run_string_fitter = kwargs["run_string_fitter"]
         if kwargs["run_string"] is None:
-            self.run_string = f"SXS{self.SXSnum}_lm_{self.l}.{self.m}_N_{self.N_list_string}"
+            self.run_string = f"SXS{self.SXS_num}_lm_{self.l}.{self.m}_N_{self.N_list_string}"
         else:
             self.run_string = kwargs["run_string"]
         save_path = self.kwargs["mode_searchers_save_path"]
@@ -696,7 +706,7 @@ class ModeSearchAllFreeVaryingNSXS:
         self.load_pickle = self.kwargs["load_pickle"]
         self.mode_searcher_load_pickle = self.kwargs["mode_searcher_load_pickle"]
         if self.kwargs['set_seed_SXS']:
-            self.set_seed = int(self.SXSnum)
+            self.set_seed = int(self.SXS_num)
         else:
             self.set_seed = self.kwargs['default_seed']
         self.save_mode_searcher = self.kwargs['save_mode_searcher']
@@ -720,8 +730,9 @@ class ModeSearchAllFreeVaryingNSXS:
             **kwargs)
         self.mode_searcher_vary_N.do_mode_searches()
         self.found_modes_final = self.mode_searcher_vary_N.found_modes_final
-        print(f"Runname: {self.run_string}, final list of modes: ")
-        print(', '.join(qnms_to_string(self.found_modes_final)))
+        logger.info(
+            f"Runname: {self.run_string}, final list of modes: "
+            + ', '.join(qnms_to_string(self.found_modes_final)))
 
     def do_mode_search_varying_N(self) -> None:
         """
@@ -735,20 +746,19 @@ class ModeSearchAllFreeVaryingNSXS:
         """
         Loads the waveform from the SXS catalog.
         """
-        if self.CCE:
-            raise NotImplementedError
+        _check_no_cce(self.CCE)
         relevant_modes_dict = get_relevant_lm_waveforms_SXS(
-            self.SXSnum, CCE=self.CCE)
+            self.SXS_num, CCE=self.CCE)
         if not self.relevant_lm_list_override:
             self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
                 relevant_modes_dict)
         peaktime_dom = list(relevant_modes_dict.values())[0].peaktime
         # if self.CCE:
         #     # self.h, self.M, self.a, self.Lev = get_waveform_CCE(
-        #     #     self.SXSnum, self.l, self.m)
+        #     #     self.SXS_num, self.l, self.m)
         # else:
         self.h, self.M, self.a, self.Lev = get_waveform_SXS(
-            self.SXSnum, self.l, self.m, download = self.download)
+            self.SXS_num, self.l, self.m, download = self.download)
         self.h.update_peaktime(peaktime_dom)
 
     def pickle_save(self) -> None:
@@ -774,28 +784,25 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
 
     def __init__(
             self,
-            SXSnum,
+            SXS_num,
             t0_arr=np.linspace(
                 0,
                 50,
                 num=501),
             **kwargs_in):
-        self.SXSnum = SXSnum
+        self.SXS_num = SXS_num
         self.t0_arr = t0_arr
-        kwargs = {'load_pickle': True,
+        self.kwargs = _merge_kwargs({'load_pickle': True,
                   'mode_searcher_load_pickle': True,
-                  'N_list': [5, 6, 7, 8, 9, 10],
+                  'N_list': DEFAULT_N_LIST,
                   'postfix_string': '',
-                  'CCE': False}
-        kwargs.update(kwargs_in)
-        self.kwargs = kwargs
-        self.load_pickle = kwargs['load_pickle']
-        self.mode_searcher_load_pickle = kwargs['mode_searcher_load_pickle']
-        self.N_list = kwargs['N_list']
-        self.postfix_string = kwargs['postfix_string']
-        self.CCE = kwargs['CCE']
-        if self.CCE:
-            raise NotImplementedError
+                  'CCE': False}, kwargs_in)
+        self.load_pickle = self.kwargs['load_pickle']
+        self.mode_searcher_load_pickle = self.kwargs['mode_searcher_load_pickle']
+        self.N_list = self.kwargs['N_list']
+        self.postfix_string = self.kwargs['postfix_string']
+        self.CCE = self.kwargs['CCE']
+        _check_no_cce(self.CCE)
         self.get_relevant_lm_list()
         self.get_relevant_lm_mode_searcher_varying_N()
 
@@ -807,7 +814,7 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
                 with open(_file_path, "rb") as f:
                     self.relevant_lm_mode_searcher_varying_N[_i] = pickle.load(
                         f)
-                print(
+                logger.info(
                     f"Loaded lm = {self.relevant_lm_list[_i][0]}.{self.relevant_lm_list[_i][1]} from an old run.")
             else:
                 self.relevant_lm_mode_searcher_varying_N[_i].do_mode_search_varying_N(
@@ -815,7 +822,7 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
 
     def get_relevant_lm_list(self):
         relevant_modes_dict = get_relevant_lm_waveforms_SXS(
-            self.SXSnum, CCE=self.CCE)
+            self.SXS_num, CCE=self.CCE)
         self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
             relevant_modes_dict)
 
@@ -824,12 +831,12 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
         for lm in self.relevant_lm_list:
             l, m = lm
             if self.CCE:
-                _run_string_prefix = f"CCE{self.SXSnum}_lm_{l}.{m}"
+                _run_string_prefix = f"CCE{self.SXS_num}_lm_{l}.{m}"
             else:
-                _run_string_prefix = f"SXS{self.SXSnum}_lm_{l}.{m}"
+                _run_string_prefix = f"SXS{self.SXS_num}_lm_{l}.{m}"
             self.relevant_lm_mode_searcher_varying_N. append(
                 ModeSearchAllFreeVaryingNSXS(
-                    self.SXSnum,
+                    self.SXS_num,
                     l,
                     m,
                     t0_arr=self.t0_arr,
@@ -928,55 +935,11 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range=0.95,
     return fluc_least_indx, fluc_least, start_flat_indx
 
 
-def start_of_flat_region(length, arr1, arr2, quantile_range=0.95,
-                         normalize_1_by=None, normalize_2_by=2 * np.pi,
-                         med_min=1e-3, weight_1=1, weight_2=1.5,
-                         fluc_tol=0.1):
-    if len(arr1) != len(arr2):
-        raise Exception("The length of the two arrays do not match")
-    nan_tol = 1 - quantile_range
-    total_length = len(arr1)
-    quantile_low = (1 - quantile_range) / 2
-    quantile_hi = 1 - quantile_low
-    for i in range(total_length - length):
-        arr1_in_range = arr1[i:i + length]
-        arr2_in_range = arr2[i:i + length]
-        if length > 0:
-            arr1_nan_frac = np.sum(np.isnan(arr1_in_range)) / length
-            arr2_nan_frac = np.sum(np.isnan(arr2_in_range)) / length
-        else:
-            arr1_nan_frac = 1
-            arr2_nan_frac = 1
-        quantile_adj = min(arr1_nan_frac / 2, nan_tol / 2)
-        hi1 = np.nanquantile(arr1_in_range, min(1, quantile_hi + quantile_adj))
-        low1 = np.nanquantile(
-            arr1_in_range, max(
-                0, quantile_low - quantile_adj))
-        med1 = max(np.nanquantile(arr1_in_range, 0.5), med_min)
-        if normalize_1_by is None:
-            normalize1 = med1
-        else:
-            normalize1 = normalize_1_by
-        fluc1 = (hi1 - low1) / normalize1
-
-        hi2 = np.nanquantile(arr2_in_range, min(1, quantile_hi + quantile_adj))
-        low2 = np.nanquantile(
-            arr2_in_range, max(
-                0, quantile_low - quantile_adj))
-        med2 = max(np.nanquantile(arr2_in_range, 0.5), med_min)
-        if normalize_2_by is None:
-            normalize2 = med2
-        else:
-            normalize2 = normalize_2_by
-        fluc2 = (hi2 - low2) / normalize2
-
-        fluc = np.sqrt((fluc1 * weight_1)**2 + (fluc2 * weight_2)**2)
-
-        if fluc < fluc_tol and arr1_nan_frac < nan_tol:
-            start_flat_indx = i
-            return start_flat_indx
-
-    return np.nan
+def start_of_flat_region(length, arr1, arr2, **kwargs):
+    _, _, start_flat_indx = flattest_region_quadrature(length, arr1, arr2, **kwargs)
+    if start_flat_indx < 0:
+        return np.nan
+    return start_flat_indx
 
 
 def eff_mode_search(

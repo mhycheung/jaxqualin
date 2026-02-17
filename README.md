@@ -18,7 +18,6 @@
   <a href="#installation">Installation</a> •
   <a href="#usage">Usage</a> •
   <a href="#paper-results">Paper Results</a> •
-  <a href="#coming-soon">Coming Soon</a> •
   <a href="#how-to-cite">How to Cite</a> •
   <a href="#license">License</a> 
 </p>
@@ -26,7 +25,7 @@
 ## Key Features
 
 * Fit a ringdown waveform with quasinormal modes (QNMs) of fixed or free frequencies
-* Nonlinear least-squares fitting with automatic differentiation via <a href="https://github.com/Dipolar-Quantum-Gases/jaxfit">JaxFit</a>
+* Nonlinear least-squares fitting with variable projection via <a href="https://github.com/jax-ml/jax">JAX</a> and <a href="https://github.com/patrick-kidger/optimistix">Optimistix</a>
 * Agnostic identification of QNMs within the waveform
 * Saving and reusing results with `pickle`
 * Easy visualization of results
@@ -48,12 +47,6 @@ Basic usage examples can be found under the Examples tab on the <a href="https:/
 ## Paper Results
 
 Interactive plots of the methods paper results can be found under the Results tab on the <a href="https://mhycheung.github.io/jaxqualin/">package homepage</a>.
-
-## Coming Soon
-
-* Full API
-* Support for real (Schwarzshild) ringdown waveforms
-* Fitting for the mass and spin of the remnant 
 
 ## How to Cite
 Please cite the methods paper if you used our package to produce results in your publication.

@@ -1,0 +1,29 @@
+[project]
+name = "jaxqualin"
+version = "1.0.0"
+description = "A package for extracting quasinormal modes from time domain data"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = ">=3.9,<3.13"
+tqdm = ">4.61.1"
+setuptools = "*"
+pip = "*"
+pytest = ">=9.0.2,<10"
+
+[pypi-dependencies]
+adjustText = "==0.8"
+jax = ">=0.4.30,<0.5"
+jaxlib = ">=0.4.30,<0.5"
+
+matplotlib = ">3.6.1"
+numpy = ">1.23,<2"
+optimistix = "*"
+pandas = ">1.5.1"
+pykerr = "==0.1.0"
+qnm = "==0.4.4"
+scipy = ">1.9.3"
+sxs = ">2025"
+
+[tasks]

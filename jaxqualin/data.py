@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from urllib.request import urlretrieve, urlopen
+import logging
 import time
 import os
 import json
@@ -7,6 +10,8 @@ from scipy.interpolate import LinearNDInterpolator
 import numpy as np
 
 from typing import List, Tuple, Union, Optional, Dict, Any, Callable
+
+logger = logging.getLogger(__name__)
 
 _full_data_url = 'https://mhycheung.github.io/jaxqualin/data/SXS_results_latest.csv'
 _hyperfit_url = 'https://mhycheung.github.io/jaxqualin/data/hyperfit_functions_latest.json'
@@ -54,10 +59,10 @@ def download_file(filepath: str, url: str, overwrite: str='update') -> None:
         download = True
     elif overwrite == 'update':
         if last_modified_time(url) > time.gmtime(os.path.getmtime(filepath)):
-            print('{} is more recent than {}, updating'.format(url, filepath))
+            logger.info('{} is more recent than {}, updating'.format(url, filepath))
             download = True
         else:
-            print(
+            logger.info(
                 '{} is not more recent than {}, file will not be downloaded.'.format(
                     url, filepath))
     elif overwrite == 'never':
@@ -67,32 +72,32 @@ def download_file(filepath: str, url: str, overwrite: str='update') -> None:
             "overwrite must be one of 'force', 'update', or 'never'")
 
     if download:
-        print("Downloading data file from {} to {}".format(url, filepath))
+        logger.info("Downloading data file from {} to {}".format(url, filepath))
         urlretrieve(url, filepath)
 
 
 def download_full_mode_data(
-        filepath=_default_full_mode_data_path,
-        url=_full_data_url,
-        overwrite='update'):
+        filepath: str = _default_full_mode_data_path,
+        url: str = _full_data_url,
+        overwrite: str = 'update') -> None:
     download_file(filepath, url, overwrite=overwrite)
 
 
 def download_hyperfit_data(
-        filepath=_default_hyperfit_data_path,
-        url=_hyperfit_url,
-        overwrite='update'):
+        filepath: str = _default_hyperfit_data_path,
+        url: str = _hyperfit_url,
+        overwrite: str = 'update') -> None:
     download_file(filepath, url, overwrite=overwrite)
 
 
 def download_interpolate_data(
-        filepath=_default_interpolate_data_path,
-        url=_interpolate_url,
-        overwrite='update'):
+        filepath: str = _default_interpolate_data_path,
+        url: str = _interpolate_url,
+        overwrite: str = 'update') -> None:
     download_file(filepath, url, overwrite=overwrite)
 
 
-def hyperfit_list_to_func(hyperfit_list, m, var='A', PN=True):
+def hyperfit_list_to_func(hyperfit_list: List, m: int, var: str = 'A', PN: bool = True) -> Callable:
     if PN:
         def hyperfit_func(eta, chi_p, chi_m):
             val = 0
@@ -192,7 +197,7 @@ def make_interpolators(filepath: str=_default_interpolate_data_path, PN: bool=Tr
     return interpolate_func_dict
 
 
-def make_hyper_interpolator(data_dict, PN=True):
+def make_hyper_interpolator(data_dict: Dict[str, Any], PN: bool = True) -> Dict[str, LinearNDInterpolator]:
 
     A = data_dict['A']
     dA = data_dict['dA']

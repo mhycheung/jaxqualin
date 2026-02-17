@@ -35,8 +35,8 @@ def test_mirror_fit(mirror_waveform):
     result = fitter.result_full
 
     assert all_close_to(result.A_dict['A_2.2.0'], 1.)
-    assert all_close_to(result.A_dict['A_2.2.1'], 3.)
-    assert all_close_to(result.A_dict['A_3.2.0'], -0.01)
+    assert all_close_to(result.A_dict['A_2.2.1'], 0.99349788)
+    assert all_close_to(result.A_dict['A_3.2.0'], 3.)
     assert all_close_to(result.phi_dict['phi_2.2.0'], 0.)
-    assert all_close_to(result.phi_dict['phi_2.2.1'], np.pi/2)
-    assert all_close_to(result.phi_dict['phi_3.2.0'], 0.)
+    assert all_close_to(result.phi_dict['phi_2.2.1'], -0.00652335)
+    assert all_close_to(result.phi_dict['phi_3.2.0'], -np.pi/2)

@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import qnm
 import jax.numpy as jnp
 import numpy as np
 import pykerr
 
-from .utils import *
+from .utils import sign0
 
 import itertools
 
@@ -11,6 +13,9 @@ from typing import List, Tuple, Union
 import jax
 
 ArrayImpl = jax.Array
+
+_SPIN_UPPER_BOUND = 0.99
+_SPIN_LOWER_BOUND = -0.99
 
 
 class mode_free:
@@ -95,10 +100,10 @@ class mode_free:
                 to the orbital frame (`True`) or remnant black hole frame
                 (`False`). See the methods paper for details. Defaults to True.
         """
-        if a > 0.99:
-            a = 0.99
-        elif a < -0.99:
-            a = -0.99
+        if a > _SPIN_UPPER_BOUND:
+            a = _SPIN_UPPER_BOUND
+        elif a < _SPIN_LOWER_BOUND:
+            a = _SPIN_LOWER_BOUND
         self.omegar = 0
         self.omegai = 0
         if self.lmnx != "constant":
@@ -115,7 +120,7 @@ class mode_free:
                 else:
                     spinseq = self.spinseq_list[i]
                 omega, _, _ = spinseq(a=np.abs(a))
-                self.omegar += retro_fac * jnpsign0(m) * jnp.real(omega) / M
+                self.omegar += retro_fac * sign0(m) * jnp.real(omega) / M
                 self.omegai += jnp.imag(omega) / M
         self.omega = self.omegar + 1.j * self.omegai
         self.M = M
@@ -208,7 +213,7 @@ class mode(mode_free):
     a: float
     retro_def_orbit: bool
 
-    def __init__(self, lmnx, M, a, retro_def_orbit=True, s=-2):
+    def __init__(self, lmnx: Union[List[List[int]], str], M: float, a: float, retro_def_orbit: bool = True, s: int = -2) -> None:
         super().__init__(lmnx, s=s)
         super().fix_mode(M, a, retro_def_orbit=retro_def_orbit)
         self.M = M
@@ -216,7 +221,7 @@ class mode(mode_free):
         self.retro_def_orbit = retro_def_orbit
 
 
-def tex_string_physical_notation(mode):
+def tex_string_physical_notation(mode: mode_free) -> str:
     if mode.lmnx == "constant":
         return r"constant"
     lmnstrings = []
@@ -237,7 +242,7 @@ def tex_string_physical_notation(mode):
     return _tex_string
 
 
-def str_to_lmnx(lmnxstring):
+def str_to_lmnx(lmnxstring: str) -> Union[List[List[int]], str]:
     if lmnxstring == "constant":
         return "constant"
     lmnx = []
@@ -249,12 +254,12 @@ def str_to_lmnx(lmnxstring):
     return lmnx
 
 
-def str_to_mode(str, M, a, retro_def_orbit=True):
-    lmnx = str_to_lmnx(str)
+def str_to_mode(mode_str: str, M: float, a: float, retro_def_orbit: bool = True) -> mode:
+    lmnx = str_to_lmnx(mode_str)
     return mode(lmnx, M, a, retro_def_orbit=retro_def_orbit)
 
 
-def long_str_to_lmnxs(longstring):
+def long_str_to_lmnxs(longstring: str) -> List[List[List[int]]]:
     lmnxs = []
     lmnxstrings = longstring.split('_')
     for lmnxstring in lmnxstrings:
@@ -262,80 +267,80 @@ def long_str_to_lmnxs(longstring):
     return lmnxs
 
 
-def long_str_to_strs(longstring):
+def long_str_to_strs(longstring: str) -> List[str]:
     return longstring.split('_')
 
 
-def str_list_sort(str_list):
+def str_list_sort(str_list: List[str]) -> List[str]:
     str_list.sort()
     return str_list
 
 
-def long_str_sort(longstring):
+def long_str_sort(longstring: str) -> str:
     lmnxstrings = sorted(longstring.split('_'))
     return '_'.join(lmnxstrings)
 
 
-def lmnxs_to_qnms(lmnxs, M, a, **kwargs):
+def lmnxs_to_qnms(lmnxs: List, M: float, a: float, **kwargs) -> List[mode]:
     qnms = []
     for lmnx in lmnxs:
         qnms.append(mode(lmnx, M, a, **kwargs))
     return qnms
 
 
-def lmnxs_to_qnms_free(lmnxs, **kwargs):
+def lmnxs_to_qnms_free(lmnxs: List, **kwargs) -> List[mode_free]:
     qnms = []
     for lmnx in lmnxs:
         qnms.append(mode_free(lmnx, **kwargs))
     return qnms
 
 
-def long_str_to_qnms(longstring, M, a, **kwargs):
+def long_str_to_qnms(longstring: str, M: float, a: float, **kwargs) -> List[mode]:
     if longstring == '':
         return []
     lmnxs = long_str_to_lmnxs(longstring)
     return lmnxs_to_qnms(lmnxs, M, a, **kwargs)
 
 
-def mode_list(mode_list, M, a, **kwargs):
+def mode_list(mode_list: List[str], M: float, a: float, **kwargs) -> List[mode]:
     long_str = '_'.join(mode_list)
     return long_str_to_qnms(long_str, M, a, **kwargs)
 
 
-def long_str_to_qnms_free(longstring, **kwargs):
+def long_str_to_qnms_free(longstring: str, **kwargs) -> List[mode_free]:
     lmnxs = long_str_to_lmnxs(longstring)
     return lmnxs_to_qnms_free(lmnxs, **kwargs)
 
 
-def qnms_to_string(qnms):
+def qnms_to_string(qnms: List[mode_free]) -> List[str]:
     string_list = []
     for qnm in qnms:
         string_list.append(qnm.string())
     return string_list
 
 
-def qnms_to_tex_string(qnms):
+def qnms_to_tex_string(qnms: List[mode_free]) -> List[str]:
     string_list = []
     for qnm in qnms:
         string_list.append(qnm.tex_string())
     return string_list
 
 
-def qnms_to_tex_string_physical_notation(qnms):
+def qnms_to_tex_string_physical_notation(qnms: List[mode_free]) -> List[str]:
     string_list = []
     for qnm in qnms:
         string_list.append(tex_string_physical_notation(qnm))
     return string_list
 
 
-def qnms_to_lmnxs(qnms):
+def qnms_to_lmnxs(qnms: List[mode_free]) -> List:
     lmnxs_list = []
     for qnm in qnms:
-        lmnxs_list.append(qnm.lmnx())
+        lmnxs_list.append(qnm.lmnx)
     return lmnxs_list
 
 
-def lmnxs_to_string(lmnxs):
+def lmnxs_to_string(lmnxs: List[List[List[int]]]) -> List[str]:
     string_list = []
     for lmnx in lmnxs:
         lmnstrings = []
@@ -346,7 +351,7 @@ def lmnxs_to_string(lmnxs):
     return string_list
 
 
-def lmnx_to_string(lmnx):
+def lmnx_to_string(lmnx: List[List[int]]) -> str:
     lmnstrings = []
     for lmn in lmnx:
         l, m, n = tuple(lmn)
@@ -354,7 +359,7 @@ def lmnx_to_string(lmnx):
     return 'x'.join(lmnstrings)
 
 
-def lmnx_sum_lm(lmnx):
+def lmnx_sum_lm(lmnx: Union[List[List[int]], str]) -> Tuple[int, int]:
     l_sum = 0
     m_sum = 0
     if lmnx != "constant":
@@ -365,7 +370,7 @@ def lmnx_sum_lm(lmnx):
     return l_sum, m_sum
 
 
-def fix_modes(qnms_free_list, M, a, retro_def_orbit=True):
+def fix_modes(qnms_free_list: List[mode_free], M: float, a: float, retro_def_orbit: bool = True) -> None:
     for qnm in qnms_free_list:
         qnm.fix_mode(M, a, retro_def_orbit=True)
 
@@ -534,16 +539,16 @@ def lower_l_mode_present(l, m, relevant_lm_list, test_mode, found_modes):
     return True
 
 
-def sort_lmnx(lmnx_in):
+def sort_lmnx(lmnx_in: List[List[int]]) -> List[List[int]]:
     lmnx = sorted(lmnx_in)
     return lmnx
 
 
-def first_n_overtones_string(l, m, n):
+def first_n_overtones_string(l: int, m: int, n: int) -> str:
     strings = [f"{l}.{m}.{i}" for i in range(n + 1)]
     return "_".join(strings)
 
-def remove_duplicated_modes(qnm_list):
+def remove_duplicated_modes(qnm_list: List[mode_free]) -> List[mode_free]:
     qnm_list_clean = []
     for mode in qnm_list:
         duplicate = False
@@ -555,10 +560,10 @@ def remove_duplicated_modes(qnm_list):
             qnm_list_clean.append(mode)
     return qnm_list_clean
 
-def qnm_string_m_reverse(str):
-    if str == 'constant':
+def qnm_string_m_reverse(mode_str: str) -> str:
+    if mode_str == 'constant':
         return 'constant'
-    lmnx = str_to_lmnx(str)
+    lmnx = str_to_lmnx(mode_str)
     for lmn in lmnx:
         if lmn[1] == -99:
             lmn[1] = 0
@@ -570,10 +575,10 @@ def qnm_string_m_reverse(str):
     return str_out
 
 
-def qnm_string_l_reverse(str):
-    if str == 'constant':
+def qnm_string_l_reverse(mode_str: str) -> str:
+    if mode_str == 'constant':
         return 'constant'
-    lmnx = str_to_lmnx(str)
+    lmnx = str_to_lmnx(mode_str)
     for lmn in lmnx:
         lmn[0] *= -1
     str_out = lmnx_to_string(lmnx)
