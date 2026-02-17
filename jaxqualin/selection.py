@@ -1,6 +1,6 @@
 from .utils import max_consecutive_trues
 from .qnmode import mode, potential_modes, qnms_to_string, remove_duplicated_modes, lower_overtone_present, lower_l_mode_present
-from .fit import QNMFitVaryingStartingTime, FIT_SAVE_PATH
+from .fit import QNMFitVaryingStartingTime, FIT_SAVE_PATH, DEFAULT_SEED
 from .waveforms import waveform, get_waveform_SXS, get_relevant_lm_waveforms_SXS, relevant_modes_dict_to_lm_tuple, make_eff_ringdown_waveform_from_param
 
 import logging
