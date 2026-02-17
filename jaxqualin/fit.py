@@ -700,15 +700,22 @@ def _compute_linear_params_and_popt_real(final_nonlinear_params, time, y_real, s
         popt = popt.at[2 * i + 1].set(phi)
 
     # Free modes: pairs (a, b) at indices [2*N_fix + 2*j, 2*N_fix + 2*j+1]
+    # For Schwarzschild, cos(omega_r*t + phi) = cos(-omega_r*t - phi),
+    # so positive and negative omega_r are degenerate.  We normalise to
+    # omega_r >= 0 by flipping the sign of both omega_r and phi when needed.
     for j in range(N_free):
         a = final_linear_params[2 * N_fix + 2 * j]
         b = final_linear_params[2 * N_fix + 2 * j + 1]
         c = a - 1.j * b
         A = jnp.abs(c)
         phi = -jnp.angle(c)
+        omegar_j = omegar_final[j]
+        sign = jnp.where(omegar_j < 0, -1.0, 1.0)
+        omegar_j = omegar_j * sign
+        phi = phi * sign
         popt = popt.at[2 * N_fix + 4 * j].set(A)
         popt = popt.at[2 * N_fix + 4 * j + 1].set(phi)
-        popt = popt.at[2 * N_fix + 4 * j + 2].set(omegar_final[j])
+        popt = popt.at[2 * N_fix + 4 * j + 2].set(omegar_j)
         popt = popt.at[2 * N_fix + 4 * j + 3].set(omegai_final[j])
 
     return popt

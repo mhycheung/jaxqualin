@@ -236,6 +236,27 @@ class TestSchwarzschildQNMFitRoundtrip:
         assert np.isclose(recovered_omegai, target_omegai, rtol=1e-3), \
             f"omega_i: expected {target_omegai}, got {recovered_omegai}"
 
+    def test_free_mode_negative_guess_gives_positive_omegar(self):
+        """A negative initial omega_r guess should still yield positive omega_r."""
+        modes, Mf, af = _make_schwarzschild_modes(['2.2.0'])
+        target_omegar = float(modes[0].omegar)
+        target_omegai = float(modes[0].omegai)
+        A, phi = 1.5, 0.5
+        t = np.linspace(0, 100, 2000)
+        h = _make_real_waveform_from_modes(modes, [A], [phi], t)
+
+        fitter = QNMFit(
+            h, t0=0.0, N_free=1, qnm_fixed_list=[],
+            Schwarzschild=True,
+            guess_free=[1, 1, -abs(target_omegar) * 0.9, target_omegai * 0.9])
+        fitter.do_fit()
+        popt = np.array(fitter.popt)
+        recovered_omegar = popt[2]
+        assert recovered_omegar > 0, \
+            f"omega_r should be positive, got {recovered_omegar}"
+        assert np.isclose(recovered_omegar, abs(target_omegar), rtol=1e-3), \
+            f"omega_r: expected {abs(target_omegar)}, got {recovered_omegar}"
+
     def test_reconstruction_is_real(self):
         """The reconstructed waveform should be real-valued for Schwarzschild."""
         modes, Mf, af = _make_schwarzschild_modes(['2.2.0'])
