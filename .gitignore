@@ -12,8 +12,8 @@ test_script.py
 slurm_scripts/
 pickle/data_frame/
 data/
-*.ipynb
-./*.ipynb
+docs/notebooks/*.html
+docs/notebooks/__marimo__/
 json/*
 .jaxqualin_cache/
 .pixi/
