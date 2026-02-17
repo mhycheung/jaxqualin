@@ -29,7 +29,7 @@ dependencies = [
   "optimistix",
   "numpy>1.23,<2.4",
   "pandas>1.5.1",
-  "pykerr==0.1.0",
+  "pykerr>=0.1.0",
   "qnm==0.4.4",
   "setuptools",
   "scipy>=1.13",
