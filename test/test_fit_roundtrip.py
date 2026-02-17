@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 
 from jaxqualin.waveforms import waveform, clean_QNM
-from jaxqualin.qnmode import mode_list, make_mirror_ratio_list
-from jaxqualin.fit import QNMFit, QNMFitVaryingStartingTime
+from jaxqualin.qnmode import mode_list, mode_free, make_mirror_ratio_list, long_str_to_qnms_free
+from jaxqualin.fit import QNMFit, QNMFitVarMa, QNMFitVaryingStartingTime
 from jaxqualin.utils import all_close_to
 
 
@@ -253,3 +253,195 @@ class TestVaryingStartingTimeConsistency:
 
         diff = np.angle(np.exp(1j * (phi_arr - phi0)))
         assert np.allclose(diff, 0, atol=1e-5)
+
+
+# ---------------------------------------------------------------------------
+# Kerr (non-Schwarzschild) QNMFitVarMa roundtrips
+# ---------------------------------------------------------------------------
+
+class TestKerrVarMaRoundtrip:
+    """Roundtrip tests for QNMFitVarMa with non-zero spin (Kerr)."""
+
+    def test_recovers_A_phi_M_a(self):
+        """Fit a single free-frequency mode and recover A, phi, M, and a."""
+        Mf_true, af_true = 1.0, 0.7
+        modes = mode_list(['2.2.0'], Mf_true, af_true)
+        A, phi = 2.0, 0.5
+        t = np.linspace(0, 100, 2000)
+        h = _make_clean_waveform(modes, [A], [phi], t)
+
+        qnm_free = long_str_to_qnms_free('2.2.0')
+        fitter = QNMFitVarMa(
+            h, t0=0.0, qnm_free_list=qnm_free,
+            Schwarzschild=False,
+            guess_free=[A * 0.8, phi * 0.8],
+            guess_M_a=[Mf_true * 0.9, af_true * 0.9])
+        fitter.do_fit()
+        popt = np.array(fitter.popt)
+
+        recovered_A = popt[0]
+        recovered_phi = popt[1]
+        recovered_M = popt[2]
+        recovered_a = popt[3]
+
+        assert np.isclose(recovered_A, A, rtol=0.05), \
+            f"A: expected {A}, got {recovered_A}"
+        assert np.isclose(recovered_M, Mf_true, rtol=0.05), \
+            f"M: expected {Mf_true}, got {recovered_M}"
+        assert np.isclose(recovered_a, af_true, rtol=0.05), \
+            f"a: expected {af_true}, got {recovered_a}"
+
+    def test_popt_length_kerr(self):
+        """popt should have length 2*N_fix + 2*N_free + 2 (M and a)."""
+        Mf_true, af_true = 1.0, 0.7
+        modes_fixed = mode_list(['2.2.0'], Mf_true, af_true)
+        A, phi = 1.0, 0.0
+        t = np.linspace(0, 100, 2000)
+        h = _make_clean_waveform(modes_fixed, [A], [phi], t)
+
+        qnm_free = long_str_to_qnms_free('2.2.1')
+        fitter = QNMFitVarMa(
+            h, t0=0.0, qnm_free_list=qnm_free,
+            qnm_fixed_list=modes_fixed,
+            Schwarzschild=False,
+            guess_M_a=[Mf_true * 0.9, af_true * 0.9])
+        fitter.do_fit()
+        popt = np.array(fitter.popt)
+
+        N_fix = len(modes_fixed)
+        N_free = len(qnm_free)
+        expected_len = 2 * N_fix + 2 * N_free + 2
+        assert len(popt) == expected_len, \
+            f"popt length: expected {expected_len}, got {len(popt)}"
+
+    def test_mismatch_near_zero(self):
+        """A clean QNM fitted with correct guess should give small mismatch."""
+        Mf_true, af_true = 1.0, 0.7
+        modes = mode_list(['2.2.0'], Mf_true, af_true)
+        A, phi = 2.0, 0.5
+        t = np.linspace(0, 100, 2000)
+        h = _make_clean_waveform(modes, [A], [phi], t)
+
+        qnm_free = long_str_to_qnms_free('2.2.0')
+        fitter = QNMFitVarMa(
+            h, t0=0.0, qnm_free_list=qnm_free,
+            Schwarzschild=False,
+            guess_free=[A * 0.8, phi * 0.8],
+            guess_M_a=[Mf_true * 0.9, af_true * 0.9])
+        fitter.do_fit()
+        assert fitter.mismatch < 1e-4, f"Mismatch too large: {fitter.mismatch}"
+
+    def test_two_modes_fixed_plus_free(self):
+        """One fixed mode and one free-frequency mode in Kerr."""
+        Mf_true, af_true = 1.0, 0.7
+        modes_fixed = mode_list(['2.2.0'], Mf_true, af_true)
+        modes_all = mode_list(['2.2.0', '2.2.1'], Mf_true, af_true)
+        A_list = [1.0, 0.5]
+        phi_list = [0.0, np.pi / 4]
+        t = np.linspace(0, 100, 2000)
+        h = _make_clean_waveform(modes_all, A_list, phi_list, t)
+
+        qnm_free = long_str_to_qnms_free('2.2.1')
+        fitter = QNMFitVarMa(
+            h, t0=0.0, qnm_free_list=qnm_free,
+            qnm_fixed_list=modes_fixed,
+            Schwarzschild=False,
+            guess_M_a=[Mf_true * 0.95, af_true * 0.95])
+        fitter.do_fit()
+        assert fitter.mismatch < 1e-3, f"Mismatch too large: {fitter.mismatch}"
+
+
+# ---------------------------------------------------------------------------
+# Kerr VarMa via QNMFitVaryingStartingTime
+# ---------------------------------------------------------------------------
+
+class TestKerrVarMaVaryingStartingTime:
+    """Full pipeline tests for QNMFitVaryingStartingTime with var_M_a in Kerr."""
+
+    def test_recovers_M_and_a(self):
+        """VarMa path: should recover both M and a, and Ma_dict has both."""
+        Mf_true, af_true = 1.0, 0.7
+        modes_fixed = mode_list(['2.2.0'], Mf_true, af_true)
+        qnm_free = long_str_to_qnms_free('2.2.0')
+
+        A, phi = 2.0, 0.5
+        t = np.linspace(0, 100, 2000)
+        h = _make_clean_waveform(modes_fixed, [A], [phi], t)
+
+        t0_arr = np.array([0.0, 5.0])
+        fitter = QNMFitVaryingStartingTime(
+            h, t0_arr, N_free=0,
+            qnm_fixed_list=[],
+            qnm_free_list=qnm_free,
+            var_M_a=True,
+            Schwarzschild=False,
+            load_pickle=False,
+            run_string_prefix='kerr_varMa_test',
+            save_results=False)
+        fitter.do_fits()
+        result = fitter.result_full
+
+        assert "M" in result.Ma_dict, "Ma_dict should contain 'M'"
+        assert "a" in result.Ma_dict, "Ma_dict should contain 'a' for Kerr"
+
+        M_arr = np.array(result.Ma_dict["M"])
+        a_arr = np.array(result.Ma_dict["a"])
+        assert np.allclose(M_arr, Mf_true, rtol=0.05), \
+            f"M not recovered: expected {Mf_true}, got {M_arr}"
+        assert np.allclose(a_arr, af_true, rtol=0.05), \
+            f"a not recovered: expected {af_true}, got {a_arr}"
+
+    def test_mismatch_small(self):
+        """VarMa Kerr path: mismatch should be small."""
+        Mf_true, af_true = 1.0, 0.7
+        modes_fixed = mode_list(['2.2.0'], Mf_true, af_true)
+        qnm_free = long_str_to_qnms_free('2.2.0')
+
+        A, phi = 2.0, 0.5
+        t = np.linspace(0, 100, 2000)
+        h = _make_clean_waveform(modes_fixed, [A], [phi], t)
+
+        t0_arr = np.array([0.0])
+        fitter = QNMFitVaryingStartingTime(
+            h, t0_arr, N_free=0,
+            qnm_fixed_list=[],
+            qnm_free_list=qnm_free,
+            var_M_a=True,
+            Schwarzschild=False,
+            load_pickle=False,
+            run_string_prefix='kerr_varMa_mm_test',
+            save_results=False)
+        fitter.do_fits()
+        result = fitter.result_full
+        mismatch = result.mismatch_arr[0]
+        assert mismatch < 1e-3, f"Mismatch too large: {mismatch}"
+
+    def test_popt_shape_kerr(self):
+        """popt_full should have 2*N_fix + 2*N_free + 2 rows (M and a)."""
+        Mf_true, af_true = 1.0, 0.7
+        modes_fixed = mode_list(['2.2.0'], Mf_true, af_true)
+        qnm_free = long_str_to_qnms_free('2.2.0')
+
+        A, phi = 1.0, 0.0
+        t = np.linspace(0, 100, 2000)
+        h = _make_clean_waveform(modes_fixed, [A], [phi], t)
+
+        t0_arr = np.array([0.0, 5.0, 10.0])
+        fitter = QNMFitVaryingStartingTime(
+            h, t0_arr, N_free=0,
+            qnm_fixed_list=[],
+            qnm_free_list=qnm_free,
+            var_M_a=True,
+            Schwarzschild=False,
+            load_pickle=False,
+            run_string_prefix='kerr_varMa_shape',
+            save_results=False)
+        fitter.do_fits()
+        result = fitter.result_full
+
+        N_fix = 0
+        N_free = len(qnm_free)
+        expected_popt_rows = 2 * N_fix + 2 * N_free + 2
+        assert result.popt_full.shape == (expected_popt_rows, len(t0_arr)), \
+            f"popt_full shape: expected ({expected_popt_rows}, {len(t0_arr)}), " \
+            f"got {result.popt_full.shape}"
