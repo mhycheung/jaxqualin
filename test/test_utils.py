@@ -142,3 +142,32 @@ class TestAllCloseTo:
     def test_close_with_tolerance(self):
         arr = np.array([1.0, 1.0 + 1e-10, 1.0 - 1e-10])
         assert all_close_to(arr, 1.0)
+
+
+class TestLinfunc:
+    def test_basic(self):
+        from jaxqualin.utils import linfunc
+        x = np.array([1.0, 2.0, 3.0])
+        result = linfunc([2, 3], x)
+        expected = 2 * x + 3
+        assert np.allclose(result, expected)
+
+    def test_zero_slope(self):
+        from jaxqualin.utils import linfunc
+        x = np.array([0.0, 5.0, 10.0])
+        result = linfunc([0, 7], x)
+        assert np.allclose(result, 7.0)
+
+
+class TestLinfunc2:
+    def test_basic(self):
+        from jaxqualin.utils import linfunc2
+        x = np.array([1.0, 2.0, 3.0])
+        result = linfunc2(5.0, x)
+        expected = 2 * x + 5.0
+        assert np.allclose(result, expected)
+
+    def test_matches_linfunc_slope_2(self):
+        from jaxqualin.utils import linfunc, linfunc2
+        x = np.array([0.5, 1.5, 2.5])
+        assert np.allclose(linfunc([2, 3], x), linfunc2(3, x))
