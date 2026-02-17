@@ -611,12 +611,117 @@ def _prepare_fit_data(time, hr, hi, sigma, max_len):
     return time, hr, hi, y, sigma, mask
 
 
+# ---------------------------------------------------------------------------
+# Schwarzschild (real-waveform) VARPRO functions
+# ---------------------------------------------------------------------------
+# For Schwarzschild black holes the waveform is purely real:
+#   h(t) = sum_j A_j * exp(omega_i_j * t) * cos(omega_r_j * t + phi_j)
+#
+# We decompose the complex basis exp(-i*omega*t) into two real columns:
+#   col_cos = Re(exp(-i*omega*t)) = exp(omega_i*t) * cos(omega_r*t)
+#   col_sin = Im(exp(-i*omega*t)) = -exp(omega_i*t) * sin(omega_r*t)
+# and fit h_real = a * col_cos + b * col_sin with real coefficients a, b.
+# The complex coefficient c = a + i*b then yields A = |c|, phi = -angle(c).
+
+def _model_func_real(nonlinear_params, t, omegar_fixed, omegai_fixed, N_free, N_fix):
+    """Build a real-valued basis for Schwarzschild fitting.
+
+    Each mode contributes two real columns (cos and sin parts), so the
+    returned matrix has shape (len(t), 2*(N_fix + N_free)).
+    """
+    omegar_arr = nonlinear_params[0:N_free]
+    omegai_arr = nonlinear_params[N_free:2*N_free]
+
+    basis = []
+    for i in range(N_fix):
+        exp_decay = jnp.exp(omegai_fixed[i] * t)
+        basis.append(exp_decay * jnp.cos(omegar_fixed[i] * t))   # Re column
+        basis.append(-exp_decay * jnp.sin(omegar_fixed[i] * t))  # Im column
+    for i in range(N_free):
+        exp_decay = jnp.exp(omegai_arr[i] * t)
+        basis.append(exp_decay * jnp.cos(omegar_arr[i] * t))
+        basis.append(-exp_decay * jnp.sin(omegar_arr[i] * t))
+
+    return jnp.array(basis).T
+
+
+def _residual_func_real(nonlinear_params, args, N_free, N_fix):
+    """Residual function for Schwarzschild real-valued VARPRO."""
+    t, y_real, sigma, omegar_fixed, omegai_fixed, mask = args
+    basis = _model_func_real(nonlinear_params, t, omegar_fixed, omegai_fixed, N_free, N_fix)
+
+    basis_masked = basis * mask[:, None]
+    y_masked = y_real * mask
+
+    linear_params, _, _, _ = jnp.linalg.lstsq(basis_masked / sigma[:, None], y_masked / sigma)
+
+    y_fit = jnp.dot(basis, linear_params)
+    residual = (y_real - y_fit) * mask
+    return residual
+
+
+def _do_optimization_real(params0, args, N_free, N_fix, max_nfev):
+    """Optimization driver for Schwarzschild real-valued VARPRO."""
+    residual = partial(_residual_func_real, N_free=N_free, N_fix=N_fix)
+    solver = optx.LevenbergMarquardt(rtol=1e-8, atol=1e-8)
+    sol = optx.least_squares(residual, solver, params0,
+                             args=args, max_steps=max_nfev,
+                             throw=False)
+    return sol.value
+
+
+def _compute_linear_params_and_popt_real(final_nonlinear_params, time, y_real, sigma, mask,
+                                         omegar_fixed, omegai_fixed, N_free, N_fix):
+    """Compute linear params and assemble popt for Schwarzschild real-valued fit.
+
+    The real basis gives two coefficients (a, b) per mode.  Reassembling
+    c = a + i*b recovers A = |c| and phi = -angle(c).
+    """
+    final_basis = _model_func_real(final_nonlinear_params, time, omegar_fixed, omegai_fixed, N_free, N_fix)
+    final_basis_masked = final_basis * mask[:, None]
+    y_masked = y_real * mask
+    final_linear_params, _, _, _ = jnp.linalg.lstsq(final_basis_masked / sigma[:, None], y_masked / sigma)
+
+    omegar_final = final_nonlinear_params[0:N_free]
+    omegai_final = final_nonlinear_params[N_free:2*N_free]
+
+    popt = jnp.zeros(2 * N_fix + 4 * N_free)
+
+    # Fixed modes: pairs (a, b) at indices [2*i, 2*i+1]
+    # Re(c * B) = Re(c)*Re(B) - Im(c)*Im(B) = a*col_cos + b*col_sin,
+    # so a = Re(c) and b = -Im(c), giving c = a - i*b.
+    for i in range(N_fix):
+        a = final_linear_params[2 * i]
+        b = final_linear_params[2 * i + 1]
+        c = a - 1.j * b
+        A = jnp.abs(c)
+        phi = -jnp.angle(c)
+        popt = popt.at[2 * i].set(A)
+        popt = popt.at[2 * i + 1].set(phi)
+
+    # Free modes: pairs (a, b) at indices [2*N_fix + 2*j, 2*N_fix + 2*j+1]
+    for j in range(N_free):
+        a = final_linear_params[2 * N_fix + 2 * j]
+        b = final_linear_params[2 * N_fix + 2 * j + 1]
+        c = a - 1.j * b
+        A = jnp.abs(c)
+        phi = -jnp.angle(c)
+        popt = popt.at[2 * N_fix + 4 * j].set(A)
+        popt = popt.at[2 * N_fix + 4 * j + 1].set(phi)
+        popt = popt.at[2 * N_fix + 4 * j + 2].set(omegar_final[j])
+        popt = popt.at[2 * N_fix + 4 * j + 3].set(omegai_final[j])
+
+    return popt
+
+
 # Create JIT-compiled versions for common configurations
 # The static_argnums specify which arguments don't change and can be used for caching
 _do_optimization_jit = jit(_do_optimization, static_argnums=(2, 3, 4, 5))
 _compute_linear_params_and_popt_jit = jit(_compute_linear_params_and_popt, static_argnums=(8, 9, 10))
 _reconstruct_waveform_jit = jit(_reconstruct_waveform, static_argnums=(4, 5))
 _prepare_fit_data_jit = jit(_prepare_fit_data, static_argnums=(4,))
+_do_optimization_real_jit = jit(_do_optimization_real, static_argnums=(2, 3, 4))
+_compute_linear_params_and_popt_real_jit = jit(_compute_linear_params_and_popt_real, static_argnums=(7, 8))
 
 
 class QNMFitBase:
@@ -755,19 +860,32 @@ class QNMFit(QNMFitBase):
         else:
              mirror_ratio_arr = jnp.array([])
 
-        args = (self.time, y, sigma, omegar_fixed, omegai_fixed, mirror_ratio_arr, mask)
-        
-        # Use JIT-compiled optimization function for better performance
-        final_nonlinear_params = _do_optimization_jit(
-            self.params0, args, self.N_free, self.N_fix, self.include_mirror, self.max_nfev
-        )
-        
-        # Use JIT-compiled post-processing for linear params and popt
-        popt = _compute_linear_params_and_popt_jit(
-            final_nonlinear_params, self.time, y, sigma, mask,
-            omegar_fixed, omegai_fixed, mirror_ratio_arr,
-            self.N_free, self.N_fix, self.include_mirror
-        )
+        if self.Schwarzschild:
+            # Schwarzschild: use real-valued VARPRO with cos/sin basis
+            y_real = jnp.asarray(self.hr)
+            args_real = (self.time, y_real, sigma, omegar_fixed, omegai_fixed, mask)
+
+            final_nonlinear_params = _do_optimization_real_jit(
+                self.params0, args_real, self.N_free, self.N_fix, self.max_nfev
+            )
+            popt = _compute_linear_params_and_popt_real_jit(
+                final_nonlinear_params, self.time, y_real, sigma, mask,
+                omegar_fixed, omegai_fixed, self.N_free, self.N_fix
+            )
+        else:
+            args = (self.time, y, sigma, omegar_fixed, omegai_fixed, mirror_ratio_arr, mask)
+
+            # Use JIT-compiled optimization function for better performance
+            final_nonlinear_params = _do_optimization_jit(
+                self.params0, args, self.N_free, self.N_fix, self.include_mirror, self.max_nfev
+            )
+
+            # Use JIT-compiled post-processing for linear params and popt
+            popt = _compute_linear_params_and_popt_jit(
+                final_nonlinear_params, self.time, y, sigma, mask,
+                omegar_fixed, omegai_fixed, mirror_ratio_arr,
+                self.N_free, self.N_fix, self.include_mirror
+            )
         
         self.popt = popt
         self.pcov = jnp.full((len(popt), len(popt)), jnp.nan)
@@ -777,7 +895,7 @@ class QNMFit(QNMFitBase):
         self.nfev = None
         self.status = None
         
-        # Use JIT-compiled reconstruction for non-mirror, non-Schwarzschild case
+        # Reconstruct waveform
         if self.Schwarzschild:
             reconstruct_h_padded = qnm_fit_func_wrapper(
                 self.time, self.qnm_fixed_list, self.N_free, self.popt, part="real")
@@ -797,7 +915,10 @@ class QNMFit(QNMFitBase):
         
         # Slice to original length for mismatch calculation (numpy slicing, no JAX tracing)
         self.reconstruct_h = reconstruct_h_np[:original_len]
-        h_true_unpadded = hr_np[:original_len] + 1.j * hi_np[:original_len]
+        if self.Schwarzschild:
+            h_true_unpadded = hr_np[:original_len]
+        else:
+            h_true_unpadded = hr_np[:original_len] + 1.j * hi_np[:original_len]
         self.h_true = h_true_unpadded
         self.mismatch = 1 - (np.abs(np.vdot(h_true_unpadded, self.reconstruct_h) / (
             np.linalg.norm(h_true_unpadded) * np.linalg.norm(self.reconstruct_h))))
@@ -1451,9 +1572,7 @@ class QNMFitVaryingStartingTime:
         self.fit_save_prefix = fit_save_prefix
         self.Schwarzschild = Schwarzschild
         if self.Schwarzschild:
-            warnings.warn(
-                "Schwarzschild is not tested yet, proceed with caution",
-                UserWarning)
+            logger.info("Schwarzschild mode enabled: fitting real-valued waveform.")
         self.nonconvergence_cut = nonconvergence_cut
         self.A_bound = A_bound
         self.fit_kwargs = fit_kwargs
