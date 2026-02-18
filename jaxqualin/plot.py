@@ -901,6 +901,7 @@ def phase_break_for_plot(times, phis_in):
     timeslist = []
     phislist = []
     j = 0
+    nextadjust = 0
     for i in range(len(phis) - 1):
         if (phis[i] < 1 and phis[i + 1] > 2 * np.pi - 1):
             if i - j > 0:
