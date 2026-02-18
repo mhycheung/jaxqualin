@@ -89,7 +89,7 @@ def _(QNMFitVaryingStartingTime, SXSnum, h, l, m, np):
     _run_string_prefix = f'SXS{SXSnum}_lm_{l}.{m}'  # list of QNMs with fixed frequencies in the fit model
     _N_free = 3  # prefix of pickle file for saving the results
     # fitter object
-    fitter = QNMFitVaryingStartingTime(h, _t0_arr, N_free=_N_free, qnm_fixed_list=qnm_fixed_list, load_pickle=True, run_string_prefix=_run_string_prefix)  # number of free modes to use
+    fitter = QNMFitVaryingStartingTime(h, _t0_arr, N_free=_N_free, qnm_fixed_list=qnm_fixed_list, load_pickle=False, run_string_prefix=_run_string_prefix)  # number of free modes to use
     return (fitter,)
 
 
@@ -146,7 +146,7 @@ def _(Mf, QNMFitVaryingStartingTime, SXSnum, af, h, l, m, mode_list, np):
     qnm_fixed_list_1 = mode_list(['2.2.0', '2.2.1', '3.2.0'], Mf, af)
     _run_string_prefix = f'SXS{SXSnum}_lm_{l}.{m}'
     _N_free = 0
-    fitter_1 = QNMFitVaryingStartingTime(h, _t0_arr, N_free=_N_free, qnm_fixed_list=qnm_fixed_list_1, load_pickle=True, run_string_prefix=_run_string_prefix)
+    fitter_1 = QNMFitVaryingStartingTime(h, _t0_arr, N_free=_N_free, qnm_fixed_list=qnm_fixed_list_1, load_pickle=False, run_string_prefix=_run_string_prefix)
     return fitter_1, qnm_fixed_list_1
 
 

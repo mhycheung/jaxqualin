@@ -34,6 +34,29 @@ FIT_SAVE_PATH = os.path.join(os.getcwd(), ".jaxqualin_cache/fits")
 DEFAULT_SEED = 1234
 DEFAULT_MAX_NFEV = 200000
 DEFAULT_FIT_TOL = 1e-13
+MARIMO_TQDM_NCOLS = 150
+
+
+def _running_in_marimo() -> bool:
+    """Return True when executing inside an active marimo runtime context."""
+    try:
+        from marimo._runtime.context import ContextNotInitializedError, get_context
+    except Exception:
+        return False
+    try:
+        get_context()
+        return True
+    except ContextNotInitializedError:
+        return False
+    except Exception:
+        return False
+
+
+def _tqdm_kwargs() -> Dict[str, Any]:
+    """Use tqdm defaults normally; set ncols only in marimo notebooks."""
+    if _running_in_marimo():
+        return {"ncols": MARIMO_TQDM_NCOLS}
+    return {}
 
 
 @dataclass
@@ -2030,7 +2053,7 @@ class QNMFitVaryingStartingTime:
         qnm_fit_list = []
         desc = f"Runname: {self.run_string_prefix}, making initial guesses for N_free = {self.N_free}. Status"
         for j, guess in tqdm(
-                enumerate(guess_list), desc=desc, total=len(guess_list)):
+                enumerate(guess_list), desc=desc, total=len(guess_list), **_tqdm_kwargs()):
             qnm_fit = QNMFit(
                 self.h,
                 self.t0_arr[0],
@@ -2328,7 +2351,7 @@ class QNMFitVaryingStartingTime:
             for i, _t0 in tqdm(
                 enumerate(
                     self.t0_arr), desc=desc, total=len(
-                    self.t0_arr)):
+                    self.t0_arr), **_tqdm_kwargs()):
                 self._run_fit_at_t0(i, _t0)
             self.result_full.nonconvergence_indx = self.nonconvergence_indx
             self.result_full.process_results()

@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.19.11"
-app = marimo.App()
+app = marimo.App(width="full")
 
 
 @app.cell
@@ -27,26 +27,11 @@ def _():
     import jaxqualin.fit as fit_module
     from jaxqualin.plot import (plot_amplitudes, plot_phases, 
                                 plot_omega_free, plot_predicted_qnms)
-    from tqdm import tqdm as tqdm_text
-    import sys
 
     import numpy as np
     import matplotlib.pyplot as plt
 
-    # Force text tqdm in marimo with stable formatting.
-    def marimo_tqdm(*args, **kwargs):
-        desc = kwargs.get("desc")
-        if isinstance(desc, str) and len(desc) > 70:
-            kwargs["desc"] = desc[:67] + "..."
-        kwargs.setdefault("file", sys.stdout)
-        kwargs.setdefault("dynamic_ncols", False)
-        kwargs.setdefault("ncols", 120)
-        kwargs.setdefault("miniters", 1)
-        kwargs.setdefault("mininterval", 0.0)
-        kwargs.setdefault("bar_format", "{l_bar}{bar}| {n_fmt}/{total_fmt}")
-        return tqdm_text(*args, **kwargs)
 
-    fit_module.tqdm = marimo_tqdm
     return (
         QNMFitVaryingStartingTime,
         get_SXS_waveform_summed,
@@ -94,6 +79,8 @@ def _(h, np, plt):
 def _(mo):
     mo.md(r"""
     ### Free QNMs (unfixed frequencies)
+
+    This takes a bit of time because we need to fit with twice the number of modes to include both $\pm m$ modes. In future updates it might be possible to fit with a single mode with elliptical polarization.
     """)
     return
 
@@ -103,7 +90,7 @@ def _(QNMFitVaryingStartingTime, SXSnum, h, iota, np, psi):
     _t0_arr = np.linspace(0, 50, num=101)  # array of starting times to fit for
     qnm_fixed_list = []  # t0 = 0 is the peak of the strain
     _run_string_prefix = f'SXS{SXSnum}_lm_2.2_iota_{iota:.7f}_psi_{psi:.7f}'  # list of QNMs with fixed frequencies in the fit model
-    _N_free = 2  # prefix of pickle file for saving the results
+    _N_free = 6  # prefix of pickle file for saving the results
     # fitter object
     fitter = QNMFitVaryingStartingTime(h, _t0_arr, N_free=_N_free, qnm_fixed_list=qnm_fixed_list, load_pickle=False, run_string_prefix=_run_string_prefix)  # number of free modes to use
     return (fitter,)
