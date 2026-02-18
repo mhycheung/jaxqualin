@@ -30,5 +30,5 @@ sxs = ">2025"
 marimo = "*"
 
 [tasks]
-export-docs = "for f in docs/notebooks/*.py; do marimo export html \"$f\" -o \"${f%.py}.html\"; done"
+export-docs = "python -c \"import pathlib, subprocess; [subprocess.run(['marimo', 'export', 'html', str(f), '-o', str(f.with_suffix('.html'))], check=True) for f in pathlib.Path('docs/notebooks').glob('*.py')]\""
 build-docs = { cmd = "mkdocs build", depends-on = ["export-docs"] }
