@@ -24,12 +24,29 @@ def _():
     from jaxqualin.waveforms import get_SXS_waveform_summed
     from jaxqualin.qnmode import mode_list
     from jaxqualin.fit import QNMFitVaryingStartingTime
+    import jaxqualin.fit as fit_module
     from jaxqualin.plot import (plot_amplitudes, plot_phases, 
                                 plot_omega_free, plot_predicted_qnms)
+    from tqdm import tqdm as tqdm_text
+    import sys
 
     import numpy as np
     import matplotlib.pyplot as plt
 
+    # Force text tqdm in marimo with stable formatting.
+    def marimo_tqdm(*args, **kwargs):
+        desc = kwargs.get("desc")
+        if isinstance(desc, str) and len(desc) > 70:
+            kwargs["desc"] = desc[:67] + "..."
+        kwargs.setdefault("file", sys.stdout)
+        kwargs.setdefault("dynamic_ncols", False)
+        kwargs.setdefault("ncols", 120)
+        kwargs.setdefault("miniters", 1)
+        kwargs.setdefault("mininterval", 0.0)
+        kwargs.setdefault("bar_format", "{l_bar}{bar}| {n_fmt}/{total_fmt}")
+        return tqdm_text(*args, **kwargs)
+
+    fit_module.tqdm = marimo_tqdm
     return (
         QNMFitVaryingStartingTime,
         get_SXS_waveform_summed,
@@ -86,9 +103,9 @@ def _(QNMFitVaryingStartingTime, SXSnum, h, iota, np, psi):
     _t0_arr = np.linspace(0, 50, num=101)  # array of starting times to fit for
     qnm_fixed_list = []  # t0 = 0 is the peak of the strain
     _run_string_prefix = f'SXS{SXSnum}_lm_2.2_iota_{iota:.7f}_psi_{psi:.7f}'  # list of QNMs with fixed frequencies in the fit model
-    _N_free = 6  # prefix of pickle file for saving the results
+    _N_free = 2  # prefix of pickle file for saving the results
     # fitter object
-    fitter = QNMFitVaryingStartingTime(h, _t0_arr, N_free=_N_free, qnm_fixed_list=qnm_fixed_list, load_pickle=True, run_string_prefix=_run_string_prefix)  # number of free modes to use
+    fitter = QNMFitVaryingStartingTime(h, _t0_arr, N_free=_N_free, qnm_fixed_list=qnm_fixed_list, load_pickle=False, run_string_prefix=_run_string_prefix)  # number of free modes to use
     return (fitter,)
 
 
@@ -139,10 +156,10 @@ def _(mo):
 @app.cell
 def _(Mf, QNMFitVaryingStartingTime, SXSnum, af, h, iota, mode_list, np, psi):
     _t0_arr = np.linspace(0, 50, num=101)
-    qnm_fixed_list_1 = mode_list(['2.2.0', '2.-2.0', '3.3.0', '3.-3.0', '4.4.0', '4.-4.0'], Mf, af)
+    qnm_fixed_list_1 = mode_list(['2.2.0', '2.-2.0', '3.3.0', '3.-3.0', '4.4.0', '4.-4.0', 'constant'], Mf, af)
     _run_string_prefix = f'SXS{SXSnum}_lm_2.2_iota_{iota:.7f}_psi_{psi:.7f}'
     _N_free = 0
-    fitter_1 = QNMFitVaryingStartingTime(h, _t0_arr, N_free=_N_free, qnm_fixed_list=qnm_fixed_list_1, load_pickle=True, run_string_prefix=_run_string_prefix)
+    fitter_1 = QNMFitVaryingStartingTime(h, _t0_arr, N_free=_N_free, qnm_fixed_list=qnm_fixed_list_1, load_pickle=False, run_string_prefix=_run_string_prefix)
     return fitter_1, qnm_fixed_list_1
 
 
@@ -200,7 +217,7 @@ def _(mo):
 @app.cell
 def _(Mf, QNMFitVaryingStartingTime, SXSnum, af, h, iota, mode_list, np, psi):
     _t0_arr = np.linspace(0, 50, num=101)
-    qnm_fixed_list_2 = mode_list(['2.2.0', '3.3.0', '4.4.0'], Mf, af)
+    qnm_fixed_list_2 = mode_list(['2.2.0', '3.3.0', '4.4.0', 'constant'], Mf, af)
     _run_string_prefix = f'SXS{SXSnum}_lm_2.2_iota_{iota:.7f}_psi_{psi:.7f}_incl_mirror'
     _N_free = 0
     fitter_2 = QNMFitVaryingStartingTime(h, _t0_arr, N_free=_N_free, qnm_fixed_list=qnm_fixed_list_2, load_pickle=False, run_string_prefix=_run_string_prefix, include_mirror=True, iota=iota, psi=psi)
