@@ -537,19 +537,25 @@ def _sum_modes_native(
         raise ValueError("mode_array_dict must contain at least one (l, m) mode.")
 
     try:
-        import lal
+        import quaternionic
+        import spherical
     except ImportError as exc:
         raise ImportError(
-            "Summing modes requires `lal` from lalsuite. "
-            "Install it in the active environment (e.g. `pixi add lalsimulation` "
-            "or `pip install lalsuite`)."
+            "Summing modes requires `spherical` and `quaternionic`. "
+            "Install them in the active environment "
+            "(e.g. `pixi add --pypi spherical quaternionic` "
+            "or `pip install spherical quaternionic`)."
         ) from exc
 
     first_mode = next(iter(mode_array_dict.values()))
     mode_sum = np.zeros_like(first_mode, dtype=np.complex128)
+    ell_max = max(l for l, _ in mode_array_dict)
+    wigner = spherical.Wigner(ell_max)
+    R = quaternionic.array.from_spherical_coordinates(iota, psi)
+    y_all = wigner.sYlm(-2, R)
 
     for (l, m), h_lm in mode_array_dict.items():
-        y_lm = lal.SpinWeightedSphericalHarmonic(iota, psi, -2, l, m)
+        y_lm = y_all[wigner.Yindex(l, m)]
         mode_sum = mode_sum + np.asarray(h_lm, dtype=np.complex128) * y_lm
 
     return mode_sum

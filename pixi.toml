@@ -24,6 +24,8 @@ optimistix = "*"
 pandas = ">1.5.1"
 pykerr = ">=0.1.0"
 qnm = "==0.4.4"
+quaternionic = "*"
+spherical = "*"
 sxs = ">2025"
 marimo = "*"
 
