@@ -18,13 +18,6 @@ import jax
 from scipy.interpolate import griddata
 from scipy.stats import loguniform, uniform
 
-try:
-    from pycbc.waveform.waveform_modes import sum_modes
-except ImportError:
-    _has_pycbc = False
-else:
-    _has_pycbc = True
-
 from numpy.random import default_rng
 from scipy.optimize import minimize
 rng = default_rng(seed=1234)
@@ -495,8 +488,7 @@ def get_waveform_toy_no_exp(
 def get_SXS_waveform_summed(SXS_num: str, iota: float, psi: float, 
                             l_max: int =4, res: int =0, N_ext: int=2) -> Tuple[waveform, float, float]:
     """
-    Obtain the waveform of a SXS simulation summed over all modes up to l_max, 
-    using `pycbc.waveform.waveform_modes.sum_modes`.
+    Obtain the waveform of a SXS simulation summed over all modes up to l_max.
 
     Parameters:
         SXS_num: The SXS simulation number.
@@ -514,10 +506,6 @@ def get_SXS_waveform_summed(SXS_num: str, iota: float, psi: float,
 
     """
 
-    if not _has_pycbc:
-        raise ImportError(
-            "This function requires pycbc. Install it with `pip install pycbc`.")
-
     Mf, af, Level, hdict = get_SXS_waveform_dict(SXS_num, res=res, N_ext=N_ext)
 
     hdict_complex = {}
@@ -529,13 +517,42 @@ def get_SXS_waveform_summed(SXS_num: str, iota: float, psi: float,
             hdict_complex[(l, m)] = np.array(
                 hdict[key][1] + 1.j * hdict[key][2])
 
-    h_sum = sum_modes(hdict_complex, iota, psi)
+    h_sum = _sum_modes_native(hdict_complex, iota, psi)
 
     t = hdict["2,2"][0]
 
     h = waveform(t, h_sum)
 
     return h, Mf, af
+
+
+def _sum_modes_native(
+        mode_array_dict: Dict[Tuple[int, int], np.ndarray],
+        iota: float,
+        psi: float) -> np.ndarray:
+    """
+    Sum spin-weighted spherical harmonic modes into a complex strain.
+    """
+    if len(mode_array_dict) == 0:
+        raise ValueError("mode_array_dict must contain at least one (l, m) mode.")
+
+    try:
+        import lal
+    except ImportError as exc:
+        raise ImportError(
+            "Summing modes requires `lal` from lalsuite. "
+            "Install it in the active environment (e.g. `pixi add lalsimulation` "
+            "or `pip install lalsuite`)."
+        ) from exc
+
+    first_mode = next(iter(mode_array_dict.values()))
+    mode_sum = np.zeros_like(first_mode, dtype=np.complex128)
+
+    for (l, m), h_lm in mode_array_dict.items():
+        y_lm = lal.SpinWeightedSphericalHarmonic(iota, psi, -2, l, m)
+        mode_sum = mode_sum + np.asarray(h_lm, dtype=np.complex128) * y_lm
+
+    return mode_sum
 
 
 def delayed_QNM(

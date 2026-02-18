@@ -37,9 +37,6 @@ dependencies = [
   "tqdm>4.61.1",
 ]
 
-[project.optional-dependencies]
-pycbc = ["PyCBC>2.0.6"]
-
 [project.urls]
 "Homepage" = "https://github.com/mhycheung/Jaxqualin"
 "Bug Tracker" = "https://github.com/mhycheung/Jaxqualin/issues"
