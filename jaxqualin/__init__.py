@@ -15,6 +15,12 @@ from .qnmode import (
     qnms_to_string,
     potential_modes,
     make_mirror_ratio_list,
+    custom_mode,
+    custom_mode_list,
+    QNMModel,
+    KerrModel,
+    model_mode_free,
+    model_mode,
 )
 
 # ---------------------------------------------------------------------------
@@ -25,9 +31,12 @@ from .fit import (
     InitialGuessConfig,
     QNMFitResult,
     QNMFit,
+    QNMFitModel,
     QNMFitVarMa,
     QNMFitVaryingStartingTime,
     QNMFitVaryingStartingTimeResult,
+    QNMFitVaryingStartingTimeResultModel,
+    QNMFitVaryingStartingTimeResultVarMa,
     FIT_SAVE_PATH,
 )
 
@@ -77,14 +86,23 @@ __all__ = [
     "qnms_to_string",
     "potential_modes",
     "make_mirror_ratio_list",
+    "custom_mode",
+    "custom_mode_list",
+    "QNMModel",
+    "KerrModel",
+    "model_mode_free",
+    "model_mode",
     # fit
     "FitConfig",
     "InitialGuessConfig",
     "QNMFitResult",
     "QNMFit",
+    "QNMFitModel",
     "QNMFitVarMa",
     "QNMFitVaryingStartingTime",
     "QNMFitVaryingStartingTimeResult",
+    "QNMFitVaryingStartingTimeResultModel",
+    "QNMFitVaryingStartingTimeResultVarMa",
     "FIT_SAVE_PATH",
     # waveforms
     "waveform",

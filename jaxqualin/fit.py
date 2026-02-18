@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from jax.numpy.linalg import pinv
 import optimistix as optx
 import scipy
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, least_squares as scipy_least_squares
 
 from .utils import interweave
 from .qnmode import S_mirror_fac, qnms_to_string, make_mirror_ratio_list, mode, mode_free
@@ -182,6 +182,10 @@ def qnm_fit_func_varMa_mirror(
         omegar = qnm_fixed.omegar
         omegai = qnm_fixed.omegai
         lmnx = qnm_fixed.lmnx
+        if lmnx is None:
+            raise ValueError(
+                "Mirror mode fitting requires modes with lmnx quantum numbers. "
+                "custom_mode objects cannot be used with include_mirror=True.")
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
@@ -206,6 +210,10 @@ def qnm_fit_func_varMa_mirror(
         omegar = qnm_free.omegar
         omegai = qnm_free.omegai
         lmnx = qnm_free.lmnx
+        if lmnx is None:
+            raise ValueError(
+                "Mirror mode fitting requires modes with lmnx quantum numbers. "
+                "custom_mode objects cannot be used with include_mirror=True.")
         mirror_ratio = 1
         for lmn in lmnx:
             l, m, n = tuple(lmn)
@@ -465,6 +473,232 @@ def qnm_fit_func_wrapper_complex_varMa_mirror(
         part="imag")
     h_riffle = interweave(h_real, h_imag)
     return h_riffle
+
+
+# ---------------------------------------------------------------------------
+# Generalised wrappers for arbitrary QNMModel parameters
+# ---------------------------------------------------------------------------
+
+
+def qnm_fit_func_var_model(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        fix_mode_params_list,
+        free_mode_params_list,
+        model_params,
+        part=None):
+    """Like ``qnm_fit_func_varMa`` but with an arbitrary parameter dict."""
+    Q = 0
+    for qnm_fixed, fix_mode_params in zip(
+            qnm_fixed_list, fix_mode_params_list):
+        A, phi = tuple(fix_mode_params)
+        omegar = qnm_fixed.omegar
+        omegai = qnm_fixed.omegai
+        if part is None:
+            Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
+        elif part == "real":
+            Q += A * np.exp(omegai * t) * np.cos(omegar * t + phi)
+        elif part == "imag":
+            Q += -A * np.exp(omegai * t) * np.sin(omegar * t + phi)
+    for free_mode_params, qnm_free in zip(
+            free_mode_params_list, qnm_free_list):
+        A, phi = tuple(free_mode_params)
+        qnm_free.fix_mode(**model_params)
+        omegar = qnm_free.omegar
+        omegai = qnm_free.omegai
+        if part is None:
+            Q += A * np.exp(-1.j * ((omegar + 1.j * omegai) * t + phi))
+        elif part == "real":
+            Q += A * np.exp(omegai * t) * np.cos(omegar * t + phi)
+        elif part == "imag":
+            Q += -A * np.exp(omegai * t) * np.sin(omegar * t + phi)
+    return Q
+
+
+def qnm_fit_func_wrapper_var_model(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        model,
+        *args,
+        part=None):
+    """Wrapper that unpacks optimisation vector for a generic QNMModel."""
+    N_fix = len(qnm_fixed_list)
+    N_free = len(qnm_free_list)
+    fix_mode_params_list = []
+    for i in range(N_fix):
+        A = args[0][2 * i]
+        phi = args[0][2 * i + 1]
+        fix_mode_params_list.append([A, phi])
+    free_mode_params_list = []
+    for j in range(N_free):
+        A = args[0][2 * N_fix + 2 * j]
+        phi = args[0][2 * N_fix + 2 * j + 1]
+        free_mode_params_list.append([A, phi])
+    model_params = {}
+    for k, name in enumerate(model.param_names):
+        model_params[name] = args[0][2 * (N_fix + N_free) + k]
+    return qnm_fit_func_var_model(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        fix_mode_params_list,
+        free_mode_params_list,
+        model_params,
+        part=part)
+
+
+def qnm_fit_func_wrapper_complex_var_model(
+        t,
+        qnm_fixed_list,
+        qnm_free_list,
+        model,
+        *args):
+    """Complex-interweaved wrapper for a generic QNMModel."""
+    N = len(t)
+    t_real = t[0::2]
+    t_imag = t[1::2]
+    h_real = qnm_fit_func_wrapper_var_model(
+        t_real,
+        qnm_fixed_list,
+        qnm_free_list,
+        model,
+        *args,
+        part="real")
+    h_imag = qnm_fit_func_wrapper_var_model(
+        t_imag,
+        qnm_fixed_list,
+        qnm_free_list,
+        model,
+        *args,
+        part="imag")
+    h_riffle = interweave(h_real, h_imag)
+    return h_riffle
+
+
+# ---------------------------------------------------------------------------
+# VARPRO helpers for QNMModel-based fits
+# ---------------------------------------------------------------------------
+# With VARPRO the optimizer only searches over the *model* parameters
+# (e.g. M, a, delta).  At every evaluation the complex linear
+# coefficients  c_j = A_j exp(-i phi_j)  are solved analytically via
+# least-squares, removing them from the search space entirely.
+# ---------------------------------------------------------------------------
+
+
+def _varpro_basis_model(time, qnm_fixed_list, qnm_free_list, model,
+                        model_params):
+    """Build the complex-exponential basis matrix for VARPRO.
+
+    Returns an (N_t, N_modes) complex ndarray where each column is
+    ``exp(-i * omega_j * t)`` for one mode.
+    """
+    for qnm_free in qnm_free_list:
+        qnm_free.fix_mode(**model_params)
+
+    cols = []
+    for qnm_fixed in qnm_fixed_list:
+        omega = complex(qnm_fixed.omegar) + 1j * complex(qnm_fixed.omegai)
+        cols.append(np.exp(-1j * omega * time))
+    for qnm_free in qnm_free_list:
+        omega = complex(qnm_free.omegar) + 1j * complex(qnm_free.omegai)
+        cols.append(np.exp(-1j * omega * time))
+
+    return np.column_stack(cols)          # (N_t, N_modes)
+
+
+def _varpro_residual_model(model_params_arr, time, y, qnm_fixed_list,
+                           qnm_free_list, model):
+    """VARPRO residual: only model params are nonlinear.
+
+    Parameters
+    ----------
+    model_params_arr : 1-D array of model parameter values.
+    time : 1-D real array of time samples.
+    y : 1-D complex array, the target waveform  ``hr + 1j*hi``.
+    qnm_fixed_list, qnm_free_list, model : as elsewhere.
+
+    Returns
+    -------
+    1-D real array of length ``2 * len(time)``.
+    """
+    model_params = {name: model_params_arr[k]
+                    for k, name in enumerate(model.param_names)}
+
+    basis = _varpro_basis_model(time, qnm_fixed_list, qnm_free_list,
+                                model, model_params)
+
+    # Solve for complex linear coefficients  c = A * exp(-i phi)
+    c, _, _, _ = np.linalg.lstsq(basis, y, rcond=None)
+
+    residual = y - basis @ c
+    return np.concatenate([residual.real, residual.imag])
+
+
+def _varpro_assemble_popt_model(model_params_arr, time, y,
+                                qnm_fixed_list, qnm_free_list, model):
+    """Assemble the full ``popt`` vector from VARPRO solution.
+
+    The output format is
+    ``[A_fix_0, phi_fix_0, …, A_free_0, phi_free_0, …, model_p0, …]``
+    matching the layout expected by
+    :meth:`QNMFitVaryingStartingTimeResultModel.process_results`.
+    """
+    N_fix = len(qnm_fixed_list)
+    N_free = len(qnm_free_list)
+    n_model = len(model.param_names)
+
+    model_params = {name: model_params_arr[k]
+                    for k, name in enumerate(model.param_names)}
+
+    basis = _varpro_basis_model(time, qnm_fixed_list, qnm_free_list,
+                                model, model_params)
+    c, _, _, _ = np.linalg.lstsq(basis, y, rcond=None)
+
+    # Convention:  h(t) = A * exp(-i*(omega*t + phi))  =>  c = A * exp(-i*phi)
+    A_arr = np.abs(c)
+    phi_arr = -np.angle(c)
+
+    popt = np.zeros(2 * N_fix + 2 * N_free + n_model)
+    for i in range(N_fix):
+        popt[2 * i] = A_arr[i]
+        popt[2 * i + 1] = phi_arr[i]
+    for j in range(N_free):
+        popt[2 * N_fix + 2 * j] = A_arr[N_fix + j]
+        popt[2 * N_fix + 2 * j + 1] = phi_arr[N_fix + j]
+    for k in range(n_model):
+        popt[2 * N_fix + 2 * N_free + k] = model_params_arr[k]
+
+    return popt
+
+
+def _varpro_reconstruct_model(time, popt, qnm_fixed_list, qnm_free_list,
+                              model):
+    """Reconstruct the complex waveform from a VARPRO popt vector."""
+    N_fix = len(qnm_fixed_list)
+    N_free = len(qnm_free_list)
+    n_model = len(model.param_names)
+
+    model_params_arr = popt[2 * N_fix + 2 * N_free:]
+    model_params = {name: model_params_arr[k]
+                    for k, name in enumerate(model.param_names)}
+
+    basis = _varpro_basis_model(time, qnm_fixed_list, qnm_free_list,
+                                model, model_params)
+
+    # Recover complex coefficients from (A, phi)
+    c = np.zeros(N_fix + N_free, dtype=np.complex128)
+    for i in range(N_fix):
+        A = popt[2 * i]
+        phi = popt[2 * i + 1]
+        c[i] = A * np.exp(-1j * phi)
+    for j in range(N_free):
+        A = popt[2 * N_fix + 2 * j]
+        phi = popt[2 * N_fix + 2 * j + 1]
+        c[N_fix + j] = A * np.exp(-1j * phi)
+
+    return basis @ c
 
 
 class QNMFitResult:
@@ -945,7 +1179,13 @@ class QNMFit(QNMFitBase):
 
 
 
-class QNMFitVarMa(QNMFitBase):
+class QNMFitModel(QNMFitBase):
+    """Fit QNM waveform with a parametric frequency model.
+
+    When *model* is ``None`` (default), falls back to the Kerr M/a path.
+    For a custom model, pass a :class:`QNMModel` instance together with
+    *model_params_guess* and optionally *model_params_bounds*.
+    """
 
     def __init__(
             self,
@@ -964,6 +1204,9 @@ class QNMFitVarMa(QNMFitBase):
             guess_free=[1, 1],
             guess_M_a=[1, 0.5],
             a_bound=0.99,
+            model=None,
+            model_params_guess=None,
+            model_params_bounds=None,
             **fit_kwargs):
         super().__init__(
             h=h, t0=t0, qnm_fixed_list=qnm_fixed_list,
@@ -977,8 +1220,81 @@ class QNMFitVarMa(QNMFitBase):
         self.guess_free = guess_free
         self.guess_M_a = guess_M_a
         self.a_bound = a_bound
+        self.model = model
+        self.model_params_guess = model_params_guess
+        self.model_params_bounds = model_params_bounds
+
+    # -----------------------------------------------------------------
+    # Generalised do_fit for an arbitrary QNMModel
+    # -----------------------------------------------------------------
+
+    def _do_fit_model(self):
+        """Fit using a user-supplied :class:`QNMModel` with VARPRO.
+
+        Only the model parameters (e.g. M, a, delta) are passed to the
+        nonlinear optimiser.  The linear parameters (amplitudes and phases)
+        are solved analytically at each iteration via least-squares,
+        dramatically reducing the dimensionality of the search.
+        """
+        model = self.model
+        n_model = model.n_params
+        self.time, self.hr, self.hi = self.h.postmerger(self.t0)
+        time = np.asarray(self.time)
+        y = np.asarray(self.hr) + 1j * np.asarray(self.hi)
+
+        # --- Extract or build initial model-parameter guess ---------------
+        if hasattr(self.params0, "__iter__"):
+            # params0 is a full popt from a previous fit — take model
+            # params from the tail.
+            model_params0 = np.asarray(self.params0, dtype=float)[-n_model:]
+        else:
+            model_params0 = np.array(
+                [self.model_params_guess[n] for n in model.param_names])
+
+        # --- Build bounds (model parameters only) -------------------------
+        default_bounds = model.param_bounds()
+        if self.model_params_bounds is not None:
+            default_bounds.update(self.model_params_bounds)
+        lower, upper = [], []
+        for name in model.param_names:
+            lo, hi = default_bounds.get(name, (-np.inf, np.inf))
+            lower.append(lo)
+            upper.append(hi)
+
+        # --- VARPRO: optimise only model params ---------------------------
+        sol = scipy_least_squares(
+            _varpro_residual_model,
+            model_params0,
+            args=(time, y, self.qnm_fixed_list, self.qnm_free_list, model),
+            bounds=(lower, upper),
+            method="trf",
+            max_nfev=self.max_nfev,
+        )
+
+        # --- Assemble full popt and reconstruct ---------------------------
+        self.popt = _varpro_assemble_popt_model(
+            sol.x, time, y,
+            self.qnm_fixed_list, self.qnm_free_list, model)
+        self.pcov = None
+
+        self.reconstruct_h = _varpro_reconstruct_model(
+            time, self.popt,
+            self.qnm_fixed_list, self.qnm_free_list, model)
+
+        self.h_true = self.hr + 1.j * self.hi
+        self.mismatch = 1 - (np.abs(np.vdot(
+            self.h_true, self.reconstruct_h) / (
+            np.linalg.norm(self.h_true)
+            * np.linalg.norm(self.reconstruct_h))))
+        self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
+        self.fit_done = True
+
+    # -----------------------------------------------------------------
 
     def do_fit(self):
+        if self.model is not None:
+            return self._do_fit_model()
+
         self.time, self.hr, self.hi = self.h.postmerger(self.t0)
         self._h_interweave = interweave(self.hr, self.hi)
         self._time_interweave = interweave(self.time, self.time)
@@ -1062,14 +1378,61 @@ class QNMFitVarMa(QNMFitBase):
             self.popt = other_result.popt
             self.pcov = other_result.pcov
             self.time, self.hr, self.hi = self.h.postmerger(self.t0)
-            self._h_interweave = interweave(self.hr, self.hi)
-            self._time_interweave = interweave(self.time, self.time)
-            self.reconstruct_h = qnm_fit_func_wrapper(
-                self.time, self.qnm_fixed_list, self.N_free, self.popt)
+            if self.model is not None:
+                self.reconstruct_h = _varpro_reconstruct_model(
+                    np.asarray(self.time), self.popt,
+                    self.qnm_fixed_list, self.qnm_free_list, self.model)
+            else:
+                self._h_interweave = interweave(self.hr, self.hi)
+                self._time_interweave = interweave(self.time, self.time)
+                self.reconstruct_h = qnm_fit_func_wrapper(
+                    self.time, self.qnm_fixed_list, self.N_free, self.popt)
             self.h_true = self.hr + 1.j * self.hi
             self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
                 np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
             self.result = QNMFitResult(self.popt, self.pcov, self.mismatch)
+
+
+class QNMFitVarMa(QNMFitModel):
+    """Backward-compatible convenience wrapper that uses the Kerr M/a model.
+
+    This is equivalent to ``QNMFitModel`` with ``model=None`` (the default
+    Kerr-specific code path).  The ``model``, ``model_params_guess``, and
+    ``model_params_bounds`` parameters are **not** accepted here; use
+    :class:`QNMFitModel` directly for custom models.
+    """
+
+    def __init__(
+            self,
+            h,
+            t0,
+            qnm_free_list,
+            qnm_fixed_list=[],
+            retro_def_orbit=True,
+            Schwarzschild=False,
+            params0=None,
+            max_nfev=DEFAULT_MAX_NFEV,
+            include_mirror=False,
+            iota=None,
+            psi=None,
+            guess_fixed=[1, 1],
+            guess_free=[1, 1],
+            guess_M_a=[1, 0.5],
+            a_bound=0.99,
+            **fit_kwargs):
+        super().__init__(
+            h=h, t0=t0, qnm_free_list=qnm_free_list,
+            qnm_fixed_list=qnm_fixed_list,
+            retro_def_orbit=retro_def_orbit,
+            Schwarzschild=Schwarzschild,
+            params0=params0, max_nfev=max_nfev,
+            include_mirror=include_mirror,
+            iota=iota, psi=psi,
+            guess_fixed=guess_fixed, guess_free=guess_free,
+            guess_M_a=guess_M_a, a_bound=a_bound,
+            model=None, model_params_guess=None,
+            model_params_bounds=None,
+            **fit_kwargs)
 
 
 def make_initial_guess(
@@ -1242,7 +1605,7 @@ class QNMFitVaryingStartingTimeResult:
         return Q_fix_list, Q_free_list
 
 
-class QNMFitVaryingStartingTimeResultVarMa:
+class QNMFitVaryingStartingTimeResultModel:
 
     def __init__(
             self,
@@ -1257,19 +1620,23 @@ class QNMFitVaryingStartingTimeResultVarMa:
             iota=None,
             psi=None,
             fit_save_prefix=FIT_SAVE_PATH,
-            save_results=True):
+            save_results=True,
+            model=None):
         self.t0_arr = t0_arr
         self.qnm_fixed_list = qnm_fixed_list
         self.qnm_free_list = qnm_free_list
         self.N_fix = len(self.qnm_fixed_list)
         self.N_free = len(qnm_free_list)
         self.Schwarzschild = Schwarzschild
-        if Schwarzschild:
-            M_a_len = 1
+        self.model = model
+        if model is not None:
+            model_param_len = model.n_params
+        elif Schwarzschild:
+            model_param_len = 1
         else:
-            M_a_len = 2
+            model_param_len = 2
         self._popt_full = np.zeros(
-            (2 * self.N_fix + 2 * self.N_free + M_a_len, len(self.t0_arr)), dtype=float)
+            (2 * self.N_fix + 2 * self.N_free + model_param_len, len(self.t0_arr)), dtype=float)
         self._mismatch_arr = np.zeros(len(self.t0_arr), dtype=float)
         self.result_processed = False
         _qnm_free_string_list = sorted(qnms_to_string(qnm_fixed_list))
@@ -1313,21 +1680,28 @@ class QNMFitVaryingStartingTimeResultVarMa:
             self.A_free_dict[f"A_free_{(i-2*self.N_fix)//2}"] = self.popt_full[i]
             self.phi_free_dict[f"phi_free_{(i-2*self.N_fix)//2}"] = self.popt_full[i + 1]
         j = 2 * self.N_fix + 2 * self.N_free
-        M_arr = self.popt_full[j]
-        if not self.Schwarzschild:
-            a_arr = self.popt_full[j + 1]
+        if self.model is not None:
+            self.model_params_dict = {}
+            for k, name in enumerate(self.model.param_names):
+                self.model_params_dict[name] = self.popt_full[j + k]
+        else:
+            M_arr = self.popt_full[j]
+            if not self.Schwarzschild:
+                a_arr = self.popt_full[j + 1]
+            if self.Schwarzschild:
+                self.model_params_dict = {"M": M_arr}
+            else:
+                self.model_params_dict = {"M": M_arr, "a": a_arr}
+        # Backward-compatible alias
+        self.Ma_dict = self.model_params_dict
         self.A_dict = {**self.A_fix_dict, **self.A_free_dict}
         self.phi_dict = {**self.phi_fix_dict, **self.phi_free_dict}
-        if self.Schwarzschild:
-            self.Ma_dict = {"M": M_arr}
-        else:
-            self.Ma_dict = {"M": M_arr, "a": a_arr}
         self.results_dict = {
             **self.A_fix_dict,
             **self.A_free_dict,
             **self.phi_fix_dict,
             **self.phi_free_dict,
-            **self.Ma_dict}
+            **self.model_params_dict}
         self.result_processed = True
         if self.save_results:
             self.pickle_save()
@@ -1340,6 +1714,10 @@ class QNMFitVaryingStartingTimeResultVarMa:
 
     def pickle_exists(self):
         return os.path.exists(self.file_path)
+
+
+# Backward-compatible alias
+QNMFitVaryingStartingTimeResultVarMa = QNMFitVaryingStartingTimeResultModel
 
 
 class QNMFitVaryingStartingTime:
@@ -1468,7 +1846,10 @@ class QNMFitVaryingStartingTime:
             mirror_ignore_phase: bool = True,
             skip_i_init: int = 1,
             save_results: bool = True,
-            fit_config: Optional[FitConfig] = None) -> None:
+            fit_config: Optional[FitConfig] = None,
+            model=None,
+            model_params_guess=None,
+            model_params_bounds=None) -> None:
         """
         Initialize the `QNMFitVaryingStartingTime` object.
 
@@ -1524,6 +1905,9 @@ class QNMFitVaryingStartingTime:
             fit_config: optional FitConfig dataclass. If provided, overrides
                 the individual max_nfev, weighted, Schwarzschild,
                 include_mirror, iota, and psi parameters.
+            model: optional QNMModel instance for custom parametric models.
+            model_params_guess: dict of initial guesses for model params.
+            model_params_bounds: dict overriding default model param bounds.
         """
         if fit_config is not None:
             self.fit_config = fit_config
@@ -1563,7 +1947,12 @@ class QNMFitVaryingStartingTime:
         self.params0 = params0
         self.max_nfev = max_nfev
         if not hasattr(self.params0, "__iter__"):
-            if var_M_a:
+            if model is not None:
+                guess_model = [model_params_guess[n]
+                               for n in model.param_names]
+                self.params0 = jnp.array(
+                    [A_rel, 1] * self.N_fix + [A_rel, 1] * self.N_free + guess_model)
+            elif var_M_a:
                 if Schwarzschild:
                     self.params0 = jnp.array(
                         [A_rel, 1] * self.N_fix + [A_rel, 1] * self.N_free + [1])
@@ -1607,6 +1996,11 @@ class QNMFitVaryingStartingTime:
 
         self.skip_i_init = skip_i_init
         self.save_results = save_results
+        self.model = model
+        self.model_params_guess = model_params_guess
+        self.model_params_bounds = model_params_bounds
+        if self.model is not None:
+            self.var_M_a = True
 
     def get_mirror_ratio_list(self) -> List[float]:
         """
@@ -1753,18 +2147,35 @@ class QNMFitVaryingStartingTime:
         max_len = self._max_len_for_fit
 
         if self.var_M_a:
-            qnm_fit = QNMFitVarMa(
-                self.h,
-                _t0,
-                self.qnm_free_list,
-                qnm_fixed_list=self.qnm_fixed_list,
-                Schwarzschild=self.Schwarzschild,
-                params0=self._current_params0,
-                max_nfev=self.max_nfev,
-                include_mirror=self.include_mirror,
-                iota=self.iota,
-                psi=self.psi,
-                **self.fit_kwargs)
+            if self.model is not None:
+                qnm_fit = QNMFitModel(
+                    self.h,
+                    _t0,
+                    self.qnm_free_list,
+                    qnm_fixed_list=self.qnm_fixed_list,
+                    Schwarzschild=self.Schwarzschild,
+                    params0=self._current_params0,
+                    max_nfev=self.max_nfev,
+                    include_mirror=self.include_mirror,
+                    iota=self.iota,
+                    psi=self.psi,
+                    model=self.model,
+                    model_params_guess=self.model_params_guess,
+                    model_params_bounds=self.model_params_bounds,
+                    **self.fit_kwargs)
+            else:
+                qnm_fit = QNMFitVarMa(
+                    self.h,
+                    _t0,
+                    self.qnm_free_list,
+                    qnm_fixed_list=self.qnm_fixed_list,
+                    Schwarzschild=self.Schwarzschild,
+                    params0=self._current_params0,
+                    max_nfev=self.max_nfev,
+                    include_mirror=self.include_mirror,
+                    iota=self.iota,
+                    psi=self.psi,
+                    **self.fit_kwargs)
         else:
             qnm_fit = QNMFit(
                 self.h,
@@ -1837,7 +2248,10 @@ class QNMFitVaryingStartingTime:
         max_len = len(self._time_longest)
         self._max_len_for_fit = max_len
         if self.var_M_a:
-            self.result_full = QNMFitVaryingStartingTimeResultVarMa(
+            _ResultClass = (QNMFitVaryingStartingTimeResultModel
+                            if self.model is not None
+                            else QNMFitVaryingStartingTimeResultVarMa)
+            self.result_full = _ResultClass(
                 self.t0_arr,
                 self.qnm_fixed_list,
                 self.qnm_free_list,
@@ -1848,7 +2262,8 @@ class QNMFitVaryingStartingTime:
                 iota=self.iota,
                 psi=self.psi,
                 fit_save_prefix=self.fit_save_prefix,
-                save_results=self.save_results)
+                save_results=self.save_results,
+                model=self.model)
         else:
             self.result_full = QNMFitVaryingStartingTimeResult(
                 self.t0_arr,

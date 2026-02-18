@@ -9,7 +9,9 @@ import numpy as np
 from .qnmode import qnms_to_string, qnms_to_tex_string, S_mirror_fac, A_pos_to_A_neg, mode
 from .selection import closest_free_mode_distance, closest_free_mode_distance_cov, ModeSearchAllFreeVaryingN
 from .postprocess import get_df_for_coexisting_modes
-from .fit import QNMFitVaryingStartingTimeResult, QNMFitVaryingStartingTimeResultVarMa
+from .fit import (QNMFitVaryingStartingTimeResult,
+                  QNMFitVaryingStartingTimeResultModel,
+                  QNMFitVaryingStartingTimeResultVarMa)
 from .utils import linfunc, linfunc2
 
 from bisect import bisect_right
@@ -69,7 +71,7 @@ def _add_colorbar(ax, cmap, norm, label=""):
 
 
 def plot_omega_free(
-        results_full: Union[QNMFitVaryingStartingTimeResult, QNMFitVaryingStartingTimeResultVarMa],
+        results_full: Union[QNMFitVaryingStartingTimeResult, QNMFitVaryingStartingTimeResultModel, QNMFitVaryingStartingTimeResultVarMa],
         ax: mpl.axes.Axes=None,
         plot_indxs: List[int]=[],
         t0_min: Optional[float]=None,
@@ -350,8 +352,10 @@ def plot_M_a(
 
 def plot_amplitudes(
         results_full: Union[QNMFitVaryingStartingTimeResult, 
+                            QNMFitVaryingStartingTimeResultModel,
                             QNMFitVaryingStartingTimeResultVarMa],
-        fixed_modes: Optional[Union[QNMFitVaryingStartingTimeResult, 
+        fixed_modes: Optional[Union[QNMFitVaryingStartingTimeResult,
+                                    QNMFitVaryingStartingTimeResultModel,
                                     QNMFitVaryingStartingTimeResultVarMa]]=None,
         ax: mpl.axes.Axes =None,
         alpha: float = 1.0,
@@ -435,7 +439,7 @@ def plot_amplitudes(
                 c=color,
                 alpha=alpha,
                 ls=ls)
-            if len(lmnx) == 1 and plot_mirror_pred:
+            if lmnx is not None and len(lmnx) == 1 and plot_mirror_pred:
                 if af is None or iota is None or psi is None:
                     raise ValueError(
                         "af, iota, and psi must be specified to plot retrodicted phase of mirror modes.")
@@ -546,9 +550,11 @@ def plot_amplitudes_unadj(
     ax.set_ylabel(r"$A$")
 
 
-def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult, 
+def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
+                                    QNMFitVaryingStartingTimeResultModel,
                                     QNMFitVaryingStartingTimeResultVarMa],
-                fixed_modes: Optional[Union[QNMFitVaryingStartingTimeResult, 
+                fixed_modes: Optional[Union[QNMFitVaryingStartingTimeResult,
+                                            QNMFitVaryingStartingTimeResultModel,
                                             QNMFitVaryingStartingTimeResultVarMa]] =None, 
                 ax: mpl.axes.Axes =None, 
                 alpha: float =1., 
@@ -625,7 +631,7 @@ def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
                 A_fix_dict[f"A_{fixed_mode_string}"] > 0, 0, np.pi)
             t_breaks, phi_breaks = phase_break_for_plot(
                 t0_arr, phi_fix_dict[f"phi_{fixed_mode_string}"] + phase_shift)
-            if len(lmnx) == 1 and plot_mirror_pred:
+            if lmnx is not None and len(lmnx) == 1 and plot_mirror_pred:
                 if af is None or iota is None or psi is None:
                     raise ValueError(
                         "af, iota, and psi must be specified to plot retrodicted phase of mirror modes.")
@@ -651,7 +657,7 @@ def plot_phases(results_full: Union[QNMFitVaryingStartingTimeResult,
                         c=color,
                         alpha=alpha,
                         ls=ls)
-            if len(lmnx) == 1 and plot_mirror_pred:
+            if lmnx is not None and len(lmnx) == 1 and plot_mirror_pred:
                 if m > 0:
                     for t_break_S, phi_break_S in zip(
                             t_breaks_S, phi_breaks_S):
