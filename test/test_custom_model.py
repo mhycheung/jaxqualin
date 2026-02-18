@@ -35,7 +35,7 @@ class TestBackwardCompat:
         qnm_free = long_str_to_qnms_free('2.2.0')
         fitter = QNMFitVarMa(
             h, t0=0.0, qnm_free_list=qnm_free,
-            Schwarzschild=False,
+            real=False,
             guess_free=[A * 0.8, phi * 0.8],
             guess_M_a=[Mf * 0.9, af * 0.9])
         fitter.do_fit()
@@ -52,7 +52,7 @@ class TestBackwardCompat:
         qnm_free = long_str_to_qnms_free('2.2.0')
         fitter = QNMFitVarMa(
             h, t0=0.0, qnm_free_list=qnm_free,
-            Schwarzschild=True,
+            real=True,
             guess_free=[A * 0.8, phi * 0.8],
             guess_M_a=[Mf * 0.9])
         fitter.do_fit()
@@ -72,7 +72,7 @@ class TestBackwardCompat:
         fitter = QNMFitVarMa(
             h, t0=0.0, qnm_free_list=qnm_free,
             qnm_fixed_list=modes_fixed,
-            Schwarzschild=False,
+            real=False,
             guess_M_a=[Mf * 0.9, af * 0.9])
         fitter.do_fit()
         expected = 2 * 1 + 2 * 1 + 2

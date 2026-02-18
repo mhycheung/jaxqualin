@@ -273,7 +273,7 @@ class TestKerrVarMaRoundtrip:
         qnm_free = long_str_to_qnms_free('2.2.0')
         fitter = QNMFitVarMa(
             h, t0=0.0, qnm_free_list=qnm_free,
-            Schwarzschild=False,
+            real=False,
             guess_free=[A * 0.8, phi * 0.8],
             guess_M_a=[Mf_true * 0.9, af_true * 0.9])
         fitter.do_fit()
@@ -303,7 +303,7 @@ class TestKerrVarMaRoundtrip:
         fitter = QNMFitVarMa(
             h, t0=0.0, qnm_free_list=qnm_free,
             qnm_fixed_list=modes_fixed,
-            Schwarzschild=False,
+            real=False,
             guess_M_a=[Mf_true * 0.9, af_true * 0.9])
         fitter.do_fit()
         popt = np.array(fitter.popt)
@@ -325,7 +325,7 @@ class TestKerrVarMaRoundtrip:
         qnm_free = long_str_to_qnms_free('2.2.0')
         fitter = QNMFitVarMa(
             h, t0=0.0, qnm_free_list=qnm_free,
-            Schwarzschild=False,
+            real=False,
             guess_free=[A * 0.8, phi * 0.8],
             guess_M_a=[Mf_true * 0.9, af_true * 0.9])
         fitter.do_fit()
@@ -345,7 +345,7 @@ class TestKerrVarMaRoundtrip:
         fitter = QNMFitVarMa(
             h, t0=0.0, qnm_free_list=qnm_free,
             qnm_fixed_list=modes_fixed,
-            Schwarzschild=False,
+            real=False,
             guess_M_a=[Mf_true * 0.95, af_true * 0.95])
         fitter.do_fit()
         assert fitter.mismatch < 1e-3, f"Mismatch too large: {fitter.mismatch}"
@@ -374,7 +374,7 @@ class TestKerrVarMaVaryingStartingTime:
             qnm_fixed_list=[],
             qnm_free_list=qnm_free,
             var_M_a=True,
-            Schwarzschild=False,
+            real=False,
             load_pickle=False,
             run_string_prefix='kerr_varMa_test',
             save_results=False)
@@ -407,7 +407,7 @@ class TestKerrVarMaVaryingStartingTime:
             qnm_fixed_list=[],
             qnm_free_list=qnm_free,
             var_M_a=True,
-            Schwarzschild=False,
+            real=False,
             load_pickle=False,
             run_string_prefix='kerr_varMa_mm_test',
             save_results=False)
@@ -432,7 +432,7 @@ class TestKerrVarMaVaryingStartingTime:
             qnm_fixed_list=[],
             qnm_free_list=qnm_free,
             var_M_a=True,
-            Schwarzschild=False,
+            real=False,
             load_pickle=False,
             run_string_prefix='kerr_varMa_shape',
             save_results=False)

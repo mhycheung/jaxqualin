@@ -14,7 +14,7 @@ nav:
     - Custom waveform: notebooks/example_custom_waveform.md
     - Summed multipoles: notebooks/example_summed_waveform.md
     - Loading hyperfits and interpolators: notebooks/example_hyperfit_load.md
-    - Schwarzschild fitting: notebooks/example_schwarzschild.md
+    - Real-waveform fitting: notebooks/example_real_waveform.md
     - Kerr mass and spin fitting: notebooks/example_varma.md
     - Custom modes and models: notebooks/example_custom_modes_and_models.md
   - Results: 

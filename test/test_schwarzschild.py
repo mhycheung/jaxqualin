@@ -5,8 +5,8 @@ purely real: h(t) = sum_j A_j * exp(omega_i_j * t) * cos(omega_r_j * t + phi_j).
 
 These tests cover:
   1. Low-level model functions with part="real"
-  2. QNMFit (VARPRO) roundtrips with Schwarzschild=True
-  3. QNMFitVarMa roundtrips with Schwarzschild=True
+  2. QNMFit (VARPRO) roundtrips with real=True
+  3. QNMFitVarMa roundtrips with real=True
   4. QNMFitVaryingStartingTime full-pipeline tests
   5. Edge cases (popt lengths, nan results, result shapes)
 """
@@ -101,28 +101,28 @@ class TestSchwarzschildModelFunction:
             np.real(np.array(h_complex)), np.array(h_real), atol=1e-12)
 
     def test_wrapper_complex_schwarzschild_zeros_imag(self):
-        """qnm_fit_func_wrapper_complex with Schwarzschild=True zeros imaginary slots."""
+        """qnm_fit_func_wrapper_complex with real=True zeros imaginary slots."""
         modes, Mf, af = _make_schwarzschild_modes(['2.2.0'])
         A, phi = 1.0, 0.0
         popt = jnp.array([A, phi])
         t_interleave = interweave(jnp.linspace(0, 50, 100), jnp.linspace(0, 50, 100))
 
         h_riffle = qnm_fit_func_wrapper_complex(
-            t_interleave, modes, 0, popt, Schwarzschild=True)
+            t_interleave, modes, 0, popt, real=True)
         h_arr = np.array(h_riffle)
 
         # Odd indices are imaginary slots; they should all be zero
         assert np.allclose(h_arr[1::2], 0.0, atol=1e-15)
 
     def test_wrapper_complex_schwarzschild_real_part_nonzero(self):
-        """qnm_fit_func_wrapper_complex with Schwarzschild=True has non-trivial real slots."""
+        """qnm_fit_func_wrapper_complex with real=True has non-trivial real slots."""
         modes, Mf, af = _make_schwarzschild_modes(['2.2.0'])
         A, phi = 1.0, 0.0
         popt = jnp.array([A, phi])
         t_interleave = interweave(jnp.linspace(0, 50, 100), jnp.linspace(0, 50, 100))
 
         h_riffle = qnm_fit_func_wrapper_complex(
-            t_interleave, modes, 0, popt, Schwarzschild=True)
+            t_interleave, modes, 0, popt, real=True)
         h_arr = np.array(h_riffle)
 
         # Even indices are real slots; they should be non-trivial
@@ -130,7 +130,7 @@ class TestSchwarzschildModelFunction:
 
 
 # ---------------------------------------------------------------------------
-# 2. QNMFit (VARPRO) roundtrip tests with Schwarzschild=True
+# 2. QNMFit (VARPRO) roundtrip tests with real=True
 # ---------------------------------------------------------------------------
 
 class TestSchwarzschildQNMFitRoundtrip:
@@ -143,7 +143,7 @@ class TestSchwarzschildQNMFitRoundtrip:
         h = _make_real_waveform_from_modes(modes, [A], [phi], t)
 
         fitter = QNMFit(h, t0=0.0, N_free=0, qnm_fixed_list=modes,
-                        Schwarzschild=True)
+                        real=True)
         fitter.do_fit()
         popt = np.array(fitter.popt)
         assert np.isclose(popt[0], A, atol=1e-5), f"Expected A={A}, got {popt[0]}"
@@ -155,7 +155,7 @@ class TestSchwarzschildQNMFitRoundtrip:
         h = _make_real_waveform_from_modes(modes, [A], [phi], t)
 
         fitter = QNMFit(h, t0=0.0, N_free=0, qnm_fixed_list=modes,
-                        Schwarzschild=True)
+                        real=True)
         fitter.do_fit()
         popt = np.array(fitter.popt)
         assert np.isclose(popt[1], phi, atol=1e-5), f"Expected phi={phi}, got {popt[1]}"
@@ -167,7 +167,7 @@ class TestSchwarzschildQNMFitRoundtrip:
         h = _make_real_waveform_from_modes(modes, [A], [phi], t)
 
         fitter = QNMFit(h, t0=0.0, N_free=0, qnm_fixed_list=modes,
-                        Schwarzschild=True)
+                        real=True)
         fitter.do_fit()
         assert fitter.mismatch < 1e-8, f"Mismatch too large: {fitter.mismatch}"
 
@@ -179,7 +179,7 @@ class TestSchwarzschildQNMFitRoundtrip:
         h = _make_real_waveform_from_modes(modes, A_list, phi_list, t)
 
         fitter = QNMFit(h, t0=0.0, N_free=0, qnm_fixed_list=modes,
-                        Schwarzschild=True)
+                        real=True)
         fitter.do_fit()
         popt = np.array(fitter.popt)
         assert np.isclose(popt[0], A_list[0], atol=1e-5), \
@@ -195,7 +195,7 @@ class TestSchwarzschildQNMFitRoundtrip:
         h = _make_real_waveform_from_modes(modes, A_list, phi_list, t)
 
         fitter = QNMFit(h, t0=0.0, N_free=0, qnm_fixed_list=modes,
-                        Schwarzschild=True)
+                        real=True)
         fitter.do_fit()
         popt = np.array(fitter.popt)
         assert np.isclose(popt[1], phi_list[0], atol=1e-5), \
@@ -211,7 +211,7 @@ class TestSchwarzschildQNMFitRoundtrip:
         h = _make_real_waveform_from_modes(modes, A_list, phi_list, t)
 
         fitter = QNMFit(h, t0=0.0, N_free=0, qnm_fixed_list=modes,
-                        Schwarzschild=True)
+                        real=True)
         fitter.do_fit()
         assert fitter.mismatch < 1e-8, f"Mismatch too large: {fitter.mismatch}"
 
@@ -225,7 +225,7 @@ class TestSchwarzschildQNMFitRoundtrip:
 
         fitter = QNMFit(
             h, t0=0.0, N_free=1, qnm_fixed_list=[],
-            Schwarzschild=True,
+            real=True,
             guess_free=[1, 1, target_omegar * 0.9, target_omegai * 0.9])
         fitter.do_fit()
         popt = np.array(fitter.popt)
@@ -247,7 +247,7 @@ class TestSchwarzschildQNMFitRoundtrip:
 
         fitter = QNMFit(
             h, t0=0.0, N_free=1, qnm_fixed_list=[],
-            Schwarzschild=True,
+            real=True,
             guess_free=[1, 1, -abs(target_omegar) * 0.9, target_omegai * 0.9])
         fitter.do_fit()
         popt = np.array(fitter.popt)
@@ -265,7 +265,7 @@ class TestSchwarzschildQNMFitRoundtrip:
         h = _make_real_waveform_from_modes(modes, [A], [phi], t)
 
         fitter = QNMFit(h, t0=0.0, N_free=0, qnm_fixed_list=modes,
-                        Schwarzschild=True)
+                        real=True)
         fitter.do_fit()
         recon = np.array(fitter.reconstruct_h)
         assert np.allclose(np.imag(recon), 0.0, atol=1e-15), \
@@ -273,7 +273,7 @@ class TestSchwarzschildQNMFitRoundtrip:
 
 
 # ---------------------------------------------------------------------------
-# 3. QNMFitVarMa roundtrip tests with Schwarzschild=True
+# 3. QNMFitVarMa roundtrip tests with real=True
 # ---------------------------------------------------------------------------
 
 class TestSchwarzschildQNMFitVarMaRoundtrip:
@@ -291,7 +291,7 @@ class TestSchwarzschildQNMFitVarMaRoundtrip:
         qnm_free = long_str_to_qnms_free('2.2.0')
         fitter = QNMFitVarMa(
             h, t0=0.0, qnm_free_list=qnm_free,
-            Schwarzschild=True,
+            real=True,
             guess_free=[A * 0.8, phi * 0.8],
             guess_M_a=[Mf_true * 0.9])
         fitter.do_fit()
@@ -319,7 +319,7 @@ class TestSchwarzschildQNMFitVarMaRoundtrip:
         fitter = QNMFitVarMa(
             h, t0=0.0, qnm_free_list=qnm_free,
             qnm_fixed_list=modes_fixed,
-            Schwarzschild=True,
+            real=True,
             guess_M_a=[Mf_true * 0.9])
         fitter.do_fit()
         popt = np.array(fitter.popt)
@@ -341,7 +341,7 @@ class TestSchwarzschildQNMFitVarMaRoundtrip:
         qnm_free = long_str_to_qnms_free('2.2.0')
         fitter = QNMFitVarMa(
             h, t0=0.0, qnm_free_list=qnm_free,
-            Schwarzschild=True,
+            real=True,
             guess_free=[A * 0.8, phi * 0.8],
             guess_M_a=[Mf_true * 0.9])
         fitter.do_fit()
@@ -366,7 +366,7 @@ class TestSchwarzschildVaryingStartingTime:
         fitter = QNMFitVaryingStartingTime(
             h, t0_arr, N_free=0,
             qnm_fixed_list=modes, load_pickle=False,
-            Schwarzschild=True,
+            real=True,
             run_string_prefix='schw_vst_test',
             save_results=False)
         fitter.do_fits()
@@ -387,7 +387,7 @@ class TestSchwarzschildVaryingStartingTime:
         fitter = QNMFitVaryingStartingTime(
             h, t0_arr, N_free=0,
             qnm_fixed_list=modes, load_pickle=False,
-            Schwarzschild=True,
+            real=True,
             run_string_prefix='schw_vst_phase_test',
             save_results=False)
         fitter.do_fits()
@@ -414,7 +414,7 @@ class TestSchwarzschildVaryingStartingTime:
             qnm_fixed_list=[],
             qnm_free_list=qnm_free,
             var_M_a=True,
-            Schwarzschild=True,
+            real=True,
             load_pickle=False,
             run_string_prefix='schw_varMa_test',
             save_results=False)
@@ -445,7 +445,7 @@ class TestSchwarzschildVaryingStartingTime:
             qnm_fixed_list=[],
             qnm_free_list=qnm_free,
             var_M_a=True,
-            Schwarzschild=True,
+            real=True,
             load_pickle=False,
             run_string_prefix='schw_varMa_mm_test',
             save_results=False)
@@ -479,7 +479,7 @@ class TestSchwarzschildEdgeCases:
             qnm_fixed_list=[],
             qnm_free_list=qnm_free,
             var_M_a=True,
-            Schwarzschild=True,
+            real=True,
             load_pickle=False,
             run_string_prefix='schw_shape_test',
             save_results=False)
@@ -510,7 +510,7 @@ class TestSchwarzschildEdgeCases:
             qnm_fixed_list=[],
             qnm_free_list=qnm_free,
             var_M_a=True,
-            Schwarzschild=True,
+            real=True,
             load_pickle=False,
             run_string_prefix='schw_nan_test',
             save_results=False)
@@ -535,7 +535,7 @@ class TestSchwarzschildEdgeCases:
         fitter = QNMFitVaryingStartingTime(
             h, t0_arr, N_free=0,
             qnm_fixed_list=modes,
-            Schwarzschild=True,
+            real=True,
             load_pickle=False,
             run_string_prefix='schw_varpro_shape_test',
             save_results=False)

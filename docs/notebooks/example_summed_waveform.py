@@ -164,9 +164,9 @@ def _(mo):
     mo.md(r"""
     #### Plotting the results
     Because our waveform is non-precessing, by PT symmetry, the amplitudes of the mirror modes can be predicted from those of the prograde modes, i.e.
-    $$
-    \tilde{A}_{\ell{,}-m{,}n} = \dfrac{S_{\ell{,}-m{,}n}(\iota, \psi)}{S_{\ell{,}m{,}n}^*(\iota, \psi)}\tilde{A}^*_{\ell{,}m{,}n} ,
-    $$
+    
+    $\tilde{A}_{\ell{,}-m{,}n} = \dfrac{S_{\ell{,}-m{,}n}(\iota, \psi)}{S_{\ell{,}m{,}n}^*(\iota, \psi)}\tilde{A}^*_{\ell{,}m{,}n} ,$
+    
     Where $\tilde{A}$ denotes the complex amplitude, and $S_{\ell{,}m{,}n}$ are the spin weighted ($s = -2$ in this case) spheroidal harmonics.
     We compute the predicted mirror mode amplitudes and plot them as dashed lines with colors corresponding to their prograde mode counter-parts.
     """)

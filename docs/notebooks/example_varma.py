@@ -111,7 +111,7 @@ def _(mo):
     mo.md(r"""
     ## Case 1: Single starting time VarMa fit
 
-    We use `QNMFitVarMa` with `Schwarzschild=False` (the default) to fit the complex waveform at a single starting time $t_0 = 5$.
+    We use `QNMFitVarMa` with `real=False` (the default) to fit the complex waveform at a single starting time $t_0 = 5$.
     The fitter recovers the mode amplitudes, phases, the black hole mass $M$, and spin $a$.
 
     The parameter vector `popt` has the structure: $[A_0, \phi_0, A_1, \phi_1, \ldots, M, a]$.
@@ -125,7 +125,7 @@ def _(QNMFitVarMa, Mf_true, af_true, h_kerr, long_str_to_qnms_free, mo, np):
 
     fitter_kerr_varma = QNMFitVarMa(
         h_kerr, t0=5.0, qnm_free_list=kerr_qnm_free,
-        Schwarzschild=False,
+        real=False,
         guess_free=[1.0, 0.5],
         guess_M_a=[Mf_true * 0.9, af_true * 0.9],
     )
@@ -169,7 +169,7 @@ def _(
         qnm_fixed_list=[],
         qnm_free_list=kerr_varma_qnm_free,
         var_M_a=True,
-        Schwarzschild=False,
+        real=False,
         load_pickle=False,
         run_string_prefix='kerr_varma_example',
         save_results=False,

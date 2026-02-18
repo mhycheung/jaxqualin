@@ -65,7 +65,7 @@ class FitConfig:
     max_nfev: int = DEFAULT_MAX_NFEV
     sigma: float = 1.
     weight_by_amplitude: bool = False
-    Schwarzschild: bool = False
+    real: bool = False
     include_mirror: bool = False
     iota: float = None
     psi: float = None
@@ -302,7 +302,7 @@ def qnm_fit_func_wrapper_varMa(
         qnm_free_list,
         retro_def_orbit,
         *args,
-        Schwarzschild=False,
+        real=False,
         part=None):
     N_fix = len(qnm_fixed_list)
     N_free = len(qnm_free_list)
@@ -317,7 +317,7 @@ def qnm_fit_func_wrapper_varMa(
         phi = args[0][2 * N_fix + 2 * j + 1]
         free_mode_params_list.append([A, phi])
     M = args[0][2 * (N_fix + N_free)]
-    if Schwarzschild:
+    if real:
         return qnm_fit_func_varMa(
             t,
             qnm_fixed_list,
@@ -350,7 +350,7 @@ def qnm_fit_func_wrapper_varMa_mirror(
         psi,
         retro_def_orbit,
         *args,
-        Schwarzschild=False,
+        real=False,
         part=None):
     N_fix = len(qnm_fixed_list)
     N_free = len(qnm_free_list)
@@ -365,7 +365,7 @@ def qnm_fit_func_wrapper_varMa_mirror(
         phi = args[0][2 * N_fix + 2 * j + 1]
         free_mode_params_list.append([A, phi])
     M = args[0][2 * (N_fix + N_free)]
-    if Schwarzschild:
+    if real:
         return qnm_fit_func_varMa_mirror(
             t,
             qnm_fixed_list,
@@ -402,13 +402,13 @@ def qnm_fit_func_wrapper_complex(
         qnm_fixed_list,
         N_free,
         *args,
-        Schwarzschild=False):
+        real=False):
     N = len(t)
     t_real = t[0::2]
     t_imag = t[1::2]
     h_real = qnm_fit_func_wrapper(
         t_real, qnm_fixed_list, N_free, *args, part="real")
-    if Schwarzschild:
+    if real:
         h_imag = jnp.zeros(int(N / 2))
     else:
         h_imag = qnm_fit_func_wrapper(
@@ -423,13 +423,13 @@ def qnm_fit_func_wrapper_complex_mirror(
         mirror_ratio_list,
         N_free,
         *args,
-        Schwarzschild=False):
+        real=False):
     N = len(t)
     t_real = t[0::2]
     t_imag = t[1::2]
     h_real = qnm_fit_func_mirror_wrapper(
         t_real, qnm_fixed_list, mirror_ratio_list, *args, part="real")
-    if Schwarzschild:
+    if real:
         h_imag = jnp.zeros(int(N / 2))
     else:
         h_imag = qnm_fit_func_mirror_wrapper(
@@ -997,7 +997,7 @@ class QNMFitBase:
             t0,
             qnm_fixed_list=[],
             N_free=0,
-            Schwarzschild=False,
+            real=False,
             max_nfev=DEFAULT_MAX_NFEV,
             include_mirror=False,
             iota=None,
@@ -1010,7 +1010,7 @@ class QNMFitBase:
         self.qnm_fixed_list = qnm_fixed_list
         self.N_fix = len(qnm_fixed_list)
         self.N_free = N_free
-        self.Schwarzschild = Schwarzschild
+        self.real = real
         self.max_nfev = max_nfev
         self.include_mirror = include_mirror
         self.iota = iota
@@ -1038,7 +1038,7 @@ class QNMFit(QNMFitBase):
             t0,
             N_free,
             qnm_fixed_list=[],
-            Schwarzschild=False,
+            real=False,
             params0=None,
             max_nfev=DEFAULT_MAX_NFEV,
             A_bound=np.inf,
@@ -1051,7 +1051,7 @@ class QNMFit(QNMFitBase):
             **fit_kwargs):
         super().__init__(
             h=h, t0=t0, qnm_fixed_list=qnm_fixed_list, N_free=N_free,
-            Schwarzschild=Schwarzschild, max_nfev=max_nfev,
+            real=real, max_nfev=max_nfev,
             include_mirror=include_mirror, weight_by_amplitude=weighted,
             **fit_kwargs)
         self.A_bound = A_bound
@@ -1124,7 +1124,7 @@ class QNMFit(QNMFitBase):
         else:
              mirror_ratio_arr = jnp.array([])
 
-        if self.Schwarzschild:
+        if self.real:
             # Schwarzschild: use real-valued VARPRO with cos/sin basis
             y_real = jnp.asarray(self.hr)
             args_real = (self.time, y_real, sigma, omegar_fixed, omegai_fixed, mask)
@@ -1160,7 +1160,7 @@ class QNMFit(QNMFitBase):
         self.status = None
         
         # Reconstruct waveform
-        if self.Schwarzschild:
+        if self.real:
             reconstruct_h_padded = qnm_fit_func_wrapper(
                 self.time, self.qnm_fixed_list, self.N_free, self.popt, part="real")
         elif self.include_mirror:
@@ -1179,7 +1179,7 @@ class QNMFit(QNMFitBase):
         
         # Slice to original length for mismatch calculation (numpy slicing, no JAX tracing)
         self.reconstruct_h = reconstruct_h_np[:original_len]
-        if self.Schwarzschild:
+        if self.real:
             h_true_unpadded = hr_np[:original_len]
         else:
             h_true_unpadded = hr_np[:original_len] + 1.j * hi_np[:original_len]
@@ -1217,7 +1217,7 @@ class QNMFitModel(QNMFitBase):
             qnm_free_list,
             qnm_fixed_list=[],
             retro_def_orbit=True,
-            Schwarzschild=False,
+            real=False,
             params0=None,
             max_nfev=DEFAULT_MAX_NFEV,
             include_mirror=False,
@@ -1233,7 +1233,7 @@ class QNMFitModel(QNMFitBase):
             **fit_kwargs):
         super().__init__(
             h=h, t0=t0, qnm_fixed_list=qnm_fixed_list,
-            N_free=len(qnm_free_list), Schwarzschild=Schwarzschild,
+            N_free=len(qnm_free_list), real=real,
             max_nfev=max_nfev, include_mirror=include_mirror,
             iota=iota, psi=psi, **fit_kwargs)
         self.qnm_free_list = qnm_free_list
@@ -1321,7 +1321,7 @@ class QNMFitModel(QNMFitBase):
         self.time, self.hr, self.hi = self.h.postmerger(self.t0)
         self._h_interweave = interweave(self.hr, self.hi)
         self._time_interweave = interweave(self.time, self.time)
-        if self.Schwarzschild:
+        if self.real:
             if not hasattr(self.params0, "__iter__"):
                 self.params0 = np.array(self.guess_fixed *
                                         self.N_fix +
@@ -1331,7 +1331,7 @@ class QNMFitModel(QNMFitBase):
             if self.include_mirror:
                 fit_func = lambda t, *params: qnm_fit_func_wrapper_varMa_mirror(
                     t, self.qnm_fixed_list, self.qnm_free_list, self.iota, self.psi,
-                    self.retro_def_orbit, params, 0, Schwarzschild=True, part="real")
+                    self.retro_def_orbit, params, 0, real=True, part="real")
                 self.popt, self.pcov = curve_fit(fit_func, np.array(
                     self.time), np.array(
                     self.hr), p0=self.params0, max_nfev=self.max_nfev,
@@ -1339,10 +1339,10 @@ class QNMFitModel(QNMFitBase):
                 self.reconstruct_h = qnm_fit_func_wrapper_varMa_mirror(
                     self.time, self.qnm_fixed_list, self.qnm_free_list, self.iota, self.psi,
                     self.retro_def_orbit, self.popt,
-                    0, Schwarzschild=True, part="real")
+                    0, real=True, part="real")
             else:
                 fit_func = lambda t, *params: qnm_fit_func_wrapper_varMa(
-                    t, self.qnm_fixed_list, self.qnm_free_list, self.retro_def_orbit, params, 0, Schwarzschild=True, part="real")
+                    t, self.qnm_fixed_list, self.qnm_free_list, self.retro_def_orbit, params, 0, real=True, part="real")
                 self.popt, self.pcov = curve_fit(fit_func, np.array(
                     self.time), np.array(
                     self.hr), p0=self.params0, max_nfev=self.max_nfev,
@@ -1354,7 +1354,7 @@ class QNMFitModel(QNMFitBase):
                     self.retro_def_orbit,
                     self.popt,
                     0,
-                    Schwarzschild=True,
+                    real=True,
                     part="real")
         else:
             if not hasattr(self.params0, "__iter__"):
@@ -1432,7 +1432,7 @@ class QNMFitVarMa(QNMFitModel):
             qnm_free_list,
             qnm_fixed_list=[],
             retro_def_orbit=True,
-            Schwarzschild=False,
+            real=False,
             params0=None,
             max_nfev=DEFAULT_MAX_NFEV,
             include_mirror=False,
@@ -1447,7 +1447,7 @@ class QNMFitVarMa(QNMFitModel):
             h=h, t0=t0, qnm_free_list=qnm_free_list,
             qnm_fixed_list=qnm_fixed_list,
             retro_def_orbit=retro_def_orbit,
-            Schwarzschild=Schwarzschild,
+            real=real,
             params0=params0, max_nfev=max_nfev,
             include_mirror=include_mirror,
             iota=iota, psi=psi,
@@ -1635,7 +1635,7 @@ class QNMFitVaryingStartingTimeResultModel:
             t0_arr,
             qnm_fixed_list,
             qnm_free_list,
-            Schwarzschild=False,
+            real=False,
             run_string_prefix="Default",
             nonconvergence_cut=False,
             include_mirror=False,
@@ -1650,11 +1650,11 @@ class QNMFitVaryingStartingTimeResultModel:
         self.qnm_free_list = qnm_free_list
         self.N_fix = len(self.qnm_fixed_list)
         self.N_free = len(qnm_free_list)
-        self.Schwarzschild = Schwarzschild
+        self.real = real
         self.model = model
         if model is not None:
             model_param_len = model.n_params
-        elif Schwarzschild:
+        elif real:
             model_param_len = 1
         else:
             model_param_len = 2
@@ -1709,9 +1709,9 @@ class QNMFitVaryingStartingTimeResultModel:
                 self.model_params_dict[name] = self.popt_full[j + k]
         else:
             M_arr = self.popt_full[j]
-            if not self.Schwarzschild:
+            if not self.real:
                 a_arr = self.popt_full[j + 1]
-            if self.Schwarzschild:
+            if self.real:
                 self.model_params_dict = {"M": M_arr}
             else:
                 self.model_params_dict = {"M": M_arr, "a": a_arr}
@@ -1752,8 +1752,7 @@ class QNMFitVaryingStartingTime:
         h: waveform object to be fitted. 
         var_M_a: fit for the mass and spin of the black hole. 
         Warning: Not tested yet.
-        Schwarzschild: whether to fit for Schwarzschild black hole, i.e.
-            real waveform.
+        real: whether to fit a real-valued waveform.
         N_free: number of frequency-free QNMs to include in the model. These
             modes are completely free, i.e. their mode numbers are not fixed
             like those in `qnm_free_list`.
@@ -1809,7 +1808,7 @@ class QNMFitVaryingStartingTime:
     t0_arr: np.ndarray
     h: waveform
     var_M_a: bool
-    Schwarzschild: bool
+    real: bool
     N_free: int
     qnm_fixed_list: List[mode]
     qnm_free_list: List[mode_free]
@@ -1846,7 +1845,7 @@ class QNMFitVaryingStartingTime:
             qnm_fixed_list: List[mode] = [],
             qnm_free_list: List[mode_free] = [],
             var_M_a: bool = False,
-            Schwarzschild: bool = False,
+            real: bool = False,
             run_string_prefix: str = "Default",
             params0: Optional[np.ndarray] = None,
             max_nfev: int = DEFAULT_MAX_NFEV,
@@ -1889,8 +1888,7 @@ class QNMFitVaryingStartingTime:
                 `var_M_a = True`.
             var_M_a: fit for the mass and spin of the black hole. Warning:
                 Not tested yet.
-            Schwarzschild: whether to fit for Schwarzschild black hole, i.e.
-                real waveform.
+            real: whether to fit a real-valued waveform.
             run_string_prefix: prefix of the run name for dumping the
                 `pickle` file.
             params0: initial guess for the fit parameters, at least for the
@@ -1926,7 +1924,7 @@ class QNMFitVaryingStartingTime:
                 nonconvergent fit occured.
             save_results: whether to save the results.
             fit_config: optional FitConfig dataclass. If provided, overrides
-                the individual max_nfev, weighted, Schwarzschild,
+                the individual max_nfev, weighted, real,
                 include_mirror, iota, and psi parameters.
             model: optional QNMModel instance for custom parametric models.
             model_params_guess: dict of initial guesses for model params.
@@ -1938,14 +1936,14 @@ class QNMFitVaryingStartingTime:
             self.fit_config = FitConfig(
                 max_nfev=max_nfev,
                 weight_by_amplitude=weighted,
-                Schwarzschild=Schwarzschild,
+                real=real,
                 include_mirror=include_mirror,
                 iota=iota,
                 psi=psi,
             )
         max_nfev = self.fit_config.max_nfev
         weighted = self.fit_config.weight_by_amplitude
-        Schwarzschild = self.fit_config.Schwarzschild
+        real = self.fit_config.real
         include_mirror = self.fit_config.include_mirror
         iota = self.fit_config.iota
         psi = self.fit_config.psi
@@ -1976,7 +1974,7 @@ class QNMFitVaryingStartingTime:
                 self.params0 = jnp.array(
                     [A_rel, 1] * self.N_fix + [A_rel, 1] * self.N_free + guess_model)
             elif var_M_a:
-                if Schwarzschild:
+                if real:
                     self.params0 = jnp.array(
                         [A_rel, 1] * self.N_fix + [A_rel, 1] * self.N_free + [1])
                 else:
@@ -1989,9 +1987,9 @@ class QNMFitVaryingStartingTime:
         self.run_string_prefix = run_string_prefix
         self.load_pickle = load_pickle
         self.fit_save_prefix = fit_save_prefix
-        self.Schwarzschild = Schwarzschild
-        if self.Schwarzschild:
-            logger.info("Schwarzschild mode enabled: fitting real-valued waveform.")
+        self.real = real
+        if self.real:
+            logger.info("Real-waveform mode enabled.")
         self.nonconvergence_cut = nonconvergence_cut
         self.A_bound = A_bound
         self.fit_kwargs = fit_kwargs
@@ -2059,7 +2057,7 @@ class QNMFitVaryingStartingTime:
                 self.t0_arr[0],
                 self.N_free,
                 qnm_fixed_list=self.qnm_fixed_list,
-                Schwarzschild=self.Schwarzschild,
+                real=self.real,
                 params0=guess,
                 max_nfev=self.max_nfev,
                 A_bound=self.A_bound,
@@ -2096,7 +2094,7 @@ class QNMFitVaryingStartingTime:
 
         nan_mismatch = np.nan
         if self.var_M_a:
-            if self.Schwarzschild:
+            if self.real:
                 nan_popt = np.full(
                     self.N_fix * 2 + self.N_free * 2 + 1, np.nan)
                 nan_pcov = nan_popt
@@ -2130,7 +2128,7 @@ class QNMFitVaryingStartingTime:
                 warmup_fit = QNMFit(
                     self.h, self.t0_arr[warmup_idx], self.N_free,
                     qnm_fixed_list=self.qnm_fixed_list,
-                    Schwarzschild=self.Schwarzschild,
+                    real=self.real,
                     params0=self.params0,
                     max_nfev=self.max_nfev,
                     A_bound=self.A_bound,
@@ -2148,7 +2146,7 @@ class QNMFitVaryingStartingTime:
             warmup_fit = QNMFit(
                 self.h, self.t0_arr[0], self.N_free,
                 qnm_fixed_list=self.qnm_fixed_list,
-                Schwarzschild=self.Schwarzschild,
+                real=self.real,
                 params0=self.params0,
                 max_nfev=self.max_nfev,
                 A_bound=self.A_bound,
@@ -2176,7 +2174,7 @@ class QNMFitVaryingStartingTime:
                     _t0,
                     self.qnm_free_list,
                     qnm_fixed_list=self.qnm_fixed_list,
-                    Schwarzschild=self.Schwarzschild,
+                    real=self.real,
                     params0=self._current_params0,
                     max_nfev=self.max_nfev,
                     include_mirror=self.include_mirror,
@@ -2192,7 +2190,7 @@ class QNMFitVaryingStartingTime:
                     _t0,
                     self.qnm_free_list,
                     qnm_fixed_list=self.qnm_fixed_list,
-                    Schwarzschild=self.Schwarzschild,
+                    real=self.real,
                     params0=self._current_params0,
                     max_nfev=self.max_nfev,
                     include_mirror=self.include_mirror,
@@ -2205,7 +2203,7 @@ class QNMFitVaryingStartingTime:
                 _t0,
                 self.N_free,
                 qnm_fixed_list=self.qnm_fixed_list,
-                Schwarzschild=self.Schwarzschild,
+                real=self.real,
                 params0=self._current_params0,
                 max_nfev=self.max_nfev,
                 A_bound=self.A_bound,
@@ -2278,7 +2276,7 @@ class QNMFitVaryingStartingTime:
                 self.t0_arr,
                 self.qnm_fixed_list,
                 self.qnm_free_list,
-                self.Schwarzschild,
+                self.real,
                 run_string_prefix=self.run_string_prefix,
                 nonconvergence_cut=self.nonconvergence_cut,
                 include_mirror=self.include_mirror,
@@ -2495,7 +2493,7 @@ def estimate_mass_and_spin(Psi, qnm_free_list,
                            one_t=False,
                            gamma=None,
                            gamma_scale=False,
-                           Schwarzschild=False,
+                           real=False,
                            qnm_fixed_list=[],
                            t0_arr=np.linspace(0, 100, num=51),
                            load_pickle=True,
@@ -2505,7 +2503,7 @@ def estimate_mass_and_spin(Psi, qnm_free_list,
                                            t0_arr,
                                            qnm_fixed_list=qnm_fixed_list,
                                            qnm_free_list=qnm_free_list,
-                                           Schwarzschild=Schwarzschild,
+                                           real=real,
                                            run_string_prefix=run_string_prefix,
                                            var_M_a=True,
                                            load_pickle=load_pickle,
@@ -2524,7 +2522,7 @@ def estimate_mass_and_spin(Psi, qnm_free_list,
         M_mean = np.mean(M_win)
         M_std = np.std(M_win)
 
-    if not Schwarzschild:
+    if not real:
         a = qnm_fitter.result_full.Ma_dict["a"]
         if one_t:
             a_mean = a[tstartindx]

@@ -148,7 +148,7 @@ def _(mo, np, result_1):
     _keys = list(result_1.A_dict.keys())
     _vals = [f"`{k}`: A = {np.array(v)[-1]:.4f}" for k, v in result_1.A_dict.items()]
     mo.md(f"""
-    **Result dict keys (labels appear correctly):**
+    **Result dict keys:**
 
     {chr(10).join('- ' + v for v in _vals)}
     """)
