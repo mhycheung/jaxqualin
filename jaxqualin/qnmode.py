@@ -916,6 +916,11 @@ def make_mirror_ratio_list(qnm_list, iota, psi = 0.):
     mirror_ratio_list_complex = []
     af = qnm_list[0].a
     for mode in qnm_list:
+        # A "constant" mode has no (l, m, n), so keep it as a single complex
+        # constant term by suppressing its mirror companion.
+        if mode.lmnx == "constant":
+            mirror_ratio_list_complex.append(0.0 + 0.0j)
+            continue
         if len(mode.lmnx) > 1:
             raise NotImplementedError("Only linear modes allowed for now")
         l, m, n = tuple(mode.lmnx[0])

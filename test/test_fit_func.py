@@ -93,6 +93,25 @@ class TestQnmFitFuncMirrorFixed:
         diff = np.array(h_mirror) - np.array(h_prograde_only)
         assert np.max(np.abs(diff)) > 1e-3
 
+    def test_constant_mode_matches_non_mirror(self):
+        Mf, af = 1.0, 0.7
+        modes = mode_list(['constant'], Mf, af)
+        iota, psi = np.pi / 3, np.pi / 2
+        mirror_ratio_list = make_mirror_ratio_list(modes, iota, psi)
+
+        A, phi = 1.3, 0.7
+        t = jnp.linspace(0, 50, 200)
+
+        h_mirror = qnm_fit_func_mirror_fixed(
+            t, modes, [[A, phi]], mirror_ratio_list, part=None)
+        h_no_mirror = qnm_fit_func(
+            t, modes, [[A, phi]], [], part=None)
+
+        # For "constant", include_mirror should still represent one complex
+        # constant term, identical to the non-mirror model.
+        assert np.allclose(
+            np.array(h_mirror), np.array(h_no_mirror), atol=1e-12)
+
 
 # ---------------------------------------------------------------------------
 # model_func_optimized basis shape
