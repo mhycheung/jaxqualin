@@ -1,7 +1,7 @@
 from .utils import max_consecutive_trues
 from .qnmode import mode, potential_modes, qnms_to_string, remove_duplicated_modes, lower_overtone_present, lower_l_mode_present
 from .fit import QNMFitVaryingStartingTime, FIT_SAVE_PATH, DEFAULT_SEED
-from .waveforms import waveform, get_waveform_SXS, get_relevant_lm_waveforms_SXS, relevant_modes_dict_to_lm_tuple, make_eff_ringdown_waveform_from_param
+from .waveforms import waveform, get_waveform_SXS, get_relevant_lm_waveforms_SXS, relevant_modes_dict_to_lm_tuple, make_eff_ringdown_waveform_from_param, DEFAULT_T_END
 
 import logging
 import numpy as np
@@ -670,6 +670,7 @@ class ModeSearchAllFreeVaryingNSXS:
                   'default_seed': DEFAULT_SEED,
                   'CCE': False,
                   'relevant_lm_list': [],
+                  't_end': DEFAULT_T_END,
                   'retro_def_orbit': True,
                   'run_string_fitter': None,
                   'run_string': None,
@@ -710,6 +711,7 @@ class ModeSearchAllFreeVaryingNSXS:
         else:
             self.set_seed = self.kwargs['default_seed']
         self.save_mode_searcher = self.kwargs['save_mode_searcher']
+        self.t_end = self.kwargs['t_end']
         self.download = kwargs["download"]
         self.get_waveform()
 
@@ -748,7 +750,7 @@ class ModeSearchAllFreeVaryingNSXS:
         """
         _check_no_cce(self.CCE)
         relevant_modes_dict = get_relevant_lm_waveforms_SXS(
-            self.SXS_num, CCE=self.CCE)
+            self.SXS_num, CCE=self.CCE, t_end=self.t_end)
         if not self.relevant_lm_list_override:
             self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
                 relevant_modes_dict)
@@ -758,7 +760,11 @@ class ModeSearchAllFreeVaryingNSXS:
         #     #     self.SXS_num, self.l, self.m)
         # else:
         self.h, self.M, self.a, self.Lev = get_waveform_SXS(
-            self.SXS_num, self.l, self.m, download = self.download)
+            self.SXS_num,
+            self.l,
+            self.m,
+            t_end=self.t_end,
+            download=self.download)
         self.h.update_peaktime(peaktime_dom)
 
     def pickle_save(self) -> None:
@@ -796,6 +802,7 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
                   'mode_searcher_load_pickle': True,
                   'N_list': DEFAULT_N_LIST,
                   'postfix_string': '',
+                  't_end': DEFAULT_T_END,
                   'CCE': False}, kwargs_in)
         self.load_pickle = self.kwargs['load_pickle']
         self.mode_searcher_load_pickle = self.kwargs['mode_searcher_load_pickle']
@@ -822,7 +829,7 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
 
     def get_relevant_lm_list(self):
         relevant_modes_dict = get_relevant_lm_waveforms_SXS(
-            self.SXS_num, CCE=self.CCE)
+            self.SXS_num, CCE=self.CCE, t_end=self.kwargs['t_end'])
         self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
             relevant_modes_dict)
 
