@@ -9,6 +9,7 @@ from jaxqualin.waveforms import (
     compute_mismatch,
     mismatch_min_phase,
     delayed_QNM,
+    _sum_modes_native,
 )
 from jaxqualin.qnmode import mode, mode_list
 
@@ -146,6 +147,37 @@ class TestDelayedQNM:
         h_clean = clean_QNM(m, t, A, phi)
 
         assert np.allclose(h_delayed, h_clean, atol=1e-10)
+
+
+# ---------------------------------------------------------------------------
+# _sum_modes_native parity with pycbc sum_modes
+# ---------------------------------------------------------------------------
+
+class TestModeSumParity:
+
+    def test_native_matches_pycbc_sum_modes(self):
+        pycbc_sum_modes = pytest.importorskip(
+            "pycbc.waveform.waveform_modes", reason="pycbc not installed"
+        ).sum_modes
+
+        rng = np.random.default_rng(42)
+        mode_dict = {
+            (2, 2): rng.normal(size=64) + 1j * rng.normal(size=64),
+            (2, 1): rng.normal(size=64) + 1j * rng.normal(size=64),
+            (2, 0): rng.normal(size=64) + 1j * rng.normal(size=64),
+            (2, -1): rng.normal(size=64) + 1j * rng.normal(size=64),
+            (2, -2): rng.normal(size=64) + 1j * rng.normal(size=64),
+            (3, 3): rng.normal(size=64) + 1j * rng.normal(size=64),
+            (3, 2): rng.normal(size=64) + 1j * rng.normal(size=64),
+            (3, -3): rng.normal(size=64) + 1j * rng.normal(size=64),
+        }
+        iota = np.pi / 3
+        psi = np.pi / 2
+
+        native = _sum_modes_native(mode_dict, iota, psi)
+        pycbc = pycbc_sum_modes(mode_dict, iota, psi)
+
+        assert np.allclose(native, pycbc, rtol=1e-13, atol=1e-13)
 
 
 # ---------------------------------------------------------------------------
