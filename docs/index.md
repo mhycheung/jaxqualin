@@ -31,8 +31,6 @@ pip install jaxqualin
 
 Basic usage examples can be found under the Examples tab on the left.
 
-> **Note**
-> We did not extensively test and do not recommend running `jaxqualin` on a GPU
 
 ## Paper Results
 

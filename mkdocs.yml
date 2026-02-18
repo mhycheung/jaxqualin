@@ -15,7 +15,8 @@ nav:
     - Summed multipoles: notebooks/example_summed_waveform.md
     - Loading hyperfits and interpolators: notebooks/example_hyperfit_load.md
     - Schwarzschild fitting: notebooks/example_schwarzschild.md
-    - VarMa fitting: notebooks/example_varma.md
+    - Kerr mass and spin fitting: notebooks/example_varma.md
+    - Custom modes and models: notebooks/example_custom_modes_and_models.md
   - Results: 
     - 2,2,0 mode: mode_md/2.2.0.md
     - 2,2,1 mode: mode_md/2.2.1.md
@@ -52,6 +53,9 @@ markdown_extensions:
   - pymdownx.snippets
   - attr_list
   - md_in_html
+
+extra_css:
+  - stylesheets/extra.css
 
 extra_javascript:
   - docs/javascripts/mathjax.js

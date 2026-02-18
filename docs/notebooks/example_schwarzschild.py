@@ -14,15 +14,9 @@ def _():
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Example: Fitting a Schwarzschild (non-spinning) waveform
+    # Example: Fitting a Schwarzschild (linearly polarized) waveform
 
-    In this example, we construct a toy waveform from Schwarzschild quasi-normal modes (QNMs) and fit it using `jaxqualin`.
-
-    A Schwarzschild black hole has zero spin ($a = 0$), so the gravitational waveform is purely real:
-
-    $$h(t) = \sum_j A_j \, e^{\omega_{i,j}\, t} \cos(\omega_{r,j}\, t + \phi_j)$$
-
-    We use `delayed_QNM` to add realistic distortions near the merger peak, then demonstrate three fitting approaches:
+    Note: 
 
     1. **Free-frequency fit** across varying $t_0$ to identify modes
     2. **Fixed-frequency fit** across varying $t_0$ with `Schwarzschild=True`

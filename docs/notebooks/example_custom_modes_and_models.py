@@ -18,8 +18,8 @@ def _(mo):
 
     This notebook demonstrates two features in `jaxqualin`:
 
-    1. **Custom fixed-omega modes** -- fit a waveform with user-specified complex frequencies.
-    2. **Fully custom model** -- define a QNM model from scratch with arbitrary parameters.
+    1. **Custom fixed-frequency modes** -- fit a waveform with user-specified complex frequencies.
+    2. **Fully custom model** -- define a QNM model as a function of arbitrary parameters.
     """)
     return
 
@@ -62,9 +62,11 @@ def _(mo):
     objects with arbitrary $\omega$ and optional labels, then use them directly in `QNMFit` or
     `QNMFitVaryingStartingTime`.
 
-    Here we use *truly arbitrary* frequencies that are **not** derived from Kerr:
-    - `"fundamental"`:  $\omega = 0.50 - 0.08i$
-    - `"overtone"`:  $\omega = 0.30 - 0.12i$
+    Here we use arbitrary frequencies that have nothing to do with Kerr BHs:
+    - `"fundamental"`:  $\omega_a = 0.50 - 0.08i$
+    - `"overtone"`:  $\omega_b = 0.30 - 0.12i$
+
+    We then use `delayed_QNM` to build a toy waveform and `QNMFitVaryingStartingTime` to fit at multiple starting times with these custom modes.
     """)
     return
 
@@ -101,8 +103,8 @@ def _(mo):
     mo.md(r"""
     ### Fit with custom fixed modes
 
-    Since the frequencies are already fixed, we use `QNMFitVaryingStartingTime` with `N_free=0`
-    and pass the custom modes as `qnm_fixed_list`.
+    We use `QNMFitVaryingStartingTime` with frequencies fixed to the custom modes, i.e. `N_free=0`
+    and `qnm_fixed_list` containing the custom modes.
     """)
     return
 
@@ -165,10 +167,9 @@ def _(mo):
 
     $$\omega = \alpha + i\,\beta$$
 
-    where $\alpha$ (real frequency) and $\beta$ (damping rate) are the free parameters
-    to be fitted. We use `delayed_QNM` to build a synthetic waveform and
-    `QNMFitVaryingStartingTime` to fit at multiple starting times, then plot the
-    recovered parameters as a function of $t_0$.
+    where $\alpha$ and $\beta$ are the free parameters
+    to be fitted. Again, we use `delayed_QNM` to build a toy waveform and
+    `QNMFitVaryingStartingTime` to fit at multiple starting times.
     """)
     return
 
@@ -239,7 +240,6 @@ def _(alpha_true, beta_true, np, plt, result_3, t0_arr_3):
     _axs[0].axhline(alpha_true, color='r', ls='--', label=rf'True $\alpha = {alpha_true}$')
     _axs[0].set_xlabel(r'$t_0$')
     _axs[0].set_ylabel(r'$\alpha$')
-    _axs[0].set_title(r'Recovered $\alpha$')
     _axs[0].legend()
 
     _beta_arr = np.array(result_3.model_params_dict['beta'])
@@ -247,16 +247,13 @@ def _(alpha_true, beta_true, np, plt, result_3, t0_arr_3):
     _axs[1].axhline(beta_true, color='r', ls='--', label=rf'True $\beta = {beta_true}$')
     _axs[1].set_xlabel(r'$t_0$')
     _axs[1].set_ylabel(r'$\beta$')
-    _axs[1].set_title(r'Recovered $\beta$')
     _axs[1].legend()
 
     _mismatch = np.array(result_3.mismatch_arr)
     _axs[2].semilogy(t0_arr_3, _mismatch, 'k-', lw=2)
     _axs[2].set_xlabel(r'$t_0$')
     _axs[2].set_ylabel('Mismatch')
-    _axs[2].set_title('Fit mismatch')
 
-    _fig.suptitle('Part 3: Fully custom model — recovered parameters vs $t_0$')
     _fig.tight_layout()
     _fig
     return

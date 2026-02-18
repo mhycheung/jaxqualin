@@ -14,18 +14,12 @@ def _():
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Example: Variable mass and spin (VarMa) fitting
+    # Example: Kerr mass and spin fitting
 
-    In this example, we construct a toy waveform from Kerr quasi-normal modes (QNMs) and fit it using the VarMa fitter in `jaxqualin`, which simultaneously recovers the black hole mass $M$ and spin $a$ along with mode amplitudes and phases.
+    In this example, we construct a toy waveform from Kerr quasi-normal modes (QNMs) and fit it using the VarMa (Variable mass and spin) fitter in `jaxqualin`, which simultaneously recovers the black hole mass $M$ and spin $a$ along with mode amplitudes and phases.
 
     A Kerr black hole has non-zero spin ($a \neq 0$), so the gravitational waveform is complex:
 
-    $$h(t) = \sum_j A_j \, e^{(\omega_{i,j} - i\omega_{r,j})\, t - i\phi_j}$$
-
-    We use `delayed_QNM` to add realistic distortions near the merger peak, then demonstrate:
-
-    1. **Single starting time VarMa fit** with `QNMFitVarMa` to recover $M$ and $a$
-    2. **Varying starting time VarMa fit** with `QNMFitVaryingStartingTime` showing $M(t_0)$ and $a(t_0)$ evolution
     """)
     return
 
@@ -214,7 +208,6 @@ def _(
     _axs[0].axhline(Mf_true, color='r', ls='--', label=f'True $M = {Mf_true}$')
     _axs[0].set_xlabel(r'$t_0$')
     _axs[0].set_ylabel(r'$M$')
-    _axs[0].set_title('Recovered mass')
     _axs[0].legend()
 
     _a_arr = np.array(result_kerr_varma_vst.Ma_dict['a'])
@@ -222,10 +215,8 @@ def _(
     _axs[1].axhline(af_true, color='r', ls='--', label=f'True $a = {af_true}$')
     _axs[1].set_xlabel(r'$t_0$')
     _axs[1].set_ylabel(r'$a$')
-    _axs[1].set_title('Recovered spin')
     _axs[1].legend()
 
-    _fig.suptitle('VarMa fit: recovered $M$ and $a$ across starting times')
     _fig.tight_layout()
     _fig
     return
@@ -246,7 +237,6 @@ def _(plot_amplitudes, plot_phases, plt, result_kerr_varma_vst):
     _fig, _axs = plt.subplots(1, 2, figsize=(12, 5))
     plot_amplitudes(result_kerr_varma_vst, ax=_axs[0])
     plot_phases(result_kerr_varma_vst, ax=_axs[1], legend=False)
-    _fig.suptitle('VarMa fit: amplitudes and phases across $t_0$')
     _fig.tight_layout()
     _fig
     return

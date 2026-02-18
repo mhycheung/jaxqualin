@@ -41,8 +41,6 @@ pip install jaxqualin
 
 Basic usage examples can be found under the Examples tab on the <a href="https://mhycheung.github.io/jaxqualin/">package homepage</a>.
 
-> **Note**
-> We did not extensively test and do not recommend running `jaxqualin` on a GPU
 
 ## Paper Results
 

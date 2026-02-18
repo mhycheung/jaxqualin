@@ -18,3 +18,4 @@ json/*
 .jaxqualin_cache/
 .pixi/
 pixi.lock
+site/

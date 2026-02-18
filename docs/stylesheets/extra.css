@@ -1,0 +1,16 @@
+/* Widen the main content area for notebook-heavy pages. */
+.md-grid {
+  max-width: 95rem;
+}
+
+.md-content__inner {
+  max-width: none;
+}
+
+/* Fill most of the viewport for embedded Marimo notebooks. */
+iframe.marimo-notebook {
+  width: 100%;
+  height: calc(100dvh - 12rem);
+  min-height: 800px;
+  border: 0;
+}
