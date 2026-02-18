@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from jax.numpy.linalg import pinv
 import optimistix as optx
 import scipy
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, least_squares as scipy_least_squares
 
 from .utils import interweave
 from .qnmode import S_mirror_fac, qnms_to_string, make_mirror_ratio_list, mode, mode_free
@@ -577,6 +577,130 @@ def qnm_fit_func_wrapper_complex_var_model(
     return h_riffle
 
 
+# ---------------------------------------------------------------------------
+# VARPRO helpers for QNMModel-based fits
+# ---------------------------------------------------------------------------
+# With VARPRO the optimizer only searches over the *model* parameters
+# (e.g. M, a, delta).  At every evaluation the complex linear
+# coefficients  c_j = A_j exp(-i phi_j)  are solved analytically via
+# least-squares, removing them from the search space entirely.
+# ---------------------------------------------------------------------------
+
+
+def _varpro_basis_model(time, qnm_fixed_list, qnm_free_list, model,
+                        model_params):
+    """Build the complex-exponential basis matrix for VARPRO.
+
+    Returns an (N_t, N_modes) complex ndarray where each column is
+    ``exp(-i * omega_j * t)`` for one mode.
+    """
+    for qnm_free in qnm_free_list:
+        qnm_free.fix_mode(**model_params)
+
+    cols = []
+    for qnm_fixed in qnm_fixed_list:
+        omega = complex(qnm_fixed.omegar) + 1j * complex(qnm_fixed.omegai)
+        cols.append(np.exp(-1j * omega * time))
+    for qnm_free in qnm_free_list:
+        omega = complex(qnm_free.omegar) + 1j * complex(qnm_free.omegai)
+        cols.append(np.exp(-1j * omega * time))
+
+    return np.column_stack(cols)          # (N_t, N_modes)
+
+
+def _varpro_residual_model(model_params_arr, time, y, qnm_fixed_list,
+                           qnm_free_list, model):
+    """VARPRO residual: only model params are nonlinear.
+
+    Parameters
+    ----------
+    model_params_arr : 1-D array of model parameter values.
+    time : 1-D real array of time samples.
+    y : 1-D complex array, the target waveform  ``hr + 1j*hi``.
+    qnm_fixed_list, qnm_free_list, model : as elsewhere.
+
+    Returns
+    -------
+    1-D real array of length ``2 * len(time)``.
+    """
+    model_params = {name: model_params_arr[k]
+                    for k, name in enumerate(model.param_names)}
+
+    basis = _varpro_basis_model(time, qnm_fixed_list, qnm_free_list,
+                                model, model_params)
+
+    # Solve for complex linear coefficients  c = A * exp(-i phi)
+    c, _, _, _ = np.linalg.lstsq(basis, y, rcond=None)
+
+    residual = y - basis @ c
+    return np.concatenate([residual.real, residual.imag])
+
+
+def _varpro_assemble_popt_model(model_params_arr, time, y,
+                                qnm_fixed_list, qnm_free_list, model):
+    """Assemble the full ``popt`` vector from VARPRO solution.
+
+    The output format is
+    ``[A_fix_0, phi_fix_0, …, A_free_0, phi_free_0, …, model_p0, …]``
+    matching the layout expected by
+    :meth:`QNMFitVaryingStartingTimeResultModel.process_results`.
+    """
+    N_fix = len(qnm_fixed_list)
+    N_free = len(qnm_free_list)
+    n_model = len(model.param_names)
+
+    model_params = {name: model_params_arr[k]
+                    for k, name in enumerate(model.param_names)}
+
+    basis = _varpro_basis_model(time, qnm_fixed_list, qnm_free_list,
+                                model, model_params)
+    c, _, _, _ = np.linalg.lstsq(basis, y, rcond=None)
+
+    # Convention:  h(t) = A * exp(-i*(omega*t + phi))  =>  c = A * exp(-i*phi)
+    A_arr = np.abs(c)
+    phi_arr = -np.angle(c)
+
+    popt = np.zeros(2 * N_fix + 2 * N_free + n_model)
+    for i in range(N_fix):
+        popt[2 * i] = A_arr[i]
+        popt[2 * i + 1] = phi_arr[i]
+    for j in range(N_free):
+        popt[2 * N_fix + 2 * j] = A_arr[N_fix + j]
+        popt[2 * N_fix + 2 * j + 1] = phi_arr[N_fix + j]
+    for k in range(n_model):
+        popt[2 * N_fix + 2 * N_free + k] = model_params_arr[k]
+
+    return popt
+
+
+def _varpro_reconstruct_model(time, popt, qnm_fixed_list, qnm_free_list,
+                              model):
+    """Reconstruct the complex waveform from a VARPRO popt vector."""
+    N_fix = len(qnm_fixed_list)
+    N_free = len(qnm_free_list)
+    n_model = len(model.param_names)
+
+    model_params_arr = popt[2 * N_fix + 2 * N_free:]
+    model_params = {name: model_params_arr[k]
+                    for k, name in enumerate(model.param_names)}
+
+    basis = _varpro_basis_model(time, qnm_fixed_list, qnm_free_list,
+                                model, model_params)
+
+    # Recover complex coefficients from (A, phi)
+    c = np.zeros(N_fix + N_free, dtype=np.complex128)
+    for i in range(N_fix):
+        A = popt[2 * i]
+        phi = popt[2 * i + 1]
+        c[i] = A * np.exp(-1j * phi)
+    for j in range(N_free):
+        A = popt[2 * N_fix + 2 * j]
+        phi = popt[2 * N_fix + 2 * j + 1]
+        c[N_fix + j] = A * np.exp(-1j * phi)
+
+    return basis @ c
+
+
 class QNMFitResult:
 
     def __init__(self, popt, pcov, mismatch,
@@ -1105,45 +1229,57 @@ class QNMFitModel(QNMFitBase):
     # -----------------------------------------------------------------
 
     def _do_fit_model(self):
-        """Fit using a user-supplied :class:`QNMModel`."""
+        """Fit using a user-supplied :class:`QNMModel` with VARPRO.
+
+        Only the model parameters (e.g. M, a, delta) are passed to the
+        nonlinear optimiser.  The linear parameters (amplitudes and phases)
+        are solved analytically at each iteration via least-squares,
+        dramatically reducing the dimensionality of the search.
+        """
         model = self.model
+        n_model = model.n_params
         self.time, self.hr, self.hi = self.h.postmerger(self.t0)
-        self._h_interweave = interweave(self.hr, self.hi)
-        self._time_interweave = interweave(self.time, self.time)
+        time = np.asarray(self.time)
+        y = np.asarray(self.hr) + 1j * np.asarray(self.hi)
 
-        # Build initial-guess vector
-        if not hasattr(self.params0, "__iter__"):
-            guess_model = [self.model_params_guess[n]
-                           for n in model.param_names]
-            self.params0 = np.array(
-                self.guess_fixed * self.N_fix
-                + self.guess_free * self.N_free
-                + guess_model)
+        # --- Extract or build initial model-parameter guess ---------------
+        if hasattr(self.params0, "__iter__"):
+            # params0 is a full popt from a previous fit — take model
+            # params from the tail.
+            model_params0 = np.asarray(self.params0, dtype=float)[-n_model:]
+        else:
+            model_params0 = np.array(
+                [self.model_params_guess[n] for n in model.param_names])
 
-        # Build bounds
+        # --- Build bounds (model parameters only) -------------------------
         default_bounds = model.param_bounds()
         if self.model_params_bounds is not None:
             default_bounds.update(self.model_params_bounds)
-        lower_bound = [-np.inf] * (2 * self.N_fix + 2 * self.N_free)
-        upper_bound = [np.inf] * (2 * self.N_fix + 2 * self.N_free)
+        lower, upper = [], []
         for name in model.param_names:
             lo, hi = default_bounds.get(name, (-np.inf, np.inf))
-            lower_bound.append(lo)
-            upper_bound.append(hi)
-        bounds = (np.array(lower_bound), np.array(upper_bound))
+            lower.append(lo)
+            upper.append(hi)
 
-        fit_func = lambda t, *params: qnm_fit_func_wrapper_complex_var_model(
-            t, self.qnm_fixed_list, self.qnm_free_list, model, params)
+        # --- VARPRO: optimise only model params ---------------------------
+        sol = scipy_least_squares(
+            _varpro_residual_model,
+            model_params0,
+            args=(time, y, self.qnm_fixed_list, self.qnm_free_list, model),
+            bounds=(lower, upper),
+            method="trf",
+            max_nfev=self.max_nfev,
+        )
 
-        self.popt, self.pcov = curve_fit(
-            fit_func, np.array(self._time_interweave),
-            np.array(self._h_interweave), p0=self.params0,
-            bounds=bounds, max_nfev=self.max_nfev,
-            method="trf", **self.fit_kwargs)
+        # --- Assemble full popt and reconstruct ---------------------------
+        self.popt = _varpro_assemble_popt_model(
+            sol.x, time, y,
+            self.qnm_fixed_list, self.qnm_free_list, model)
+        self.pcov = None
 
-        self.reconstruct_h = qnm_fit_func_wrapper_var_model(
-            self.time, self.qnm_fixed_list, self.qnm_free_list,
-            model, self.popt)
+        self.reconstruct_h = _varpro_reconstruct_model(
+            time, self.popt,
+            self.qnm_fixed_list, self.qnm_free_list, model)
 
         self.h_true = self.hr + 1.j * self.hi
         self.mismatch = 1 - (np.abs(np.vdot(
@@ -1242,10 +1378,15 @@ class QNMFitModel(QNMFitBase):
             self.popt = other_result.popt
             self.pcov = other_result.pcov
             self.time, self.hr, self.hi = self.h.postmerger(self.t0)
-            self._h_interweave = interweave(self.hr, self.hi)
-            self._time_interweave = interweave(self.time, self.time)
-            self.reconstruct_h = qnm_fit_func_wrapper(
-                self.time, self.qnm_fixed_list, self.N_free, self.popt)
+            if self.model is not None:
+                self.reconstruct_h = _varpro_reconstruct_model(
+                    np.asarray(self.time), self.popt,
+                    self.qnm_fixed_list, self.qnm_free_list, self.model)
+            else:
+                self._h_interweave = interweave(self.hr, self.hi)
+                self._time_interweave = interweave(self.time, self.time)
+                self.reconstruct_h = qnm_fit_func_wrapper(
+                    self.time, self.qnm_fixed_list, self.N_free, self.popt)
             self.h_true = self.hr + 1.j * self.hi
             self.mismatch = 1 - (np.abs(np.vdot(self.h_true, self.reconstruct_h) / (
                 np.linalg.norm(self.h_true) * np.linalg.norm(self.reconstruct_h))))
