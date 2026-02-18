@@ -16,13 +16,10 @@ def _(mo):
     mo.md(r"""
     # Example: Custom QNM modes and parametric models
 
-    This notebook demonstrates three new features in `jaxqualin`:
+    This notebook demonstrates two features in `jaxqualin`:
 
     1. **Custom fixed-omega modes** -- fit a waveform with user-specified complex frequencies.
-    2. **Augmented Kerr model** -- extend the Kerr model with additional parameters.
-    3. **Fully custom model** -- define a QNM model from scratch with arbitrary parameters.
-
-    All synthetic waveforms use `delayed_QNM` for realistic merger distortion.
+    2. **Fully custom model** -- define a QNM model from scratch with arbitrary parameters.
     """)
     return
 
@@ -43,7 +40,6 @@ def _():
     import matplotlib.pyplot as plt
 
     return (
-        KerrModel,
         QNMFitVaryingStartingTime,
         QNMModel,
         custom_mode,
@@ -60,10 +56,9 @@ def _():
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## Part 1: Custom fixed-omega modes
+    ## Part 1: Custom fixed-frequency QNMs
 
-    Sometimes you already know the complex frequencies of the modes you want to fit, either from
-    a different code, from a table, or from your own physical model. You can create `custom_mode`
+    If you want to use non-Kerr frequencies, you can create a `custom_mode`
     objects with arbitrary $\omega$ and optional labels, then use them directly in `QNMFit` or
     `QNMFitVaryingStartingTime`.
 
@@ -161,167 +156,7 @@ def _(mo, np, result_1):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## Part 2: Augmented Kerr model
-
-    Suppose you want to test whether the data is consistent with Kerr, allowing for a small
-    frequency deviation that scales with the spin. You can subclass `KerrModel` and add an
-    extra parameter:
-
-    $$\omega_{{\rm total}} = \omega_{{\rm Kerr}}(M, a) + \delta \cdot a$$
-
-    The `QNMFitModel` fitter will optimize $M$, $a$, **and** $\delta$ simultaneously.
-    """)
-    return
-
-
-@app.cell
-def _(KerrModel):
-    class KerrPlusDelta(KerrModel):
-        param_names = ["M", "a", "delta"]
-
-        def compute_omega(self, lmnx, M, a, delta, **kwargs):
-            omega_kerr = super().compute_omega(lmnx, M, a)
-            return omega_kerr + delta * a
-
-        def param_bounds(self):
-            b = super().param_bounds()
-            b["delta"] = (-1.0, 1.0)
-            return b
-
-    return (KerrPlusDelta,)
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ### Build waveform with a frequency shift
-
-    We create a waveform where each mode's frequency is shifted by $\delta \cdot a$ from the Kerr value.
-    """)
-    return
-
-
-@app.cell
-def _(KerrPlusDelta, custom_mode, delayed_QNM, np, waveform):
-    Mf_2 = 1.0
-    af_2 = 0.7
-    delta_true = 0.1
-
-    kpd_gen = KerrPlusDelta()
-    lmnx_list_2 = [[[2, 2, 0]], [[2, 2, 1]]]
-    shifted_omegas = [
-        kpd_gen.compute_omega(lmx, M=Mf_2, a=af_2, delta=delta_true)
-        for lmx in lmnx_list_2
-    ]
-    shifted_cm = [
-        custom_mode(omega, label=f"{lmx[0][0]}.{lmx[0][1]}.{lmx[0][2]}")
-        for omega, lmx in zip(shifted_omegas, lmnx_list_2)
-    ]
-
-    A_phi_2 = [(1.0, 0.0), (3.0, np.pi / 2)]
-
-    t_arr_2 = np.linspace(0, 120, 1000)
-    _h_arr = np.zeros(t_arr_2.shape, dtype=np.complex128)
-    for _i, (_mode, (_A, _phi)) in enumerate(zip(shifted_cm, A_phi_2)):
-        if _i == 0:
-            _A_delay, _A_sig, _phi_sig = 0, 10, 5
-        else:
-            _A_delay, _A_sig, _phi_sig = 5, 2, 2
-        _h_arr = _h_arr + delayed_QNM(
-            _mode, t_arr_2, _A, _phi,
-            A_delay=_A_delay, A_sig=_A_sig, phi_sig=_phi_sig,
-        )
-
-    h_2 = waveform(t_arr_2, _h_arr, t_peak=0)
-    return Mf_2, af_2, delta_true, h_2
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ### Fit with augmented Kerr model
-
-    We create `model_mode_free` objects using the `KerrPlusDelta` model and fit with
-    `QNMFitVaryingStartingTime`, which internally uses `QNMFitModel` with the custom model.
-    """)
-    return
-
-
-@app.cell
-def _(
-    KerrPlusDelta,
-    Mf_2,
-    QNMFitVaryingStartingTime,
-    af_2,
-    h_2,
-    mo,
-    model_mode_free,
-    np,
-):
-    kpd_model = KerrPlusDelta()
-    kpd_modes = [
-        model_mode_free([[2, 2, 0]], model=kpd_model),
-        model_mode_free([[2, 2, 1]], model=kpd_model),
-    ]
-
-    t0_arr_2 = np.linspace(0, 50, num=51)
-
-    fitter_2 = QNMFitVaryingStartingTime(
-        h_2, t0_arr_2, N_free=0,
-        qnm_fixed_list=[],
-        qnm_free_list=kpd_modes,
-        var_M_a=True,
-        load_pickle=False,
-        run_string_prefix='kerr_plus_delta_example',
-        save_results=False,
-        model=kpd_model,
-        model_params_guess={"M": Mf_2 * 0.9, "a": af_2 * 0.9, "delta": 0.0},
-    )
-    with mo.status.spinner("Fitting with augmented Kerr model..."):
-        fitter_2.do_fits()
-
-    result_2 = fitter_2.result_full
-    return result_2, t0_arr_2
-
-
-@app.cell(hide_code=True)
-def _(Mf_2, af_2, delta_true, np, plt, result_2, t0_arr_2):
-    _fig, _axs = plt.subplots(1, 3, figsize=(15, 4))
-
-    _M_arr = np.array(result_2.model_params_dict['M'])
-    _axs[0].plot(t0_arr_2, _M_arr, 'b-', lw=2)
-    _axs[0].axhline(Mf_2, color='r', ls='--', label=f'True $M = {Mf_2}$')
-    _axs[0].set_xlabel(r'$t_0$')
-    _axs[0].set_ylabel(r'$M$')
-    _axs[0].set_title('Recovered mass')
-    _axs[0].legend()
-
-    _a_arr = np.array(result_2.model_params_dict['a'])
-    _axs[1].plot(t0_arr_2, _a_arr, 'b-', lw=2)
-    _axs[1].axhline(af_2, color='r', ls='--', label=f'True $a = {af_2}$')
-    _axs[1].set_xlabel(r'$t_0$')
-    _axs[1].set_ylabel(r'$a$')
-    _axs[1].set_title('Recovered spin')
-    _axs[1].legend()
-
-    _delta_arr = np.array(result_2.model_params_dict['delta'])
-    _axs[2].plot(t0_arr_2, _delta_arr, 'b-', lw=2)
-    _axs[2].axhline(delta_true, color='r', ls='--', label=rf'True $\delta = {delta_true}$')
-    _axs[2].set_xlabel(r'$t_0$')
-    _axs[2].set_ylabel(r'$\delta$')
-    _axs[2].set_title(r'Recovered $\delta$')
-    _axs[2].legend()
-
-    _fig.suptitle(r'Part 2: Augmented Kerr model ($\omega_{\rm Kerr} + \delta \cdot a$)')
-    _fig.tight_layout()
-    _fig
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ## Part 3: Fully custom (non-Kerr) model
+    ## Part 2: Fitting a custom model
 
     You can also define a QNM model from scratch, where $\omega$ is a function of
     completely arbitrary parameters (not necessarily $M$ and $a$).
@@ -424,21 +259,6 @@ def _(alpha_true, beta_true, np, plt, result_3, t0_arr_3):
     _fig.suptitle('Part 3: Fully custom model — recovered parameters vs $t_0$')
     _fig.tight_layout()
     _fig
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ---
-
-    **Summary**
-
-    - `custom_mode` / `custom_mode_list`: for when you already know $\omega$ exactly.
-    - `KerrModel` (and subclasses like `KerrPlusDelta`): augment the standard Kerr model with extra parameters.
-    - `QNMModel` subclass: fully custom parametric models with any parameters.
-    - All integrate seamlessly with `QNMFit`, `QNMFitModel`, and `QNMFitVaryingStartingTime`.
-    """)
     return
 
 
