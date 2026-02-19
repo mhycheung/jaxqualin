@@ -159,10 +159,10 @@ def _(mo, mode_search_sxs_result, np):
         else:
             _earliest_txt = f"{_earliest:.2f}"
         _lines.append(
-            f"- `{_mode_string_ms}`: flattest window [{_info['flattest_start_time']:.2f}, {_info['flattest_end_time']:.2f}], "
+            f"- `{_mode_string_ms}`: flattest window [{_info['flattest_start_time']:.2f}, {_info['flattest_end_time']:.2f}] M, "
             f"A={_info['flattest_amplitude_median']:.4g} (+{_info['flattest_amplitude_plus']:.3g}/-{_info['flattest_amplitude_minus']:.3g}), "
             f"phi={_info['flattest_phase_median']:.4g} (+{_info['flattest_phase_plus']:.3g}/-{_info['flattest_phase_minus']:.3g}), "
-            f"earliest flat start={_earliest_txt}"
+            f"earliest flat start={_earliest_txt} M"
         )
     mo.md("\n".join(_lines))
     return

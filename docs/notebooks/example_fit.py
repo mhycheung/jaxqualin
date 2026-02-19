@@ -238,10 +238,10 @@ def _(flatness_summary, mo, np):
         else:
             _earliest_txt = f"{_earliest:.2f}"
         _lines.append(
-            f"- `{_mode_string_summary}`: flattest window [{info['flattest_start_time']:.2f}, {info['flattest_end_time']:.2f}], "
+            f"- `{_mode_string_summary}`: flattest window [{info['flattest_start_time']:.2f}, {info['flattest_end_time']:.2f}] M, "
             f"A={info['flattest_amplitude_median']:.4g} (+{info['flattest_amplitude_plus']:.3g}/-{info['flattest_amplitude_minus']:.3g}), "
             f"phi={info['flattest_phase_median']:.4g} (+{info['flattest_phase_plus']:.3g}/-{info['flattest_phase_minus']:.3g}), "
-            f"earliest flat start={_earliest_txt}"
+            f"earliest flat start={_earliest_txt} M"
         )
     mo.md("\n".join(_lines))
     return
