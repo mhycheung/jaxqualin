@@ -21,7 +21,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  "adjustText==0.8",
+  "adjustText>=1.0",
   "jax>=0.4.30",
   "jaxlib>=0.4.30",
   "matplotlib>3.6.1",
