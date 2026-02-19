@@ -1627,6 +1627,20 @@ class QNMFitVaryingStartingTimeResult:
             Q_free_list.append(Q)
         return Q_fix_list, Q_free_list
 
+    def summarize_fixed_mode_flatness(self, **kwargs):
+        """Return per-mode flatness summary for fixed-frequency modes.
+
+        This wraps `jaxqualin.selection.summarize_fixed_mode_flatness`.
+        """
+        from .selection import summarize_fixed_mode_flatness
+        return summarize_fixed_mode_flatness(self, **kwargs)
+
+    def fixed_mode_flatness_plot_overlays(self, **kwargs):
+        """Return (`bold_dict`, `t_flat_start_dict`) for flatness overlays."""
+        from .selection import fixed_mode_flatness_to_plot_overlays
+        flatness_summary = self.summarize_fixed_mode_flatness(**kwargs)
+        return fixed_mode_flatness_to_plot_overlays(flatness_summary)
+
 
 class QNMFitVaryingStartingTimeResultModel:
 

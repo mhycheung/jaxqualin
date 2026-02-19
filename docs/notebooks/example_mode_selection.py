@@ -140,5 +140,33 @@ def _(mode_search_sxs_result, plot_mode_searcher_results, plt):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Summary of per-mode results
+    """)
+    return
+
+
+@app.cell
+def _(mo, mode_search_sxs_result, np):
+    _summary = mode_search_sxs_result.summarize_final_modes()
+    _lines = [f"Final modes present: {', '.join(_summary.keys())}", ""]
+    for _mode_string_ms, _info in _summary.items():
+        _earliest = _info["earliest_flat_start_time"]
+        if np.isnan(_earliest):
+            _earliest_txt = "nan (no qualifying window)"
+        else:
+            _earliest_txt = f"{_earliest:.2f}"
+        _lines.append(
+            f"- `{_mode_string_ms}`: flattest window [{_info['flattest_start_time']:.2f}, {_info['flattest_end_time']:.2f}], "
+            f"A={_info['flattest_amplitude_median']:.4g} (+{_info['flattest_amplitude_plus']:.3g}/-{_info['flattest_amplitude_minus']:.3g}), "
+            f"phi={_info['flattest_phase_median']:.4g} (+{_info['flattest_phase_plus']:.3g}/-{_info['flattest_phase_minus']:.3g}), "
+            f"earliest flat start={_earliest_txt}"
+        )
+    mo.md("\n".join(_lines))
+    return
+
+
 if __name__ == "__main__":
     app.run()

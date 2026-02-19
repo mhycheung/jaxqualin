@@ -181,5 +181,71 @@ def _(plot_amplitudes, plot_phases, plt, qnm_fixed_list_1, result_1):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Flatness diagnostics on fixed-frequency fit
+
+    We now use the same stability tolerance as the mode-search workflow (`fluc_tol = 0.2`).
+    The bolded segments are the flattest windows of width $\Delta T = 10 M$, and the circle markers show the earliest window start that satisfies the flatness tolerance.
+    """)
+    return
+
+
+@app.cell
+def _(plot_amplitudes, plot_phases, plt, qnm_fixed_list_1, result_1):
+    flatness_summary = result_1.summarize_fixed_mode_flatness(delta_t=10.0, fluc_tol=0.2)
+    bold_dict, t_flat_start_dict = result_1.fixed_mode_flatness_plot_overlays(delta_t=10.0, fluc_tol=0.2)
+
+    _fig, _axs = plt.subplots(1, 2, figsize=(12, 5))
+    plot_amplitudes(
+        result_1,
+        fixed_modes=qnm_fixed_list_1,
+        ax=_axs[0],
+        use_label=False,
+        bold_dict=bold_dict,
+        alpha=0.3,
+        t_flat_start_dict=t_flat_start_dict,
+        flat_start_s=50,
+        flat_start_marker="o",
+    )
+    _axs[0].legend(fontsize=9)
+    plot_phases(
+        result_1,
+        fixed_modes=qnm_fixed_list_1,
+        ax=_axs[1],
+        legend=False,
+        bold_dict=bold_dict,
+        alpha=0.3,
+        t_flat_start_dict=t_flat_start_dict,
+        flat_start_s=50,
+        flat_start_marker="o",
+    )
+
+    _fig
+    return (flatness_summary,)
+
+
+@app.cell
+def _(flatness_summary, mo, np):
+    _lines = [
+        "Per-mode flattest-window results:",
+    ]
+    for _mode_string_summary, info in flatness_summary.items():
+        _earliest = info["earliest_flat_start_time"]
+        if np.isnan(_earliest):
+            _earliest_txt = "nan (no qualifying window)"
+        else:
+            _earliest_txt = f"{_earliest:.2f}"
+        _lines.append(
+            f"- `{_mode_string_summary}`: flattest window [{info['flattest_start_time']:.2f}, {info['flattest_end_time']:.2f}], "
+            f"A={info['flattest_amplitude_median']:.4g} (+{info['flattest_amplitude_plus']:.3g}/-{info['flattest_amplitude_minus']:.3g}), "
+            f"phi={info['flattest_phase_median']:.4g} (+{info['flattest_phase_plus']:.3g}/-{info['flattest_phase_minus']:.3g}), "
+            f"earliest flat start={_earliest_txt}"
+        )
+    mo.md("\n".join(_lines))
+    return
+
+
 if __name__ == "__main__":
     app.run()

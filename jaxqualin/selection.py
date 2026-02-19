@@ -21,6 +21,12 @@ DEFAULT_N_LIST = [5, 6, 7, 8, 9, 10]
 DEFAULT_ALPHA = 0.05
 DEFAULT_TAU_AGNOSTIC = 10
 DEFAULT_P_AGNOSTIC = 0.95
+DEFAULT_EPSILON_STABLE = 0.2
+DEFAULT_TAU_STABLE = 10
+DEFAULT_P_STABLE = 0.95
+DEFAULT_A_TOL = 1e-3
+DEFAULT_BETA_A = 1.0
+DEFAULT_BETA_PHI = 1.5
 
 
 def _merge_kwargs(defaults, overrides):
@@ -49,15 +55,15 @@ class IterativeFlatnessChecker:
         self.fitter_list = []
         self.kwargs = _merge_kwargs({
             "run_string_prefix": "Default",
-            "epsilon_stable": 0.2,
-            "tau_stable": 10,
+            "epsilon_stable": DEFAULT_EPSILON_STABLE,
+            "tau_stable": DEFAULT_TAU_STABLE,
             "retro_def_orbit": True,
             "load_pickle": True,
             "confusion_tol": 0.03,
-            "p_stable": 0.95,
-            "A_tol": 1e-3,
-            "beta_A": 1.0,
-            "beta_phi": 1.5,
+            "p_stable": DEFAULT_P_STABLE,
+            "A_tol": DEFAULT_A_TOL,
+            "beta_A": DEFAULT_BETA_A,
+            "beta_phi": DEFAULT_BETA_PHI,
             "CCE": False,
             "fit_save_prefix": FIT_SAVE_PATH}, kwargs_in)
         self.run_string_prefix = self.kwargs["run_string_prefix"]
@@ -541,6 +547,10 @@ class ModeSearchAllFreeVaryingN:
                 f"Runname: {self.run_string_prefix}, N_free = {self.N_list[i]}, found the following {len(mode_searcher.found_modes)} modes: "
                 + ', '.join(qnms_to_string(mode_searcher.found_modes)))
 
+    def summarize_final_modes(self, **kwargs):
+        """Return per-mode final results for the selected best run."""
+        return summarize_mode_searcher_final_modes(self, **kwargs)
+
 
 class ModeSearchAllFreeVaryingNSXS:
     """
@@ -743,6 +753,13 @@ class ModeSearchAllFreeVaryingNSXS:
         self.mode_search_varying_N_sxs()
         if self.save_mode_searcher:
             self.pickle_save()
+
+    def summarize_final_modes(self, **kwargs):
+        """Return per-mode final results for the selected best run."""
+        if not hasattr(self, "mode_searcher_vary_N"):
+            raise ValueError(
+                "No mode-search result found. Run do_mode_search_varying_N() first.")
+        return self.mode_searcher_vary_N.summarize_final_modes(**kwargs)
 
     def get_waveform(self) -> None:
         """
@@ -947,6 +964,257 @@ def start_of_flat_region(length, arr1, arr2, **kwargs):
     if start_flat_indx < 0:
         return np.nan
     return start_flat_indx
+
+
+def _mode_strings_from_result_fixed(result_full):
+    if hasattr(result_full, "qnm_fixed_list") and result_full.qnm_fixed_list is not None:
+        return qnms_to_string(result_full.qnm_fixed_list)
+    return [key.removeprefix("A_") for key in result_full.A_fix_dict.keys()]
+
+
+def _window_length_from_delta_t(t0_arr, delta_t):
+    if len(t0_arr) < 2:
+        raise ValueError("t0_arr must have at least 2 points.")
+    if delta_t <= 0:
+        raise ValueError("delta_t must be positive.")
+    dt = float(np.median(np.diff(t0_arr)))
+    if dt <= 0:
+        raise ValueError("t0_arr must be strictly increasing.")
+    window_length = int(delta_t / dt + 1)
+    if window_length <= 0 or window_length >= len(t0_arr):
+        raise ValueError(
+            "Computed window length must be in [1, len(t0_arr)-1]. "
+            "Adjust delta_t or provide a denser t0_arr."
+        )
+    return window_length
+
+
+def _wrap_to_pi(arr):
+    return (arr + np.pi) % (2 * np.pi) - np.pi
+
+
+def _phase_quantiles(phi_window, quantile_low=0.05, quantile_high=0.95, wrap_phase=True):
+    """Compute phase quantiles robustly, optionally using circular wrapping."""
+    phi_window = np.asarray(phi_window)
+    if not wrap_phase:
+        phi_med = float(np.nanquantile(phi_window, 0.5))
+        phi_low = float(np.nanquantile(phi_window, quantile_low))
+        phi_high = float(np.nanquantile(phi_window, quantile_high))
+        return phi_low, phi_med, phi_high, (phi_med - phi_low), (phi_high - phi_med)
+
+    phi_valid = phi_window[~np.isnan(phi_window)]
+    if phi_valid.size == 0:
+        return np.nan, np.nan, np.nan, np.nan, np.nan
+
+    # Center on circular mean angle, then quantile wrapped offsets.
+    phase_center = float(np.angle(np.mean(np.exp(1j * phi_valid))))
+    phi_offset = _wrap_to_pi(phi_valid - phase_center)
+    phi_low_offset = float(np.nanquantile(phi_offset, quantile_low))
+    phi_med_offset = float(np.nanquantile(phi_offset, 0.5))
+    phi_high_offset = float(np.nanquantile(phi_offset, quantile_high))
+    phi_low = float(_wrap_to_pi(phase_center + phi_low_offset))
+    phi_med = float(_wrap_to_pi(phase_center + phi_med_offset))
+    phi_high = float(_wrap_to_pi(phase_center + phi_high_offset))
+    return phi_low, phi_med, phi_high, (phi_med_offset - phi_low_offset), (phi_high_offset - phi_med_offset)
+
+
+def summarize_fixed_mode_flatness(
+        result_full,
+        delta_t=None,
+        flatness_length=None,
+        quantile_range=DEFAULT_P_STABLE,
+        med_min=DEFAULT_A_TOL,
+        weight_1=DEFAULT_BETA_A,
+        weight_2=DEFAULT_BETA_PHI,
+        fluc_tol=DEFAULT_EPSILON_STABLE,
+        wrap_phase=True):
+    """Compute per-mode flatness summary for a fixed-frequency fit result.
+
+    Parameters:
+        result_full: `QNMFitVaryingStartingTimeResult`-like object with
+            `t0_arr`, `A_fix_dict`, and `phi_fix_dict`.
+        delta_t: Flatness window width in time units. Ignored if
+            `flatness_length` is provided.
+        flatness_length: Optional explicit window length in index units.
+        quantile_range: Quantile range used for fluctuation estimate.
+        med_min: Floor for amplitude/phase normalization medians.
+        weight_1: Amplitude fluctuation weight.
+        weight_2: Phase fluctuation weight.
+        fluc_tol: Threshold for earliest acceptable flatness window.
+        wrap_phase: If True, compute phase quantiles using circular wrapping.
+
+    Returns:
+        Dict keyed by mode string. Each value includes:
+            - flattest window start/end index and times
+            - flattest fluctuation
+            - median amplitude/phase within flattest window
+            - earliest acceptable flat-window start index/time
+    """
+    if flatness_length is not None and delta_t is not None:
+        raise ValueError("Provide either delta_t or flatness_length, not both.")
+
+    t0_arr = np.asarray(result_full.t0_arr)
+    if flatness_length is None:
+        if delta_t is None:
+            delta_t = DEFAULT_TAU_STABLE
+        flatness_length = _window_length_from_delta_t(t0_arr, delta_t)
+    elif flatness_length <= 0 or flatness_length >= len(t0_arr):
+        raise ValueError("flatness_length must be in [1, len(t0_arr)-1].")
+
+    mode_strings = _mode_strings_from_result_fixed(result_full)
+    summary = {}
+    for mode_string in mode_strings:
+        A_arr = np.abs(np.asarray(result_full.A_fix_dict[f"A_{mode_string}"]))
+        phi_arr = np.asarray(result_full.phi_fix_dict[f"phi_{mode_string}"])
+
+        flattest_start_idx, fluc_least, earliest_start_idx = flattest_region_quadrature(
+            flatness_length,
+            A_arr,
+            phi_arr,
+            quantile_range=quantile_range,
+            med_min=med_min,
+            weight_1=weight_1,
+            weight_2=weight_2,
+            fluc_tol=fluc_tol)
+
+        flattest_end_exclusive = flattest_start_idx + flatness_length
+        flattest_end_inclusive = min(flattest_end_exclusive - 1, len(t0_arr) - 1)
+        A_window = A_arr[flattest_start_idx:flattest_end_exclusive]
+        phi_window = phi_arr[flattest_start_idx:flattest_end_exclusive]
+
+        if earliest_start_idx < 0:
+            earliest_start_idx_out = np.nan
+            earliest_start_time = np.nan
+        else:
+            earliest_start_idx_out = int(earliest_start_idx)
+            earliest_start_time = float(t0_arr[earliest_start_idx])
+
+        summary[mode_string] = {
+            "window_length": int(flatness_length),
+            "window_delta_t": float(t0_arr[flattest_end_inclusive] - t0_arr[flattest_start_idx]),
+            "flattest_start_index": int(flattest_start_idx),
+            "flattest_end_index_exclusive": int(flattest_end_exclusive),
+            "flattest_start_time": float(t0_arr[flattest_start_idx]),
+            "flattest_end_time": float(t0_arr[flattest_end_inclusive]),
+            "flattest_fluctuation": float(fluc_least),
+            "flattest_amplitude_median": float(np.nanquantile(A_window, 0.5)),
+            "flattest_amplitude_low": float(np.nanquantile(A_window, 0.05)),
+            "flattest_amplitude_high": float(np.nanquantile(A_window, 0.95)),
+            "flattest_phase_median": np.nan,
+            "flattest_phase_low": np.nan,
+            "flattest_phase_high": np.nan,
+            "earliest_flat_start_index": earliest_start_idx_out,
+            "earliest_flat_start_time": earliest_start_time,
+        }
+        summary[mode_string]["flattest_amplitude_minus"] = (
+            summary[mode_string]["flattest_amplitude_median"]
+            - summary[mode_string]["flattest_amplitude_low"]
+        )
+        summary[mode_string]["flattest_amplitude_plus"] = (
+            summary[mode_string]["flattest_amplitude_high"]
+            - summary[mode_string]["flattest_amplitude_median"]
+        )
+        summary[mode_string]["flattest_phase_minus"] = (
+            summary[mode_string]["flattest_phase_median"]
+            - summary[mode_string]["flattest_phase_low"]
+        )
+        summary[mode_string]["flattest_phase_plus"] = (
+            summary[mode_string]["flattest_phase_high"]
+            - summary[mode_string]["flattest_phase_median"]
+        )
+        phi_low, phi_med, phi_high, phi_minus, phi_plus = _phase_quantiles(
+            phi_window, quantile_low=0.05, quantile_high=0.95, wrap_phase=wrap_phase)
+        summary[mode_string]["flattest_phase_low"] = phi_low
+        summary[mode_string]["flattest_phase_median"] = phi_med
+        summary[mode_string]["flattest_phase_high"] = phi_high
+        summary[mode_string]["flattest_phase_minus"] = float(phi_minus)
+        summary[mode_string]["flattest_phase_plus"] = float(phi_plus)
+    return summary
+
+
+def fixed_mode_flatness_to_plot_overlays(flatness_summary):
+    """Convert `summarize_fixed_mode_flatness` output to plot overlay dicts."""
+    bold_dict = {}
+    t_flat_start_dict = {}
+    for mode_string, mode_summary in flatness_summary.items():
+        bold_dict[mode_string] = (
+            mode_summary["flattest_start_index"],
+            mode_summary["flattest_end_index_exclusive"])
+        if not np.isnan(mode_summary["earliest_flat_start_time"]):
+            t_flat_start_dict[mode_string] = mode_summary["earliest_flat_start_time"]
+    return bold_dict, t_flat_start_dict
+
+
+def summarize_mode_searcher_final_modes(
+        mode_searcher_vary_N,
+        quantile_low=0.05,
+        quantile_high=0.95,
+        wrap_phase=True):
+    """Summarize final-mode flatness outputs from a mode-search result.
+
+    Uses the selected best run in `ModeSearchAllFreeVaryingN` and returns a
+    per-mode dictionary containing mode presence, flattest window times, median
+    amplitude/phase, asymmetric uncertainty ranges (upper/lower quantiles), and
+    earliest flatness start time.
+    """
+    best_run_indx = mode_searcher_vary_N.best_run_indx
+    flatness_checker = mode_searcher_vary_N.flatness_checkers[best_run_indx]
+    result_full = mode_searcher_vary_N.fixed_fitters[best_run_indx].result_full
+    mode_strings = qnms_to_string(mode_searcher_vary_N.found_modes_final)
+    t0_arr = result_full.t0_arr
+    window_length = flatness_checker.tau_stable_length
+
+    summary = {}
+    for mode_string, flattest_start_idx, earliest_start_idx in zip(
+            mode_strings,
+            flatness_checker.fluc_least_indx_list,
+            flatness_checker.start_flat_indx_list):
+        flattest_start_idx = int(flattest_start_idx)
+        flattest_end_exclusive = flattest_start_idx + window_length
+        flattest_end_inclusive = min(flattest_end_exclusive - 1, len(t0_arr) - 1)
+        A_arr = np.abs(np.asarray(result_full.A_fix_dict[f"A_{mode_string}"]))
+        phi_arr = np.asarray(result_full.phi_fix_dict[f"phi_{mode_string}"])
+        A_window = A_arr[flattest_start_idx:flattest_end_exclusive]
+        phi_window = phi_arr[flattest_start_idx:flattest_end_exclusive]
+
+        if earliest_start_idx < 0:
+            earliest_start_idx_out = np.nan
+            earliest_start_time = np.nan
+        else:
+            earliest_start_idx_out = int(earliest_start_idx)
+            earliest_start_time = float(t0_arr[earliest_start_idx])
+
+        A_med = float(np.nanquantile(A_window, 0.5))
+        A_low = float(np.nanquantile(A_window, quantile_low))
+        A_high = float(np.nanquantile(A_window, quantile_high))
+        phi_low, phi_med, phi_high, phi_minus, phi_plus = _phase_quantiles(
+            phi_window,
+            quantile_low=quantile_low,
+            quantile_high=quantile_high,
+            wrap_phase=wrap_phase,
+        )
+
+        summary[mode_string] = {
+            "window_length": int(window_length),
+            "flattest_start_index": flattest_start_idx,
+            "flattest_end_index_exclusive": int(flattest_end_exclusive),
+            "flattest_start_time": float(t0_arr[flattest_start_idx]),
+            "flattest_end_time": float(t0_arr[flattest_end_inclusive]),
+            "flattest_amplitude_median": A_med,
+            "flattest_amplitude_low": A_low,
+            "flattest_amplitude_high": A_high,
+            "flattest_amplitude_minus": A_med - A_low,
+            "flattest_amplitude_plus": A_high - A_med,
+            "flattest_phase_median": phi_med,
+            "flattest_phase_low": phi_low,
+            "flattest_phase_high": phi_high,
+            "flattest_phase_minus": float(phi_minus),
+            "flattest_phase_plus": float(phi_plus),
+            "earliest_flat_start_index": earliest_start_idx_out,
+            "earliest_flat_start_time": earliest_start_time,
+            "is_present": True,
+        }
+    return summary
 
 
 def eff_mode_search(

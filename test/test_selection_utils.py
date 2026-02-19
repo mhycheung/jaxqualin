@@ -7,6 +7,7 @@ from jaxqualin.selection import (
     flattest_region_quadrature,
     start_of_flat_region,
     closest_free_mode_distance,
+    summarize_fixed_mode_flatness,
 )
 
 
@@ -94,6 +95,96 @@ class TestStartOfFlatRegion:
         arr2 = np.ones(n) * 1.0
         result = start_of_flat_region(20, arr1, arr2)
         assert result == 0
+
+
+# ---------------------------------------------------------------------------
+# summarize_fixed_mode_flatness
+# ---------------------------------------------------------------------------
+
+class TestSummarizeFixedModeFlatness:
+
+    def test_summary_structure_and_delta_t_conversion(self):
+        t0_arr = np.linspace(0, 20, 101)  # dt = 0.2
+        n = len(t0_arr)
+        arr1 = np.ones(n) * 2.0
+        arr2 = np.ones(n) * 0.3
+        arr1[:20] += np.random.RandomState(0).randn(20) * 0.5
+        arr1[-20:] += np.random.RandomState(1).randn(20) * 0.5
+        arr2[:20] += np.random.RandomState(2).randn(20) * 0.5
+        arr2[-20:] += np.random.RandomState(3).randn(20) * 0.5
+
+        result_full = SimpleNamespace(
+            t0_arr=t0_arr,
+            A_fix_dict={"A_2.2.0": arr1},
+            phi_fix_dict={"phi_2.2.0": arr2},
+        )
+
+        summary = summarize_fixed_mode_flatness(result_full, delta_t=2.0)
+        mode_summary = summary["2.2.0"]
+
+        assert mode_summary["window_length"] == 11  # int(2.0 / 0.2 + 1)
+        assert mode_summary["flattest_start_index"] >= 0
+        assert mode_summary["flattest_end_index_exclusive"] > mode_summary["flattest_start_index"]
+        assert np.isfinite(mode_summary["flattest_fluctuation"])
+        assert np.isfinite(mode_summary["flattest_amplitude_median"])
+        assert np.isfinite(mode_summary["flattest_amplitude_low"])
+        assert np.isfinite(mode_summary["flattest_amplitude_high"])
+        assert np.isclose(
+            mode_summary["flattest_amplitude_plus"],
+            mode_summary["flattest_amplitude_high"] - mode_summary["flattest_amplitude_median"],
+        )
+        assert np.isclose(
+            mode_summary["flattest_amplitude_minus"],
+            mode_summary["flattest_amplitude_median"] - mode_summary["flattest_amplitude_low"],
+        )
+        assert np.isfinite(mode_summary["flattest_phase_median"])
+        assert np.isfinite(mode_summary["flattest_phase_low"])
+        assert np.isfinite(mode_summary["flattest_phase_high"])
+        assert np.isclose(
+            mode_summary["flattest_phase_plus"],
+            mode_summary["flattest_phase_high"] - mode_summary["flattest_phase_median"],
+        )
+        assert np.isclose(
+            mode_summary["flattest_phase_minus"],
+            mode_summary["flattest_phase_median"] - mode_summary["flattest_phase_low"],
+        )
+
+    def test_summary_returns_nan_when_no_earliest_flat_region(self):
+        t0_arr = np.linspace(0, 20, 101)
+        arr1 = np.linspace(1, 10, len(t0_arr))
+        arr2 = np.linspace(0, 5, len(t0_arr))
+
+        result_full = SimpleNamespace(
+            t0_arr=t0_arr,
+            A_fix_dict={"A_2.2.0": arr1},
+            phi_fix_dict={"phi_2.2.0": arr2},
+        )
+
+        summary = summarize_fixed_mode_flatness(
+            result_full, delta_t=8.0, fluc_tol=0.01)
+        mode_summary = summary["2.2.0"]
+
+        assert np.isnan(mode_summary["earliest_flat_start_index"])
+        assert np.isnan(mode_summary["earliest_flat_start_time"])
+
+    def test_summary_phase_wrapping_across_branch_cut(self):
+        t0_arr = np.linspace(0, 10, 50)
+        arr1 = np.ones_like(t0_arr) * 2.0
+        arr2 = np.concatenate([
+            np.linspace(np.pi - 0.05, np.pi - 0.01, 25),
+            np.linspace(-np.pi + 0.01, -np.pi + 0.05, 25),
+        ])
+
+        result_full = SimpleNamespace(
+            t0_arr=t0_arr,
+            A_fix_dict={"A_2.2.0": arr1},
+            phi_fix_dict={"phi_2.2.0": arr2},
+        )
+        summary = summarize_fixed_mode_flatness(result_full, flatness_length=49)
+        mode_summary = summary["2.2.0"]
+
+        assert mode_summary["flattest_phase_plus"] < 0.2
+        assert mode_summary["flattest_phase_minus"] < 0.2
 
 
 # ---------------------------------------------------------------------------
