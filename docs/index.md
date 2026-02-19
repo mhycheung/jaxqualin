@@ -1,13 +1,22 @@
+<h1 align="center">
+    <img src="jaxqualin_logo.png" alt="jaxqualin" width="500">
+</h1>
 
+<h4 align="center"> A python package for extracting quasinormal modes from black-hole ringdown simulations.</h4>
 
-#### A python package for extracting quasinormal modes from black-hole ringdown simulations.
-
+<p align="center">
+    <a href = "https://arxiv.org/abs/2310.04489"><img src="https://img.shields.io/badge/arXiv-2310.04489-b31b1b.svg"></a>
+    <a href="https://badge.fury.io/py/jaxqualin"><img src="https://badge.fury.io/py/jaxqualin.svg"></a>
+    <a href="https://github.com/mhycheung/jaxqualin/actions/workflows/pytest.yml"><img src="https://github.com/mhycheung/jaxqualin/actions/workflows/pytest.yml/badge.svg"></a>
+    <a href="https://github.com/mhycheung/jaxqualin/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+    <a href="https://pypi.org/project/jaxqualin/"><img src="https://img.shields.io/pypi/pyversions/jaxqualin"></a>
+</p>
 
 
 ## Key Features
 
 - Fit ringdown waveforms with quasinormal modes (QNMs) using fixed frequencies, free frequencies, or mixed setups
-- JAX-accelerated nonlinear least-squares fitting with variable projection (VARPRO) and [Optimistix](https://github.com/patrick-kidger/optimistix)-based optimization
+- [JAX](https://github.com/jax-ml/jax)-accelerated nonlinear least-squares fitting with variable projection (VARPRO) and [Optimistix](https://github.com/patrick-kidger/optimistix)-based optimization
 - Flexible QNM model fitting for remnant-parameter inference (`M`, `a`) and custom parametric models
 - Custom mode and model framework for user-defined mode content beyond standard Kerr QNMs
 - Agnostic mode identification and stability-based mode selection across varying fit start times
