@@ -25,12 +25,13 @@
 
 ## Key Features
 
-* Fit a ringdown waveform with quasinormal modes (QNMs) of fixed or free frequencies
-* Nonlinear least-squares fitting with automatic differentiation via <a href="https://github.com/Dipolar-Quantum-Gases/jaxfit">JaxFit</a>
-* Agnostic identification of QNMs within the waveform
-* Saving and reusing results with `pickle`
-* Easy visualization of results
-* Call hyperfit polynomials to approximate QNM amplitudes in the ringdown of binary black hole (BBH) mergers
+- Fit ringdown waveforms with quasinormal modes (QNMs) using fixed frequencies, free frequencies, or mixed setups
+- [JAX](https://github.com/jax-ml/jax)-accelerated nonlinear least-squares fitting with variable projection (VARPRO) and [Optimistix](https://github.com/patrick-kidger/optimistix)-based optimization
+- Flexible QNM model fitting for remnant-parameter inference (`M`, `a`) and custom parametric models
+- Custom mode and model framework for user-defined mode content beyond standard Kerr QNMs
+- Agnostic mode identification and stability-based mode selection across varying fit start times
+- Save/reuse fit outputs with `pickle`, and visualize amplitudes/phases with built-in plotting tools
+- Call hyperfit polynomials to approximate QNM amplitudes in the ringdown of binary black hole (BBH) mergers
 
 ## Installation
 
@@ -40,24 +41,17 @@ pip install jaxqualin
 
 ## Usage
 
-Basic usage examples can be found under the Examples tab on the <a href="https://mhycheung.github.io/jaxqualin/">package homepage</a>.
-
-> **Note**
-> We did not extensively test and do not recommend running `jaxqualin` on a GPU
+Basic usage examples can be found under the Examples tab on the [package homepage](https://mhycheung.github.io/jaxqualin/).
 
 ## Paper Results
 
-Interactive plots of the methods paper results can be found under the Results tab on the <a href="https://mhycheung.github.io/jaxqualin/">package homepage</a>.
-
-## Coming Soon
-
-* Full API
-* Support for real (Schwarzshild) ringdown waveforms
-* Fitting for the mass and spin of the remnant 
+Interactive plots of the methods paper results can be found under the Results tab on the [package homepage](https://mhycheung.github.io/jaxqualin/).
 
 ## How to Cite
+
 Please cite the methods paper if you used our package to produce results in your publication.
 Here is the BibTeX entry:
+
 ```
 @article{Cheung:2023vki,
     author = "Cheung, Mark Ho-Yeuk and Berti, Emanuele and Baibhav, Vishal and Cotesta, Roberto",
@@ -71,7 +65,7 @@ Here is the BibTeX entry:
     number = "4",
     pages = "044069",
     year = "2024",
-    note = "[Erratum: Phys.Rev.D 110, 049902 (2024)]"
+    note = "[Erratum: Phys.Rev.D 110, 049902 (2024), Erratum: Phys.Rev.D 112, 049901 (2025)]"
 }
 ```
 
@@ -82,3 +76,4 @@ MIT
 ---
 
 > GitHub [@mhycheung](https://github.com/mhycheung)
+

@@ -1,16 +1,22 @@
+from __future__ import annotations
+
 import qnm
 import jax.numpy as jnp
 import numpy as np
 import pykerr
 
-from .utils import *
+from .utils import sign0
 
 import itertools
 
-from typing import List, Tuple, Union
-import jaxlib
+from typing import Dict, List, Optional, Tuple, Union
+import jax
+import re
 
-ArrayImpl = jaxlib.xla_extension.ArrayImpl
+ArrayImpl = jax.Array
+
+_SPIN_UPPER_BOUND = 0.99
+_SPIN_LOWER_BOUND = -0.99
 
 
 class mode_free:
@@ -29,11 +35,11 @@ class mode_free:
         spinseq_list_neg_a: Same as `spinseq_list` but for the retrograde
             branch of the QNM solution.
         omegar: The real part of the QNM , if fixed.
-            `jaxlib.xla_extension.ArrayImpl` of a single `jnp.float64`.
+            `jax.Array` of a single `jnp.float64`.
         omegai: The imaginary part of the QNM frequency, if fixed.
-            `jaxlib.xla_extension.ArrayImpl` of a single `jnp.float64`.
+            `jax.Array` of a single `jnp.float64`.
         omega: The complex QNM frequency, if fixed.
-            `jaxlib.xla_extension.ArrayImpl` of a single `jnp.complex128`.
+            `jax.Array` of a single `jnp.complex128`.
         M: The mass of the black hole, if fixed.
         a: The spin parameter of the black hole, if fixed.
 
@@ -95,10 +101,10 @@ class mode_free:
                 to the orbital frame (`True`) or remnant black hole frame
                 (`False`). See the methods paper for details. Defaults to True.
         """
-        if a > 0.99:
-            a = 0.99
-        elif a < -0.99:
-            a = -0.99
+        if a > _SPIN_UPPER_BOUND:
+            a = _SPIN_UPPER_BOUND
+        elif a < _SPIN_LOWER_BOUND:
+            a = _SPIN_LOWER_BOUND
         self.omegar = 0
         self.omegai = 0
         if self.lmnx != "constant":
@@ -115,7 +121,7 @@ class mode_free:
                 else:
                     spinseq = self.spinseq_list[i]
                 omega, _, _ = spinseq(a=np.abs(a))
-                self.omegar += retro_fac * jnpsign0(m) * jnp.real(omega) / M
+                self.omegar += retro_fac * sign0(m) * jnp.real(omega) / M
                 self.omegai += jnp.imag(omega) / M
         self.omega = self.omegar + 1.j * self.omegai
         self.M = M
@@ -208,7 +214,7 @@ class mode(mode_free):
     a: float
     retro_def_orbit: bool
 
-    def __init__(self, lmnx, M, a, retro_def_orbit=True, s=-2):
+    def __init__(self, lmnx: Union[List[List[int]], str], M: float, a: float, retro_def_orbit: bool = True, s: int = -2) -> None:
         super().__init__(lmnx, s=s)
         super().fix_mode(M, a, retro_def_orbit=retro_def_orbit)
         self.M = M
@@ -216,7 +222,309 @@ class mode(mode_free):
         self.retro_def_orbit = retro_def_orbit
 
 
-def tex_string_physical_notation(mode):
+# ---------------------------------------------------------------------------
+# Custom fixed-omega modes
+# ---------------------------------------------------------------------------
+
+_LMN_PATTERN = re.compile(r'^-?\d+\.-?\d+\.\d+(x-?\d+\.-?\d+\.\d+)*$')
+
+
+class custom_mode:
+    """
+    A mode with a user-specified complex frequency.
+
+    Unlike `mode` / `mode_free`, this class does **not** load Kerr spin
+    sequences.  It implements the same duck-typed interface so it can be
+    used anywhere a `mode_free` is expected (e.g. in ``qnm_fixed_list``).
+
+    Attributes:
+        omega: The complex QNM frequency.
+        omegar: The real part of the QNM frequency.
+        omegai: The imaginary part of the QNM frequency.
+        lmnx: Always ``None`` (no quantum numbers).
+
+    Parameters:
+        omega: Complex QNM frequency.
+        label: Optional human-readable label.  If *None*, an auto-generated
+            label of the form ``mode_<index>`` is used when the mode is
+            created via :func:`custom_mode_list`.
+    """
+
+    def __init__(self, omega: complex, label: Optional[str] = None) -> None:
+        self.omega = omega
+        self.omegar = jnp.real(omega)
+        self.omegai = jnp.imag(omega)
+        self._label = label
+        self._auto_index: Optional[int] = None
+        self.lmnx = None
+
+    # -- duck-type interface --------------------------------------------------
+
+    def string(self) -> str:
+        if self._label is not None:
+            return self._label
+        if self._auto_index is not None:
+            return f"mode_{self._auto_index}"
+        return "custom"
+
+    def tex_string(self) -> str:
+        raw = self.string()
+        if _LMN_PATTERN.match(raw):
+            _string = '$' + raw + '$'
+            _tex = _string.replace('x', r" \! \times \! ")
+            _tex = _tex.replace('-', r" \! - \! ")
+            _tex = _tex.replace('.', r"{,}")
+            return _tex
+        return f"${raw}$"
+
+    def is_overtone(self) -> bool:
+        return False
+
+    def sum_lm(self) -> Tuple[int, int]:
+        return (0, 0)
+
+    def fix_mode(self, *args, **kwargs) -> None:
+        """No-op: the frequency is already fixed."""
+        pass
+
+
+def custom_mode_list(
+        omegas: List[complex],
+        labels: Optional[List[Optional[str]]] = None,
+) -> List[custom_mode]:
+    """Create a list of :class:`custom_mode` objects.
+
+    Parameters:
+        omegas: Complex frequencies.
+        labels: Optional per-mode labels.  ``None`` entries (or the whole
+            argument) result in auto-generated labels ``mode_0``, ``mode_1``,
+            etc.
+
+    Returns:
+        A list of :class:`custom_mode` instances with ``_auto_index`` set.
+    """
+    modes: List[custom_mode] = []
+    for i, omega in enumerate(omegas):
+        label = labels[i] if labels is not None else None
+        m = custom_mode(omega, label=label)
+        m._auto_index = i
+        modes.append(m)
+    return modes
+
+
+# ---------------------------------------------------------------------------
+# QNM parametric model framework
+# ---------------------------------------------------------------------------
+
+
+class QNMModel:
+    """Base class for parametric QNM frequency models.
+
+    Subclasses must override :meth:`compute_omega` and set
+    :attr:`param_names`.
+
+    Attributes:
+        param_names: Ordered list of parameter names (e.g. ``["M", "a"]``).
+    """
+
+    param_names: List[str] = []
+
+    @property
+    def n_params(self) -> int:
+        """Number of model parameters."""
+        return len(self.param_names)
+
+    def compute_omega(self, lmnx, **params) -> complex:
+        """Return the complex QNM frequency for *lmnx* given *params*.
+
+        Must be overridden by subclasses.
+        """
+        raise NotImplementedError
+
+    def param_bounds(self) -> Dict[str, Tuple[float, float]]:
+        """Return ``{name: (lower, upper)}`` for each model parameter.
+
+        The default is ``(-inf, inf)`` for every parameter.
+        """
+        return {name: (-np.inf, np.inf) for name in self.param_names}
+
+
+class KerrModel(QNMModel):
+    """Kerr black-hole QNM frequency model.
+
+    Computes QNM frequencies as a function of mass *M* and dimensionless
+    spin *a* using the ``qnm`` package, exactly replicating the logic in
+    :meth:`mode_free.fix_mode`.
+
+    Parameters:
+        s: Spin weight (default ``-2``).
+        retro_def_orbit: Retrograde convention (default ``True``).
+    """
+
+    param_names = ["M", "a"]
+
+    def __init__(self, s: int = -2, retro_def_orbit: bool = True) -> None:
+        self.s = s
+        self.retro_def_orbit = retro_def_orbit
+        self._spinseq_cache: Dict[Tuple[int, int, int], Tuple] = {}
+
+    def _get_spinseqs(self, l: int, m: int, n: int):
+        key = (l, m, n)
+        if key not in self._spinseq_cache:
+            self._spinseq_cache[key] = (
+                qnm.modes_cache(s=self.s, l=np.abs(l), m=np.abs(m), n=n),
+                qnm.modes_cache(s=self.s, l=np.abs(l), m=-np.abs(m), n=n),
+            )
+        return self._spinseq_cache[key]
+
+    def compute_omega(self, lmnx, M, a, **kwargs) -> complex:
+        if a > _SPIN_UPPER_BOUND:
+            a = _SPIN_UPPER_BOUND
+        elif a < _SPIN_LOWER_BOUND:
+            a = _SPIN_LOWER_BOUND
+        omegar = 0
+        omegai = 0
+        if lmnx != "constant":
+            for lmn in lmnx:
+                l, m, n = tuple(lmn)
+                spinseq_pro, spinseq_neg = self._get_spinseqs(l, m, n)
+                if self.retro_def_orbit:
+                    retro_fac = jnp.sign(l)
+                    use_neg = jnp.sign(a) * jnp.sign(l)
+                else:
+                    retro_fac = jnp.sign(a) * jnp.sign(l)
+                    use_neg = jnp.sign(l)
+                if use_neg < 0:
+                    spinseq = spinseq_neg
+                else:
+                    spinseq = spinseq_pro
+                omega_raw, _, _ = spinseq(a=np.abs(a))
+                omegar += retro_fac * sign0(m) * jnp.real(omega_raw) / M
+                omegai += jnp.imag(omega_raw) / M
+        return omegar + 1.j * omegai
+
+    def param_bounds(self) -> Dict[str, Tuple[float, float]]:
+        return {
+            "M": (-np.inf, np.inf),
+            "a": (_SPIN_LOWER_BOUND, _SPIN_UPPER_BOUND),
+        }
+
+
+# ---------------------------------------------------------------------------
+# Model-based mode classes
+# ---------------------------------------------------------------------------
+
+
+class model_mode_free:
+    """A mode whose frequency is determined by a :class:`QNMModel`.
+
+    Attributes:
+        lmnx: Mode quantum numbers (or ``"constant"``).
+        model: The :class:`QNMModel` that computes frequencies.
+    """
+
+    def __init__(
+            self,
+            lmnx: Union[List[List[int]], str],
+            model: QNMModel,
+            label: Optional[str] = None,
+            s: int = -2,
+    ) -> None:
+        if isinstance(lmnx, str) and lmnx != "constant":
+            lmnx = str_to_lmnx(lmnx)
+        self.lmnx = lmnx
+        self.model = model
+        self._label = label
+
+    def fix_mode(self, **params) -> None:
+        """Compute and store the frequency from the model parameters."""
+        self.omega = self.model.compute_omega(self.lmnx, **params)
+        self.omegar = jnp.real(self.omega)
+        self.omegai = jnp.imag(self.omega)
+        for key, val in params.items():
+            setattr(self, key, val)
+
+    # -- duck-type interface --------------------------------------------------
+
+    def string(self) -> str:
+        if self._label is not None:
+            return self._label
+        if self.lmnx is not None and self.lmnx != "constant":
+            return lmnx_to_string(self.lmnx)
+        return "constant"
+
+    def tex_string(self) -> str:
+        if self._label is not None:
+            raw = self._label
+            if _LMN_PATTERN.match(raw):
+                _string = '$' + raw + '$'
+                _tex = _string.replace('x', r" \! \times \! ")
+                _tex = _tex.replace('-', r" \! - \! ")
+                _tex = _tex.replace('.', r"{,}")
+                return _tex
+            return f"${raw}$"
+        if self.lmnx == "constant":
+            return r"constant"
+        if self.lmnx is not None:
+            lmnstrings = []
+            for lmn in self.lmnx:
+                l, m, n = tuple(lmn)
+                if l < 0:
+                    lmnstrings.append(f"r{-l}.{m}.{n}")
+                else:
+                    lmnstrings.append(f"{l}.{m}.{n}")
+            lmnx_string = 'x'.join(lmnstrings)
+            _string = '$' + lmnx_string + '$'
+            _tex = _string.replace('x', r" \! \times \! ")
+            _tex = _tex.replace('-', r" \! - \! ")
+            _tex = _tex.replace('.', r"{,}")
+            return _tex
+        return "$custom$"
+
+    def is_overtone(self) -> bool:
+        if self.lmnx is None or self.lmnx == "constant":
+            return False
+        for lmn in self.lmnx:
+            l, m, n = tuple(lmn)
+            if n > 0:
+                return True
+        return False
+
+    def sum_lm(self) -> Tuple[int, int]:
+        l_sum = 0
+        m_sum = 0
+        if self.lmnx is not None and self.lmnx != "constant":
+            for lmn in self.lmnx:
+                l, m, n = tuple(lmn)
+                l_sum += l
+                m_sum += m
+        return l_sum, m_sum
+
+
+class model_mode(model_mode_free):
+    """A :class:`model_mode_free` that fixes its frequency at init time.
+
+    Parameters:
+        lmnx: Mode quantum numbers.
+        model: The :class:`QNMModel` that computes frequencies.
+        label: Optional human-readable label.
+        s: Spin weight (unused, kept for API parity).
+        **params: Model parameters forwarded to :meth:`fix_mode`.
+    """
+
+    def __init__(
+            self,
+            lmnx: Union[List[List[int]], str],
+            model: QNMModel,
+            label: Optional[str] = None,
+            s: int = -2,
+            **params,
+    ) -> None:
+        super().__init__(lmnx, model, label=label, s=s)
+        self.fix_mode(**params)
+
+
+def tex_string_physical_notation(mode: mode_free) -> str:
     if mode.lmnx == "constant":
         return r"constant"
     lmnstrings = []
@@ -237,7 +545,7 @@ def tex_string_physical_notation(mode):
     return _tex_string
 
 
-def str_to_lmnx(lmnxstring):
+def str_to_lmnx(lmnxstring: str) -> Union[List[List[int]], str]:
     if lmnxstring == "constant":
         return "constant"
     lmnx = []
@@ -249,12 +557,12 @@ def str_to_lmnx(lmnxstring):
     return lmnx
 
 
-def str_to_mode(str, M, a, retro_def_orbit=True):
-    lmnx = str_to_lmnx(str)
+def str_to_mode(mode_str: str, M: float, a: float, retro_def_orbit: bool = True) -> mode:
+    lmnx = str_to_lmnx(mode_str)
     return mode(lmnx, M, a, retro_def_orbit=retro_def_orbit)
 
 
-def long_str_to_lmnxs(longstring):
+def long_str_to_lmnxs(longstring: str) -> List[List[List[int]]]:
     lmnxs = []
     lmnxstrings = longstring.split('_')
     for lmnxstring in lmnxstrings:
@@ -262,80 +570,80 @@ def long_str_to_lmnxs(longstring):
     return lmnxs
 
 
-def long_str_to_strs(longstring):
+def long_str_to_strs(longstring: str) -> List[str]:
     return longstring.split('_')
 
 
-def str_list_sort(str_list):
+def str_list_sort(str_list: List[str]) -> List[str]:
     str_list.sort()
     return str_list
 
 
-def long_str_sort(longstring):
+def long_str_sort(longstring: str) -> str:
     lmnxstrings = sorted(longstring.split('_'))
     return '_'.join(lmnxstrings)
 
 
-def lmnxs_to_qnms(lmnxs, M, a, **kwargs):
+def lmnxs_to_qnms(lmnxs: List, M: float, a: float, **kwargs) -> List[mode]:
     qnms = []
     for lmnx in lmnxs:
         qnms.append(mode(lmnx, M, a, **kwargs))
     return qnms
 
 
-def lmnxs_to_qnms_free(lmnxs, **kwargs):
+def lmnxs_to_qnms_free(lmnxs: List, **kwargs) -> List[mode_free]:
     qnms = []
     for lmnx in lmnxs:
         qnms.append(mode_free(lmnx, **kwargs))
     return qnms
 
 
-def long_str_to_qnms(longstring, M, a, **kwargs):
+def long_str_to_qnms(longstring: str, M: float, a: float, **kwargs) -> List[mode]:
     if longstring == '':
         return []
     lmnxs = long_str_to_lmnxs(longstring)
     return lmnxs_to_qnms(lmnxs, M, a, **kwargs)
 
 
-def mode_list(mode_list, M, a, **kwargs):
+def mode_list(mode_list: List[str], M: float, a: float, **kwargs) -> List[mode]:
     long_str = '_'.join(mode_list)
     return long_str_to_qnms(long_str, M, a, **kwargs)
 
 
-def long_str_to_qnms_free(longstring, **kwargs):
+def long_str_to_qnms_free(longstring: str, **kwargs) -> List[mode_free]:
     lmnxs = long_str_to_lmnxs(longstring)
     return lmnxs_to_qnms_free(lmnxs, **kwargs)
 
 
-def qnms_to_string(qnms):
+def qnms_to_string(qnms: List[mode_free]) -> List[str]:
     string_list = []
     for qnm in qnms:
         string_list.append(qnm.string())
     return string_list
 
 
-def qnms_to_tex_string(qnms):
+def qnms_to_tex_string(qnms: List[mode_free]) -> List[str]:
     string_list = []
     for qnm in qnms:
         string_list.append(qnm.tex_string())
     return string_list
 
 
-def qnms_to_tex_string_physical_notation(qnms):
+def qnms_to_tex_string_physical_notation(qnms: List[mode_free]) -> List[str]:
     string_list = []
     for qnm in qnms:
         string_list.append(tex_string_physical_notation(qnm))
     return string_list
 
 
-def qnms_to_lmnxs(qnms):
+def qnms_to_lmnxs(qnms: List[mode_free]) -> List:
     lmnxs_list = []
     for qnm in qnms:
-        lmnxs_list.append(qnm.lmnx())
+        lmnxs_list.append(qnm.lmnx)
     return lmnxs_list
 
 
-def lmnxs_to_string(lmnxs):
+def lmnxs_to_string(lmnxs: List[List[List[int]]]) -> List[str]:
     string_list = []
     for lmnx in lmnxs:
         lmnstrings = []
@@ -346,7 +654,7 @@ def lmnxs_to_string(lmnxs):
     return string_list
 
 
-def lmnx_to_string(lmnx):
+def lmnx_to_string(lmnx: List[List[int]]) -> str:
     lmnstrings = []
     for lmn in lmnx:
         l, m, n = tuple(lmn)
@@ -354,7 +662,7 @@ def lmnx_to_string(lmnx):
     return 'x'.join(lmnstrings)
 
 
-def lmnx_sum_lm(lmnx):
+def lmnx_sum_lm(lmnx: Union[List[List[int]], str]) -> Tuple[int, int]:
     l_sum = 0
     m_sum = 0
     if lmnx != "constant":
@@ -365,7 +673,7 @@ def lmnx_sum_lm(lmnx):
     return l_sum, m_sum
 
 
-def fix_modes(qnms_free_list, M, a, retro_def_orbit=True):
+def fix_modes(qnms_free_list: List[mode_free], M: float, a: float, retro_def_orbit: bool = True) -> None:
     for qnm in qnms_free_list:
         qnm.fix_mode(M, a, retro_def_orbit=True)
 
@@ -534,16 +842,16 @@ def lower_l_mode_present(l, m, relevant_lm_list, test_mode, found_modes):
     return True
 
 
-def sort_lmnx(lmnx_in):
+def sort_lmnx(lmnx_in: List[List[int]]) -> List[List[int]]:
     lmnx = sorted(lmnx_in)
     return lmnx
 
 
-def first_n_overtones_string(l, m, n):
+def first_n_overtones_string(l: int, m: int, n: int) -> str:
     strings = [f"{l}.{m}.{i}" for i in range(n + 1)]
     return "_".join(strings)
 
-def remove_duplicated_modes(qnm_list):
+def remove_duplicated_modes(qnm_list: List[mode_free]) -> List[mode_free]:
     qnm_list_clean = []
     for mode in qnm_list:
         duplicate = False
@@ -555,10 +863,10 @@ def remove_duplicated_modes(qnm_list):
             qnm_list_clean.append(mode)
     return qnm_list_clean
 
-def qnm_string_m_reverse(str):
-    if str == 'constant':
+def qnm_string_m_reverse(mode_str: str) -> str:
+    if mode_str == 'constant':
         return 'constant'
-    lmnx = str_to_lmnx(str)
+    lmnx = str_to_lmnx(mode_str)
     for lmn in lmnx:
         if lmn[1] == -99:
             lmn[1] = 0
@@ -570,10 +878,10 @@ def qnm_string_m_reverse(str):
     return str_out
 
 
-def qnm_string_l_reverse(str):
-    if str == 'constant':
+def qnm_string_l_reverse(mode_str: str) -> str:
+    if mode_str == 'constant':
         return 'constant'
-    lmnx = str_to_lmnx(str)
+    lmnx = str_to_lmnx(mode_str)
     for lmn in lmnx:
         lmn[0] *= -1
     str_out = lmnx_to_string(lmnx)
@@ -608,6 +916,11 @@ def make_mirror_ratio_list(qnm_list, iota, psi = 0.):
     mirror_ratio_list_complex = []
     af = qnm_list[0].a
     for mode in qnm_list:
+        # A "constant" mode has no (l, m, n), so keep it as a single complex
+        # constant term by suppressing its mirror companion.
+        if mode.lmnx == "constant":
+            mirror_ratio_list_complex.append(0.0 + 0.0j)
+            continue
         if len(mode.lmnx) > 1:
             raise NotImplementedError("Only linear modes allowed for now")
         l, m, n = tuple(mode.lmnx[0])

@@ -1,0 +1,38 @@
+[project]
+name = "jaxqualin"
+version = "1.0.0"
+description = "A package for extracting quasinormal modes from time domain data"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = ">=3.10,<3.15"
+tqdm = ">4.61.1"
+setuptools = "*"
+pip = "*"
+pytest = ">=9.0.2"
+scipy = ">=1.13"
+numpy = ">1.23,<2.4"
+adjusttext = ">=1.0"
+
+[pypi-dependencies]
+jax = ">=0.4.30"
+jaxlib = ">=0.4.30"
+mkdocs = ">=1.6"
+mkdocs-material = ">=9.5"
+mkdocstrings = ">=0.26"
+mkdocstrings-python = ">=1.11"
+
+matplotlib = ">3.6.1"
+optimistix = "*"
+pandas = ">1.5.1"
+pykerr = ">=0.1.0"
+qnm = "==0.4.4"
+quaternionic = "*"
+spherical = "*"
+sxs = ">2025"
+marimo = "*"
+
+[tasks]
+export-docs = "python -c \"import pathlib, subprocess; [subprocess.run(['marimo', 'export', 'html', str(f), '-o', str(f.with_suffix('.html'))], check=True) for f in pathlib.Path('docs/notebooks').glob('*.py')]\""
+build-docs = { cmd = "mkdocs build", depends-on = ["export-docs"] }

@@ -34,9 +34,12 @@ def test_mirror_fit(mirror_waveform):
     fitter.do_fits()
     result = fitter.result_full
 
+    # VARPRO always returns positive amplitudes (A = |c|), so the injected
+    # A=0.01, phi=pi is recovered as A=0.01, phi=±pi (equivalent: both give
+    # -0.01 * exp(-i*omega*t)).
     assert all_close_to(result.A_dict['A_2.2.0'], 1.)
     assert all_close_to(result.A_dict['A_2.2.1'], 3.)
-    assert all_close_to(result.A_dict['A_3.2.0'], -0.01)
+    assert all_close_to(result.A_dict['A_3.2.0'], 0.01)
     assert all_close_to(result.phi_dict['phi_2.2.0'], 0.)
     assert all_close_to(result.phi_dict['phi_2.2.1'], np.pi/2)
-    assert all_close_to(result.phi_dict['phi_3.2.0'], 0.)
+    assert np.allclose(np.abs(result.phi_dict['phi_3.2.0']), np.pi)

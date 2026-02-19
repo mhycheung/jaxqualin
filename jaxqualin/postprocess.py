@@ -1,11 +1,17 @@
+import logging
 import numpy as np
 import pandas as pd
+import pickle
 
-from .waveforms import *
-from .qnmode import *
-from .selection import *
+from .waveforms import get_chi_q_SXS
+from .qnmode import qnms_to_string, str_to_lmnx, lmnx_sum_lm, qnm_string_l_reverse
+from .selection import start_of_flat_region, ModeSearchAllFreeVaryingNSXSAllRelevant, read_json_eff_mode_search
+from .fit import FIT_SAVE_PATH
+from .utils import linfunc, linfunc2
 
 import os
+
+logger = logging.getLogger(__name__)
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 DF_SAVE_PATH = os.path.join(ROOT_PATH, "pickle/data_frame")
@@ -82,11 +88,11 @@ def append_A_and_phis(mode_searcher_vary_N, df, **kwargs):
 
 
 def append_A_and_phis_all_lm(mode_search_complete, df, **kwargs):
-    SXSnum = mode_search_complete.SXSnum
-    q_chi_dict = get_chi_q_SXS(SXSnum)
+    SXS_num = mode_search_complete.SXS_num
+    q_chi_dict = get_chi_q_SXS(SXS_num)
     relevant_lm_list = mode_search_complete.relevant_lm_list
     retro = mode_search_complete.retro
-    kwargs.update(**q_chi_dict, SXS_num=SXSnum, retro=retro)
+    kwargs.update(**q_chi_dict, SXS_num=SXS_num, retro=retro)
     for i, lm in enumerate(relevant_lm_list):
         l, m = lm
         mode_searcher_vary_N = mode_search_complete.relevant_lm_mode_searcher_varying_N[
@@ -113,7 +119,7 @@ def create_data_frame(SXS_num_list, df_save_prefix="default", **kwargs):
             failed_list.append(SXS_num)
     file_path = os.path.join(DF_SAVE_PATH, f"{df_save_prefix}.csv")
     df.to_csv(file_path)
-    print("failed runs: ", failed_list)
+    logger.warning(f"failed runs: {failed_list}")
 
 
 def create_data_frame_eff(
@@ -165,16 +171,6 @@ def get_result(
         result = pickle.load(f)
 
     return result
-
-
-def linfunc(p, x):
-    m, c = p
-    return m * x + c
-
-
-def linfunc2(p, x):
-    c = p
-    return 2 * x + c
 
 
 def is_quadratic(row):
@@ -315,6 +311,11 @@ def classify_modes(df):
     return df
 
 
+def _filter_df_by_lm(df, l, m):
+    """Filter DataFrame rows matching given l and m values."""
+    return df.loc[(df["l"] == l) & (df["m"] == m)]
+
+
 def screen_mode(
         df,
         l,
@@ -323,8 +324,9 @@ def screen_mode(
         mode_string_retro,
         greater=True,
         A_cut=1):
-    df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) |
-                     ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro) & (df["retro"]))]
+    df_lm = _filter_df_by_lm(df, l, m)
+    df_mode = df_lm.loc[((df_lm["mode_string"] == mode_string_pro) & (df_lm["retro"] == False)) |
+                        ((df_lm["mode_string"] == mode_string_retro) & (df_lm["retro"]))]
     if greater:
         df_screen = df_mode[df_mode['A_med'] > A_cut]
     else:
@@ -335,12 +337,12 @@ def screen_mode(
 
 def df_get_mode(df, l, m, mode_string_pro, include_retro=False):
     mode_string_retro = qnm_string_l_reverse(mode_string_pro)
+    df_lm = _filter_df_by_lm(df, l, m)
     if include_retro:
-        df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) |
-                         ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro) & (df["retro"]))]
+        df_mode = df_lm.loc[((df_lm["mode_string"] == mode_string_pro) & (df_lm["retro"] == False)) |
+                            ((df_lm["mode_string"] == mode_string_retro) & (df_lm["retro"]))]
     else:
-        df_mode = df.loc[(df["l"] == l) & (df["m"] == m) &
-                         (df["mode_string"] == mode_string_pro)]
+        df_mode = df_lm.loc[df_lm["mode_string"] == mode_string_pro]
     return df_mode
 
 
@@ -413,8 +415,9 @@ def NP_quantities(x):
 
 def get_df_for_mode(df, l, m, mode_string_pro):
     mode_string_retro = qnm_string_l_reverse(mode_string_pro)
-    df_mode = df.loc[((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_pro) & (df["retro"] == False)) |
-                     ((df["l"] == l) & (df["m"] == m) & (df["mode_string"] == mode_string_retro) & (df["retro"]))]
+    df_lm = _filter_df_by_lm(df, l, m)
+    df_mode = df_lm.loc[((df_lm["mode_string"] == mode_string_pro) & (df_lm["retro"] == False)) |
+                        ((df_lm["mode_string"] == mode_string_retro) & (df_lm["retro"]))]
     return df_mode
 
 

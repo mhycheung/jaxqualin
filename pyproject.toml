@@ -3,40 +3,40 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-version = "0.0.6"
+version = "1.0.0"
 name = "jaxqualin"
 authors = [
-  { name="Mark Ho-Yeuk Cheung", email="hcheung5@jhu.edu" },
+  { name="Mark Ho-Yeuk Cheung", email="mcheung@ias.edu" },
 ]
 description = "A package for extracting quasinormal modes from time domain data"
 readme = "README.md"
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.10,<3.15"
 classifiers = [
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  "adjustText==0.8",
-  "jax>0.3.23,<=0.4.20",
-  "jaxlib>0.3.23,<=0.4.20",
-  "jaxfit==0.0.3",
+  "adjustText>=1.0",
+  "jax>=0.4.30",
+  "jaxlib>=0.4.30",
   "matplotlib>3.6.1",
-  "numpy>1.23",
+  "optimistix",
+  "numpy>1.23,<2.4",
   "pandas>1.5.1",
-  "pykerr==0.1.0",
-  "qnm==0.4.3",
+  "pykerr>=0.1.0",
+  "quaternionic",
+  "qnm==0.4.4",
   "setuptools",
-  "scipy>1.9.3,<1.13.0",
-  "sxs>2022.4.5",
+  "spherical",
+  "scipy>=1.13",
+  "sxs>2025",
   "tqdm>4.61.1",
 ]
-
-[project.optional-dependencies]
-pycbc = ["PyCBC>2.0.6"]
 
 [project.urls]
 "Homepage" = "https://github.com/mhycheung/Jaxqualin"

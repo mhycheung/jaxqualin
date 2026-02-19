@@ -1,8 +1,9 @@
-from .utils import *
-from .qnmode import *
-from .fit import *
-from .waveforms import *
+from .utils import max_consecutive_trues
+from .qnmode import mode, potential_modes, qnms_to_string, remove_duplicated_modes, lower_overtone_present, lower_l_mode_present
+from .fit import QNMFitVaryingStartingTime, FIT_SAVE_PATH, DEFAULT_SEED
+from .waveforms import waveform, get_waveform_SXS, get_relevant_lm_waveforms_SXS, relevant_modes_dict_to_lm_tuple, make_eff_ringdown_waveform_from_param, DEFAULT_T_END
 
+import logging
 import numpy as np
 import pickle
 import json
@@ -10,9 +11,35 @@ import os
 
 from typing import List, Tuple, Union, Optional, Dict, Any
 
+logger = logging.getLogger(__name__)
+
 SETTING_PATH = os.getcwd()
 MODE_SEARCHERS_SAVE_PATH = os.path.join(
     os.getcwd(), ".jaxqualin_cache/mode_searchers")
+
+DEFAULT_N_LIST = [5, 6, 7, 8, 9, 10]
+DEFAULT_ALPHA = 0.05
+DEFAULT_TAU_AGNOSTIC = 10
+DEFAULT_P_AGNOSTIC = 0.95
+DEFAULT_EPSILON_STABLE = 0.2
+DEFAULT_TAU_STABLE = 10
+DEFAULT_P_STABLE = 0.95
+DEFAULT_A_TOL = 1e-3
+DEFAULT_BETA_A = 1.0
+DEFAULT_BETA_PHI = 1.5
+
+
+def _merge_kwargs(defaults, overrides):
+    """Merge default kwargs with user overrides."""
+    result = dict(defaults)
+    result.update(overrides)
+    return result
+
+
+def _check_no_cce(cce_flag):
+    """Raise if CCE mode is requested (not yet supported)."""
+    if cce_flag:
+        raise NotImplementedError("CCE is not yet supported")
 
 
 class IterativeFlatnessChecker:
@@ -26,21 +53,19 @@ class IterativeFlatnessChecker:
         self.a = a
         self.found_modes = found_modes
         self.fitter_list = []
-        kwargs = {
+        self.kwargs = _merge_kwargs({
             "run_string_prefix": "Default",
-            "epsilon_stable": 0.2,
-            "tau_stable": 10,
+            "epsilon_stable": DEFAULT_EPSILON_STABLE,
+            "tau_stable": DEFAULT_TAU_STABLE,
             "retro_def_orbit": True,
             "load_pickle": True,
             "confusion_tol": 0.03,
-            "p_stable": 0.95,
-            "A_tol": 1e-3,
-            "beta_A": 1.0,
-            "beta_phi": 1.5,
+            "p_stable": DEFAULT_P_STABLE,
+            "A_tol": DEFAULT_A_TOL,
+            "beta_A": DEFAULT_BETA_A,
+            "beta_phi": DEFAULT_BETA_PHI,
             "CCE": False,
-            "fit_save_prefix": FIT_SAVE_PATH}
-        kwargs.update(kwargs_in)
-        self.kwargs = kwargs
+            "fit_save_prefix": FIT_SAVE_PATH}, kwargs_in)
         self.run_string_prefix = self.kwargs["run_string_prefix"]
         self.epsilon_stable = self.kwargs["epsilon_stable"]
         self.confusion_tol = self.kwargs["confusion_tol"]
@@ -52,8 +77,7 @@ class IterativeFlatnessChecker:
         self.beta_A = self.kwargs["beta_A"]
         self.beta_phi = self.kwargs["beta_phi"]
         self.CCE = self.kwargs["CCE"]
-        if self.CCE:
-            raise NotImplementedError
+        _check_no_cce(self.CCE)
         self.fit_save_prefix = self.kwargs["fit_save_prefix"]
 
         self.retro_def_orbit = self.kwargs["retro_def_orbit"]
@@ -165,12 +189,12 @@ class IterativeFlatnessChecker:
                             sacrifice_mode_indx = jj
             if discard_mode:
                 if sacrifice_mode:
-                    print(
+                    logger.info(
                         f"Although the {current_modes[worst_mode_indx].string()} mode fluctuates the most, "
                         f"the {current_modes[sacrifice_mode_indx].string()} mode is sacrificed instead.")
                     del current_modes[sacrifice_mode_indx]
                 else:
-                    print(
+                    logger.info(
                         f"discarding {current_modes[worst_mode_indx].string()} mode because it failed flatness test.")
                     del current_modes[worst_mode_indx]
             more_than_one_mode = len(current_modes) > 1
@@ -185,10 +209,10 @@ class ModeSelectorAllFree:
             self,
             result_full,
             potential_mode_list,
-            alpha_r=0.05,
-            alpha_i=0.05,
-            tau_agnostic=10,
-            p_agnostic=0.95,
+            alpha_r=DEFAULT_ALPHA,
+            alpha_i=DEFAULT_ALPHA,
+            tau_agnostic=DEFAULT_TAU_AGNOSTIC,
+            p_agnostic=DEFAULT_P_AGNOSTIC,
             N_max=10):
         self.result_full = result_full
         self.potential_mode_list = potential_mode_list
@@ -246,16 +270,16 @@ class ModeSearchAllFreeLM:
         self.relevant_lm_list = relevant_lm_list
         self.t0_arr = t0_arr
         self.N = N
-        kwargs = {
+        self.kwargs = _merge_kwargs({
             "retro_def_orbit": True,
             "run_string_prefix": "Default",
             "load_pickle": True,
             "a_recoil_tol": 0.,
             "recoil_n_max": 0,
-            "alpha_r": 0.05,
-            "alpha_i": 0.05,
-            "tau_agnostic": 10,
-            "p_agnostic": 0.95,
+            "alpha_r": DEFAULT_ALPHA,
+            "alpha_i": DEFAULT_ALPHA,
+            "tau_agnostic": DEFAULT_TAU_AGNOSTIC,
+            "p_agnostic": DEFAULT_P_AGNOSTIC,
             'fit_kwargs': {},
             "initial_num": 1,
             "random_initial": False,
@@ -264,9 +288,7 @@ class ModeSearchAllFreeLM:
             "set_seed": 1234,
             'fit_save_prefix': FIT_SAVE_PATH,
             'BBH_potential_modes': True,
-            'potential_modes_custom': []}
-        kwargs.update(kwargs_in)
-        self.kwargs = kwargs
+            'potential_modes_custom': []}, kwargs_in)
         self.retro_def_orbit = self.kwargs["retro_def_orbit"]
         self.run_string_prefix = self.kwargs["run_string_prefix"]
         self.a_recoil_tol = self.kwargs["a_recoil_tol"]
@@ -328,7 +350,6 @@ class ModeSearchAllFreeLM:
             p_agnostic=self.p_agnostic,
             N_max=N)
         self.mode_selector.do_selection()
-        # print(qnms_to_string(self.mode_selector.passed_mode_list))
         jump_mode_indx = []
         for j in range(len(self.mode_selector.passed_mode_list)):
             if not lower_overtone_present(
@@ -343,14 +364,13 @@ class ModeSearchAllFreeLM:
                     self.mode_selector.passed_mode_list +
                     self.found_modes):
                 jump_mode_indx.append(j)
-        # print(list(set(_jump_mode_indx)))
         for k in sorted(list(set(jump_mode_indx)), reverse=True):
             del self.mode_selector.passed_mode_list[k]
         self.found_modes.extend(self.mode_selector.passed_mode_list)
         print_string = f"Runname: {self.run_string_prefix}, N_free = {N}, potential modes: "
         print_string += ', '.join(qnms_to_string(
             self.mode_selector.passed_mode_list))
-        print(print_string)
+        logger.info(print_string)
         for j in sorted(self.mode_selector.passed_mode_indx, reverse=True):
             del self.potential_modes[j]
 
@@ -458,12 +478,11 @@ class ModeSearchAllFreeVaryingN:
         self.a = a
         self.relevant_lm_list = relevant_lm_list
         self.t0_arr = t0_arr
-        kwargs = {'run_string_prefix': 'Default',
+        kwargs = _merge_kwargs({'run_string_prefix': 'Default',
                   'load_pickle': True,
-                  'N_list': [5, 6, 7, 8, 9, 10],
+                  'N_list': DEFAULT_N_LIST,
                   'CCE': False,
-                  'retro_def_orbit': True}
-        kwargs.update(kwargs_in)
+                  'retro_def_orbit': True}, kwargs_in)
         self.N_list = kwargs['N_list']
         self.kwargs = kwargs
         self.flatness_checker_kwargs = flatness_checker_kwargs
@@ -474,8 +493,7 @@ class ModeSearchAllFreeVaryingN:
         self.run_string_prefix = kwargs["run_string_prefix"]
         self.load_pickle = self.kwargs["load_pickle"]
         self.CCE = self.kwargs["CCE"]
-        if self.CCE:
-            raise NotImplementedError
+        _check_no_cce(self.CCE)
 
     def init_searchers(self) -> None:
         """
@@ -517,7 +535,7 @@ class ModeSearchAllFreeVaryingN:
                     **self.flatness_checker_kwargs,
                     **self.kwargs))
             flatness_checker = self.flatness_checkers[i]
-            print(
+            logger.info(
                 f'Performing amplitude and phase flatness check for N_free = {self.N_list[i]}')
             flatness_checker.do_iterative_flatness_check()
             flatness_checker.found_modes_screened
@@ -525,9 +543,13 @@ class ModeSearchAllFreeVaryingN:
             if len(mode_searcher.found_modes) >= len(self.found_modes_final):
                 self.best_run_indx = i
                 self.found_modes_final = mode_searcher.found_modes
-            print(
-                f"Runname: {self.run_string_prefix}, N_free = {self.N_list[i]}, found the following {len(mode_searcher.found_modes)} modes: ")
-            print(', '.join(qnms_to_string(mode_searcher.found_modes)))
+            logger.info(
+                f"Runname: {self.run_string_prefix}, N_free = {self.N_list[i]}, found the following {len(mode_searcher.found_modes)} modes: "
+                + ', '.join(qnms_to_string(mode_searcher.found_modes)))
+
+    def summarize_final_modes(self, **kwargs):
+        """Return per-mode final results for the selected best run."""
+        return summarize_mode_searcher_final_modes(self, **kwargs)
 
 
 class ModeSearchAllFreeVaryingNSXS:
@@ -536,7 +558,7 @@ class ModeSearchAllFreeVaryingNSXS:
     number of free modes used in the fit.
 
     Attributes:
-        SXSnum: The SXS number of the waveform. 
+        SXS_num: The SXS number of the waveform. 
         l: The harmonic number l of the
         waveform. m: The harmonic number m of the waveform. 
         t0_arr: array of starting times for fitting. 
@@ -596,7 +618,7 @@ class ModeSearchAllFreeVaryingNSXS:
 
     """
 
-    SXSnum: str
+    SXS_num: str
     l: int
     m: int
     t0_arr: np.ndarray
@@ -626,7 +648,7 @@ class ModeSearchAllFreeVaryingNSXS:
 
     def __init__(
             self,
-            SXSnum: str,
+            SXS_num: str,
             l: int,
             m: int,
             t0_arr: np.ndarray = np.linspace(
@@ -638,36 +660,35 @@ class ModeSearchAllFreeVaryingNSXS:
         Initialize the `ModeSearchAllFreeVaryingNSXS` class.
 
         Parameters:
-            SXSnum: The SXS number of the waveform.
+            SXS_num: The SXS number of the waveform.
             l: The harmonic number l of the waveform.
             m: The harmonic number m of the waveform.
             t0_arr: array of starting times for fitting.
             **kwargs_in: keyword arguments.
         """
-        self.SXSnum = SXSnum
+        self.SXS_num = SXS_num
         self.l = l
         self.m = m
         self.t0_arr = t0_arr
-        kwargs = {'load_pickle': True,
+        kwargs = _merge_kwargs({'load_pickle': True,
                   'mode_searcher_load_pickle': True,
                   'save_mode_searcher': True,
-                  'N_list': [5, 6, 7, 8, 9, 10],
+                  'N_list': DEFAULT_N_LIST,
                   'postfix_string': '',
                   'mode_searchers_save_path': MODE_SEARCHERS_SAVE_PATH,
                   'set_seed_SXS': True,
-                  'default_seed': 1234,
+                  'default_seed': DEFAULT_SEED,
                   'CCE': False,
                   'relevant_lm_list': [],
+                  't_end': DEFAULT_T_END,
                   'retro_def_orbit': True,
                   'run_string_fitter': None,
                   'run_string': None,
-                  'download': None}
-        kwargs.update(kwargs_in)
+                  'download': None}, kwargs_in)
         self.N_list = kwargs['N_list']
         self.postfix_string = kwargs['postfix_string']
         self.CCE = kwargs['CCE']
-        if self.CCE:
-            raise NotImplementedError
+        _check_no_cce(self.CCE)
         self.kwargs = kwargs
         self.retro_def_orbit = self.kwargs['retro_def_orbit']
 
@@ -679,11 +700,11 @@ class ModeSearchAllFreeVaryingNSXS:
 
         self.N_list_string = '_'.join(list(map(str, self.N_list)))
         if kwargs["run_string_fitter"] is None:
-            self.run_string_fitter = f"SXS{self.SXSnum}_lm_{self.l}.{self.m}"
+            self.run_string_fitter = f"SXS{self.SXS_num}_lm_{self.l}.{self.m}"
         else:
             self.run_string_fitter = kwargs["run_string_fitter"]
         if kwargs["run_string"] is None:
-            self.run_string = f"SXS{self.SXSnum}_lm_{self.l}.{self.m}_N_{self.N_list_string}"
+            self.run_string = f"SXS{self.SXS_num}_lm_{self.l}.{self.m}_N_{self.N_list_string}"
         else:
             self.run_string = kwargs["run_string"]
         save_path = self.kwargs["mode_searchers_save_path"]
@@ -696,10 +717,11 @@ class ModeSearchAllFreeVaryingNSXS:
         self.load_pickle = self.kwargs["load_pickle"]
         self.mode_searcher_load_pickle = self.kwargs["mode_searcher_load_pickle"]
         if self.kwargs['set_seed_SXS']:
-            self.set_seed = int(self.SXSnum)
+            self.set_seed = int(self.SXS_num)
         else:
             self.set_seed = self.kwargs['default_seed']
         self.save_mode_searcher = self.kwargs['save_mode_searcher']
+        self.t_end = self.kwargs['t_end']
         self.download = kwargs["download"]
         self.get_waveform()
 
@@ -720,8 +742,9 @@ class ModeSearchAllFreeVaryingNSXS:
             **kwargs)
         self.mode_searcher_vary_N.do_mode_searches()
         self.found_modes_final = self.mode_searcher_vary_N.found_modes_final
-        print(f"Runname: {self.run_string}, final list of modes: ")
-        print(', '.join(qnms_to_string(self.found_modes_final)))
+        logger.info(
+            f"Runname: {self.run_string}, final list of modes: "
+            + ', '.join(qnms_to_string(self.found_modes_final)))
 
     def do_mode_search_varying_N(self) -> None:
         """
@@ -731,24 +754,34 @@ class ModeSearchAllFreeVaryingNSXS:
         if self.save_mode_searcher:
             self.pickle_save()
 
+    def summarize_final_modes(self, **kwargs):
+        """Return per-mode final results for the selected best run."""
+        if not hasattr(self, "mode_searcher_vary_N"):
+            raise ValueError(
+                "No mode-search result found. Run do_mode_search_varying_N() first.")
+        return self.mode_searcher_vary_N.summarize_final_modes(**kwargs)
+
     def get_waveform(self) -> None:
         """
         Loads the waveform from the SXS catalog.
         """
-        if self.CCE:
-            raise NotImplementedError
+        _check_no_cce(self.CCE)
         relevant_modes_dict = get_relevant_lm_waveforms_SXS(
-            self.SXSnum, CCE=self.CCE)
+            self.SXS_num, CCE=self.CCE, t_end=self.t_end)
         if not self.relevant_lm_list_override:
             self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
                 relevant_modes_dict)
         peaktime_dom = list(relevant_modes_dict.values())[0].peaktime
         # if self.CCE:
         #     # self.h, self.M, self.a, self.Lev = get_waveform_CCE(
-        #     #     self.SXSnum, self.l, self.m)
+        #     #     self.SXS_num, self.l, self.m)
         # else:
         self.h, self.M, self.a, self.Lev = get_waveform_SXS(
-            self.SXSnum, self.l, self.m, download = self.download)
+            self.SXS_num,
+            self.l,
+            self.m,
+            t_end=self.t_end,
+            download=self.download)
         self.h.update_peaktime(peaktime_dom)
 
     def pickle_save(self) -> None:
@@ -774,28 +807,26 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
 
     def __init__(
             self,
-            SXSnum,
+            SXS_num,
             t0_arr=np.linspace(
                 0,
                 50,
                 num=501),
             **kwargs_in):
-        self.SXSnum = SXSnum
+        self.SXS_num = SXS_num
         self.t0_arr = t0_arr
-        kwargs = {'load_pickle': True,
+        self.kwargs = _merge_kwargs({'load_pickle': True,
                   'mode_searcher_load_pickle': True,
-                  'N_list': [5, 6, 7, 8, 9, 10],
+                  'N_list': DEFAULT_N_LIST,
                   'postfix_string': '',
-                  'CCE': False}
-        kwargs.update(kwargs_in)
-        self.kwargs = kwargs
-        self.load_pickle = kwargs['load_pickle']
-        self.mode_searcher_load_pickle = kwargs['mode_searcher_load_pickle']
-        self.N_list = kwargs['N_list']
-        self.postfix_string = kwargs['postfix_string']
-        self.CCE = kwargs['CCE']
-        if self.CCE:
-            raise NotImplementedError
+                  't_end': DEFAULT_T_END,
+                  'CCE': False}, kwargs_in)
+        self.load_pickle = self.kwargs['load_pickle']
+        self.mode_searcher_load_pickle = self.kwargs['mode_searcher_load_pickle']
+        self.N_list = self.kwargs['N_list']
+        self.postfix_string = self.kwargs['postfix_string']
+        self.CCE = self.kwargs['CCE']
+        _check_no_cce(self.CCE)
         self.get_relevant_lm_list()
         self.get_relevant_lm_mode_searcher_varying_N()
 
@@ -807,7 +838,7 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
                 with open(_file_path, "rb") as f:
                     self.relevant_lm_mode_searcher_varying_N[_i] = pickle.load(
                         f)
-                print(
+                logger.info(
                     f"Loaded lm = {self.relevant_lm_list[_i][0]}.{self.relevant_lm_list[_i][1]} from an old run.")
             else:
                 self.relevant_lm_mode_searcher_varying_N[_i].do_mode_search_varying_N(
@@ -815,7 +846,7 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
 
     def get_relevant_lm_list(self):
         relevant_modes_dict = get_relevant_lm_waveforms_SXS(
-            self.SXSnum, CCE=self.CCE)
+            self.SXS_num, CCE=self.CCE, t_end=self.kwargs['t_end'])
         self.relevant_lm_list = relevant_modes_dict_to_lm_tuple(
             relevant_modes_dict)
 
@@ -824,12 +855,12 @@ class ModeSearchAllFreeVaryingNSXSAllRelevant:
         for lm in self.relevant_lm_list:
             l, m = lm
             if self.CCE:
-                _run_string_prefix = f"CCE{self.SXSnum}_lm_{l}.{m}"
+                _run_string_prefix = f"CCE{self.SXS_num}_lm_{l}.{m}"
             else:
-                _run_string_prefix = f"SXS{self.SXSnum}_lm_{l}.{m}"
+                _run_string_prefix = f"SXS{self.SXS_num}_lm_{l}.{m}"
             self.relevant_lm_mode_searcher_varying_N. append(
                 ModeSearchAllFreeVaryingNSXS(
-                    self.SXSnum,
+                    self.SXS_num,
                     l,
                     m,
                     t0_arr=self.t0_arr,
@@ -928,55 +959,262 @@ def flattest_region_quadrature(length, arr1, arr2, quantile_range=0.95,
     return fluc_least_indx, fluc_least, start_flat_indx
 
 
-def start_of_flat_region(length, arr1, arr2, quantile_range=0.95,
-                         normalize_1_by=None, normalize_2_by=2 * np.pi,
-                         med_min=1e-3, weight_1=1, weight_2=1.5,
-                         fluc_tol=0.1):
-    if len(arr1) != len(arr2):
-        raise Exception("The length of the two arrays do not match")
-    nan_tol = 1 - quantile_range
-    total_length = len(arr1)
-    quantile_low = (1 - quantile_range) / 2
-    quantile_hi = 1 - quantile_low
-    for i in range(total_length - length):
-        arr1_in_range = arr1[i:i + length]
-        arr2_in_range = arr2[i:i + length]
-        if length > 0:
-            arr1_nan_frac = np.sum(np.isnan(arr1_in_range)) / length
-            arr2_nan_frac = np.sum(np.isnan(arr2_in_range)) / length
+def start_of_flat_region(length, arr1, arr2, **kwargs):
+    _, _, start_flat_indx = flattest_region_quadrature(length, arr1, arr2, **kwargs)
+    if start_flat_indx < 0:
+        return np.nan
+    return start_flat_indx
+
+
+def _mode_strings_from_result_fixed(result_full):
+    if hasattr(result_full, "qnm_fixed_list") and result_full.qnm_fixed_list is not None:
+        return qnms_to_string(result_full.qnm_fixed_list)
+    return [key.removeprefix("A_") for key in result_full.A_fix_dict.keys()]
+
+
+def _window_length_from_delta_t(t0_arr, delta_t):
+    if len(t0_arr) < 2:
+        raise ValueError("t0_arr must have at least 2 points.")
+    if delta_t <= 0:
+        raise ValueError("delta_t must be positive.")
+    dt = float(np.median(np.diff(t0_arr)))
+    if dt <= 0:
+        raise ValueError("t0_arr must be strictly increasing.")
+    window_length = int(delta_t / dt + 1)
+    if window_length <= 0 or window_length >= len(t0_arr):
+        raise ValueError(
+            "Computed window length must be in [1, len(t0_arr)-1]. "
+            "Adjust delta_t or provide a denser t0_arr."
+        )
+    return window_length
+
+
+def _wrap_to_pi(arr):
+    return (arr + np.pi) % (2 * np.pi) - np.pi
+
+
+def _phase_quantiles(phi_window, quantile_low=0.05, quantile_high=0.95, wrap_phase=True):
+    """Compute phase quantiles robustly, optionally using circular wrapping."""
+    phi_window = np.asarray(phi_window)
+    if not wrap_phase:
+        phi_med = float(np.nanquantile(phi_window, 0.5))
+        phi_low = float(np.nanquantile(phi_window, quantile_low))
+        phi_high = float(np.nanquantile(phi_window, quantile_high))
+        return phi_low, phi_med, phi_high, (phi_med - phi_low), (phi_high - phi_med)
+
+    phi_valid = phi_window[~np.isnan(phi_window)]
+    if phi_valid.size == 0:
+        return np.nan, np.nan, np.nan, np.nan, np.nan
+
+    # Center on circular mean angle, then quantile wrapped offsets.
+    phase_center = float(np.angle(np.mean(np.exp(1j * phi_valid))))
+    phi_offset = _wrap_to_pi(phi_valid - phase_center)
+    phi_low_offset = float(np.nanquantile(phi_offset, quantile_low))
+    phi_med_offset = float(np.nanquantile(phi_offset, 0.5))
+    phi_high_offset = float(np.nanquantile(phi_offset, quantile_high))
+    phi_low = float(_wrap_to_pi(phase_center + phi_low_offset))
+    phi_med = float(_wrap_to_pi(phase_center + phi_med_offset))
+    phi_high = float(_wrap_to_pi(phase_center + phi_high_offset))
+    return phi_low, phi_med, phi_high, (phi_med_offset - phi_low_offset), (phi_high_offset - phi_med_offset)
+
+
+def summarize_fixed_mode_flatness(
+        result_full,
+        delta_t=None,
+        flatness_length=None,
+        quantile_range=DEFAULT_P_STABLE,
+        med_min=DEFAULT_A_TOL,
+        weight_1=DEFAULT_BETA_A,
+        weight_2=DEFAULT_BETA_PHI,
+        fluc_tol=DEFAULT_EPSILON_STABLE,
+        wrap_phase=True):
+    """Compute per-mode flatness summary for a fixed-frequency fit result.
+
+    Parameters:
+        result_full: `QNMFitVaryingStartingTimeResult`-like object with
+            `t0_arr`, `A_fix_dict`, and `phi_fix_dict`.
+        delta_t: Flatness window width in time units. Ignored if
+            `flatness_length` is provided.
+        flatness_length: Optional explicit window length in index units.
+        quantile_range: Quantile range used for fluctuation estimate.
+        med_min: Floor for amplitude/phase normalization medians.
+        weight_1: Amplitude fluctuation weight.
+        weight_2: Phase fluctuation weight.
+        fluc_tol: Threshold for earliest acceptable flatness window.
+        wrap_phase: If True, compute phase quantiles using circular wrapping.
+
+    Returns:
+        Dict keyed by mode string. Each value includes:
+            - flattest window start/end index and times
+            - flattest fluctuation
+            - median amplitude/phase within flattest window
+            - earliest acceptable flat-window start index/time
+    """
+    if flatness_length is not None and delta_t is not None:
+        raise ValueError("Provide either delta_t or flatness_length, not both.")
+
+    t0_arr = np.asarray(result_full.t0_arr)
+    if flatness_length is None:
+        if delta_t is None:
+            delta_t = DEFAULT_TAU_STABLE
+        flatness_length = _window_length_from_delta_t(t0_arr, delta_t)
+    elif flatness_length <= 0 or flatness_length >= len(t0_arr):
+        raise ValueError("flatness_length must be in [1, len(t0_arr)-1].")
+
+    mode_strings = _mode_strings_from_result_fixed(result_full)
+    summary = {}
+    for mode_string in mode_strings:
+        A_arr = np.abs(np.asarray(result_full.A_fix_dict[f"A_{mode_string}"]))
+        phi_arr = np.asarray(result_full.phi_fix_dict[f"phi_{mode_string}"])
+
+        flattest_start_idx, fluc_least, earliest_start_idx = flattest_region_quadrature(
+            flatness_length,
+            A_arr,
+            phi_arr,
+            quantile_range=quantile_range,
+            med_min=med_min,
+            weight_1=weight_1,
+            weight_2=weight_2,
+            fluc_tol=fluc_tol)
+
+        flattest_end_exclusive = flattest_start_idx + flatness_length
+        flattest_end_inclusive = min(flattest_end_exclusive - 1, len(t0_arr) - 1)
+        A_window = A_arr[flattest_start_idx:flattest_end_exclusive]
+        phi_window = phi_arr[flattest_start_idx:flattest_end_exclusive]
+
+        if earliest_start_idx < 0:
+            earliest_start_idx_out = np.nan
+            earliest_start_time = np.nan
         else:
-            arr1_nan_frac = 1
-            arr2_nan_frac = 1
-        quantile_adj = min(arr1_nan_frac / 2, nan_tol / 2)
-        hi1 = np.nanquantile(arr1_in_range, min(1, quantile_hi + quantile_adj))
-        low1 = np.nanquantile(
-            arr1_in_range, max(
-                0, quantile_low - quantile_adj))
-        med1 = max(np.nanquantile(arr1_in_range, 0.5), med_min)
-        if normalize_1_by is None:
-            normalize1 = med1
+            earliest_start_idx_out = int(earliest_start_idx)
+            earliest_start_time = float(t0_arr[earliest_start_idx])
+
+        summary[mode_string] = {
+            "window_length": int(flatness_length),
+            "window_delta_t": float(t0_arr[flattest_end_inclusive] - t0_arr[flattest_start_idx]),
+            "flattest_start_index": int(flattest_start_idx),
+            "flattest_end_index_exclusive": int(flattest_end_exclusive),
+            "flattest_start_time": float(t0_arr[flattest_start_idx]),
+            "flattest_end_time": float(t0_arr[flattest_end_inclusive]),
+            "flattest_fluctuation": float(fluc_least),
+            "flattest_amplitude_median": float(np.nanquantile(A_window, 0.5)),
+            "flattest_amplitude_low": float(np.nanquantile(A_window, 0.05)),
+            "flattest_amplitude_high": float(np.nanquantile(A_window, 0.95)),
+            "flattest_phase_median": np.nan,
+            "flattest_phase_low": np.nan,
+            "flattest_phase_high": np.nan,
+            "earliest_flat_start_index": earliest_start_idx_out,
+            "earliest_flat_start_time": earliest_start_time,
+        }
+        summary[mode_string]["flattest_amplitude_minus"] = (
+            summary[mode_string]["flattest_amplitude_median"]
+            - summary[mode_string]["flattest_amplitude_low"]
+        )
+        summary[mode_string]["flattest_amplitude_plus"] = (
+            summary[mode_string]["flattest_amplitude_high"]
+            - summary[mode_string]["flattest_amplitude_median"]
+        )
+        summary[mode_string]["flattest_phase_minus"] = (
+            summary[mode_string]["flattest_phase_median"]
+            - summary[mode_string]["flattest_phase_low"]
+        )
+        summary[mode_string]["flattest_phase_plus"] = (
+            summary[mode_string]["flattest_phase_high"]
+            - summary[mode_string]["flattest_phase_median"]
+        )
+        phi_low, phi_med, phi_high, phi_minus, phi_plus = _phase_quantiles(
+            phi_window, quantile_low=0.05, quantile_high=0.95, wrap_phase=wrap_phase)
+        summary[mode_string]["flattest_phase_low"] = phi_low
+        summary[mode_string]["flattest_phase_median"] = phi_med
+        summary[mode_string]["flattest_phase_high"] = phi_high
+        summary[mode_string]["flattest_phase_minus"] = float(phi_minus)
+        summary[mode_string]["flattest_phase_plus"] = float(phi_plus)
+    return summary
+
+
+def fixed_mode_flatness_to_plot_overlays(flatness_summary):
+    """Convert `summarize_fixed_mode_flatness` output to plot overlay dicts."""
+    bold_dict = {}
+    t_flat_start_dict = {}
+    for mode_string, mode_summary in flatness_summary.items():
+        bold_dict[mode_string] = (
+            mode_summary["flattest_start_index"],
+            mode_summary["flattest_end_index_exclusive"])
+        if not np.isnan(mode_summary["earliest_flat_start_time"]):
+            t_flat_start_dict[mode_string] = mode_summary["earliest_flat_start_time"]
+    return bold_dict, t_flat_start_dict
+
+
+def summarize_mode_searcher_final_modes(
+        mode_searcher_vary_N,
+        quantile_low=0.05,
+        quantile_high=0.95,
+        wrap_phase=True):
+    """Summarize final-mode flatness outputs from a mode-search result.
+
+    Uses the selected best run in `ModeSearchAllFreeVaryingN` and returns a
+    per-mode dictionary containing mode presence, flattest window times, median
+    amplitude/phase, asymmetric uncertainty ranges (upper/lower quantiles), and
+    earliest flatness start time.
+    """
+    best_run_indx = mode_searcher_vary_N.best_run_indx
+    flatness_checker = mode_searcher_vary_N.flatness_checkers[best_run_indx]
+    result_full = mode_searcher_vary_N.fixed_fitters[best_run_indx].result_full
+    mode_strings = qnms_to_string(mode_searcher_vary_N.found_modes_final)
+    t0_arr = result_full.t0_arr
+    window_length = flatness_checker.tau_stable_length
+
+    summary = {}
+    for mode_string, flattest_start_idx, earliest_start_idx in zip(
+            mode_strings,
+            flatness_checker.fluc_least_indx_list,
+            flatness_checker.start_flat_indx_list):
+        flattest_start_idx = int(flattest_start_idx)
+        flattest_end_exclusive = flattest_start_idx + window_length
+        flattest_end_inclusive = min(flattest_end_exclusive - 1, len(t0_arr) - 1)
+        A_arr = np.abs(np.asarray(result_full.A_fix_dict[f"A_{mode_string}"]))
+        phi_arr = np.asarray(result_full.phi_fix_dict[f"phi_{mode_string}"])
+        A_window = A_arr[flattest_start_idx:flattest_end_exclusive]
+        phi_window = phi_arr[flattest_start_idx:flattest_end_exclusive]
+
+        if earliest_start_idx < 0:
+            earliest_start_idx_out = np.nan
+            earliest_start_time = np.nan
         else:
-            normalize1 = normalize_1_by
-        fluc1 = (hi1 - low1) / normalize1
+            earliest_start_idx_out = int(earliest_start_idx)
+            earliest_start_time = float(t0_arr[earliest_start_idx])
 
-        hi2 = np.nanquantile(arr2_in_range, min(1, quantile_hi + quantile_adj))
-        low2 = np.nanquantile(
-            arr2_in_range, max(
-                0, quantile_low - quantile_adj))
-        med2 = max(np.nanquantile(arr2_in_range, 0.5), med_min)
-        if normalize_2_by is None:
-            normalize2 = med2
-        else:
-            normalize2 = normalize_2_by
-        fluc2 = (hi2 - low2) / normalize2
+        A_med = float(np.nanquantile(A_window, 0.5))
+        A_low = float(np.nanquantile(A_window, quantile_low))
+        A_high = float(np.nanquantile(A_window, quantile_high))
+        phi_low, phi_med, phi_high, phi_minus, phi_plus = _phase_quantiles(
+            phi_window,
+            quantile_low=quantile_low,
+            quantile_high=quantile_high,
+            wrap_phase=wrap_phase,
+        )
 
-        fluc = np.sqrt((fluc1 * weight_1)**2 + (fluc2 * weight_2)**2)
-
-        if fluc < fluc_tol and arr1_nan_frac < nan_tol:
-            start_flat_indx = i
-            return start_flat_indx
-
-    return np.nan
+        summary[mode_string] = {
+            "window_length": int(window_length),
+            "flattest_start_index": flattest_start_idx,
+            "flattest_end_index_exclusive": int(flattest_end_exclusive),
+            "flattest_start_time": float(t0_arr[flattest_start_idx]),
+            "flattest_end_time": float(t0_arr[flattest_end_inclusive]),
+            "flattest_amplitude_median": A_med,
+            "flattest_amplitude_low": A_low,
+            "flattest_amplitude_high": A_high,
+            "flattest_amplitude_minus": A_med - A_low,
+            "flattest_amplitude_plus": A_high - A_med,
+            "flattest_phase_median": phi_med,
+            "flattest_phase_low": phi_low,
+            "flattest_phase_high": phi_high,
+            "flattest_phase_minus": float(phi_minus),
+            "flattest_phase_plus": float(phi_plus),
+            "earliest_flat_start_index": earliest_start_idx_out,
+            "earliest_flat_start_time": earliest_start_time,
+            "is_present": True,
+        }
+    return summary
 
 
 def eff_mode_search(
