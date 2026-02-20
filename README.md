@@ -18,7 +18,6 @@
   <a href="#installation">Installation</a> •
   <a href="#usage">Usage</a> •
   <a href="#paper-results">Paper Results</a> •
-  <a href="#coming-soon">Coming Soon</a> •
   <a href="#how-to-cite">How to Cite</a> •
   <a href="#license">License</a> 
 </p>
