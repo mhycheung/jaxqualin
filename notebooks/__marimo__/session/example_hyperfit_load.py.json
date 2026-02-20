@@ -1,0 +1,297 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.19.11"
+  },
+  "cells": [
+    {
+      "id": "MJUe",
+      "code_hash": "b8eb9104ebd66fb224521a26135d884d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"load-hyperfit-functions-and-interpolator\">Load Hyperfit functions and interpolator</h1>\n<span class=\"paragraph\">(Please update to the latest version of <code>jaxqualin</code> to avoid errors!)</span>\n<span class=\"paragraph\">In this example we will call the hyperfit functions (listed in the <code>jaxqualin</code> paper) and corresponding interpolators to estimate the amplitudes and phases of different modes, as a function of the binary black hole simulation parameters.\nThe hyperfit polynomial terms and interpolation data might be updated in future versions of the paper.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "d3074ac20b319b6f89acc8081b6f5792",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"import-functions\">Import functions</h3></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "bf2be116d2f491582a1954ece9aa061f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"download-data\">Download data</h3>\n<span class=\"paragraph\">By default, the download functions compares the local version of the data with the one hosted on this webpage.\nIf the online one is newer, it will be downloaded and the local version will be overriden.\nUse <code>overwrite = 'force'</code> to force overwrite, and <code>never</code> to avoid overwriting.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "8f5c8530ebaed7a2463297845c0065ad",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"make-hyperfit-functions-and-interpolators\">Make hyperfit functions and interpolators</h3>\n<span class=\"paragraph\">Now we convert the downloaded data into functions and interpolators that we can easily call.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "BYtC",
+      "code_hash": "463120bd4638142561dabeb0a5c6b5d2",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"estimating-the-amplitude-and-phase\">Estimating the amplitude and phase</h2>\n<span class=\"paragraph\">We can estimate the amplitude and phase for a set of progenitor parameters <marimo-tex class=\"arithmatex\">||((\\eta, \\chi_+, \\chi_-)||)</marimo-tex>.\nAll is well if the hyperfit and interpolation returns similar results.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "edd2ecc49ca4d1c8ccbf59e439ed4f3f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">The interpolator returns <code>nan</code> if the requested point is outside of the convex hull of the interpolation data.\nThis can be used to check whether the hyperfit is extrapolating at the point, because the fit is trained with the same data used to construct the interpolator.\nIf the point is not covered by the convex hull, it could be because no simulations in the SXS catalog cover that region of the parameter space, or the mode amplitude is too weak (such that the mode extraction procedure missed the mode).</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Hstk",
+      "code_hash": "ee875ab3e8910ab57530ff0cc1e4296c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">When the hyperfit and interpolation returns significantly different results, care should be taken.\nThe mode amplitude might be too small for the hyperfit to work accurately, and the results in these regions of parameter space should at most be used as an order of magnitude estimation.\nIn fact, the hyperfit amplitude could even be negative, if the mode amplitude is too low.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "iLit",
+      "code_hash": "62de699159534bba0db08507ce043245",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">We can also interpolate the fluctuation of the mode amplitude and phase when they were extracted with our procedure</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ROlb",
+      "code_hash": "16daf2f1a41068f4434d948ea6fa4c94",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"changing-parameterization\">Changing parameterization</h3>\n<span class=\"paragraph\">By specifying <code>PN = False</code>, we can use the <marimo-tex class=\"arithmatex\">||((q, \\chi_1, \\chi_2)||)</marimo-tex> parameterization instead of <marimo-tex class=\"arithmatex\">||((\\eta, \\chi_+, \\chi_-)||)</marimo-tex></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Hbol",
+      "code_hash": "1d0db38904205bec4d6f6f6a1f6cec3e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "562a088fc4b5b2bf689f4aa93a5501e8",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/x-mcheung1/jaxqualin_projects/jaxqualin/.pixi/envs/default/lib/python3.12/site-packages/pykerr/qnm.py:2: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "PKri",
+      "code_hash": "a50e3318a90165560a32e1fdf3606f77",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "d369f2dc546788ea5074d60fd8651971",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "RGSE",
+      "code_hash": "dabaada4c95243d654eee04243c7a905",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "A_fit: 3.46540, A_interp: 3.52040\nphi_fit: 4.46984, phi_interp: 4.53029\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "emfo",
+      "code_hash": "d49e6320ca58272dc858e47c48beed53",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "A_fit: 10.37139, A_interp: nan\nphi_fit: 6.87546, phi_interp: nan\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "nWHF",
+      "code_hash": "1c31a10a7f5fed192eb280e5cd2374b1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "A_fit: 7.61902e-05, A_interp: 1.32380e-04\nphi_fit: 5.68904, phi_interp: 5.76660\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "ZHCJ",
+      "code_hash": "8d5b4f792ffbb280aed2669b6d7ebc6a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dA_interp: 2.87730e-05, dphi_interp: 0.23979\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "qnkX",
+      "code_hash": "976f7213115c2c7db51568b26099a8dd",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TqIu",
+      "code_hash": "36a59d3fbcb7c5cb4d0c7fec4a181be6",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "A_fit: 3.35743, A_interp: 3.38756\nphi_fit: 4.53457, phi_interp: 4.58072\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    }
+  ]
+}

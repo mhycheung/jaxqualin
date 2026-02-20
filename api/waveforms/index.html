@@ -19,8 +19,11 @@
         <link rel="next" href="../fit/">
       
       
+        
+      
+      
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -28,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.6a10b989.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
       
 
@@ -49,11 +52,12 @@
     
       <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
-    
     
     
   </head>
@@ -61,9 +65,6 @@
   
     <body dir="ltr">
   
-    
-    
-      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
@@ -90,12 +91,12 @@
     <a href="../.." title="jaxqualin" class="md-header__button md-logo" aria-label="jaxqualin" data-md-component="logo">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
       
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
     </label>
     <div class="md-header__title" data-md-component="header-title">
       <div class="md-header__ellipsis">
@@ -115,33 +116,38 @@
     </div>
     
     
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
     
-      <label class="md-header__button md-icon" for="__search">
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
-      </label>
-      <div class="md-search" data-md-component="search" role="dialog">
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
     <form class="md-search__form" name="search">
       <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
       <label class="md-search__icon md-icon" for="__search">
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
       </label>
       <nav class="md-search__options" aria-label="Search">
         
         <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
           
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
       </nav>
       
     </form>
     <div class="md-search__output">
-      <div class="md-search__scrollwrap" data-md-scrollfix>
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
         <div class="md-search-result" data-md-component="search-result">
           <div class="md-search-result__meta">
             Initializing search
@@ -152,13 +158,14 @@
     </div>
   </div>
 </div>
+      
     
     
       <div class="md-header__source">
         <a href="https://github.com/mhycheung/jaxqualin" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
     GitHub
@@ -194,7 +201,7 @@
     <a href="../.." title="jaxqualin" class="md-nav__button md-logo" aria-label="jaxqualin" data-md-component="logo">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
     jaxqualin
@@ -204,7 +211,7 @@
       <a href="https://github.com/mhycheung/jaxqualin" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
     GitHub
@@ -219,13 +226,21 @@
   
   
   
+  
     <li class="md-nav__item">
       <a href="../.." class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     Home
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -238,6 +253,7 @@
   
   
   
+  
     
     
     
@@ -245,7 +261,6 @@
     
     <li class="md-nav__item md-nav__item--nested">
       
-        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
@@ -254,9 +269,16 @@
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
             
   
+  
   <span class="md-ellipsis">
+    
+  
     Examples
+  
+
+    
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
@@ -265,7 +287,11 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
-            Examples
+            
+  
+    Examples
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -274,13 +300,21 @@
   
   
   
+  
     <li class="md-nav__item">
       <a href="../../notebooks/example_fit/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     Fitting the ringdown
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -291,6 +325,7 @@
             
               
                 
+  
   
   
   
@@ -298,9 +333,16 @@
       <a href="../../notebooks/example_mode_selection/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     Mode search
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -311,6 +353,7 @@
             
               
                 
+  
   
   
   
@@ -318,9 +361,16 @@
       <a href="../../notebooks/example_custom_waveform/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     Custom waveform
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -331,6 +381,7 @@
             
               
                 
+  
   
   
   
@@ -338,9 +389,16 @@
       <a href="../../notebooks/example_summed_waveform/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     Summed multipoles
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -354,13 +412,105 @@
   
   
   
+  
     <li class="md-nav__item">
       <a href="../../notebooks/example_hyperfit_load/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     Loading hyperfits and interpolators
+  
+
+    
   </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/example_real_waveform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-waveform fitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/example_varma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kerr mass and spin fitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/example_custom_modes_and_models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom modes and models
+  
+
+    
+  </span>
+  
   
 
       </a>
@@ -378,6 +528,7 @@
     
       
       
+  
   
   
   
@@ -390,16 +541,22 @@
       
         
         
-        
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
+  
   <span class="md-ellipsis">
+    
+  
     Results
+  
+
+    
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
@@ -408,7 +565,11 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
-            Results
+            
+  
+    Results
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -417,13 +578,21 @@
   
   
   
+  
     <li class="md-nav__item">
       <a href="../../mode_md/2.2.0/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     2,2,0 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -434,6 +603,7 @@
             
               
                 
+  
   
   
   
@@ -441,9 +611,16 @@
       <a href="../../mode_md/2.2.1/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     2,2,1 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -454,6 +631,7 @@
             
               
                 
+  
   
   
   
@@ -461,9 +639,16 @@
       <a href="../../mode_md/2.1.0/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     2,1,0 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -474,6 +659,7 @@
             
               
                 
+  
   
   
   
@@ -481,9 +667,16 @@
       <a href="../../mode_md/2.1.1/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     2,1,1 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -494,6 +687,7 @@
             
               
                 
+  
   
   
   
@@ -501,9 +695,16 @@
       <a href="../../mode_md/3.3.0/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     3,3,0 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -514,6 +715,7 @@
             
               
                 
+  
   
   
   
@@ -521,9 +723,16 @@
       <a href="../../mode_md/3.3.1/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     3,3,1 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -534,6 +743,7 @@
             
               
                 
+  
   
   
   
@@ -541,9 +751,16 @@
       <a href="../../mode_md/3.2.0/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     3,2,0 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -554,6 +771,7 @@
             
               
                 
+  
   
   
   
@@ -561,9 +779,16 @@
       <a href="../../mode_md/4.4.0/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     4,4,0 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -574,6 +799,7 @@
             
               
                 
+  
   
   
   
@@ -581,9 +807,16 @@
       <a href="../../mode_md/5.5.0/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     5,5,0 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -594,6 +827,7 @@
             
               
                 
+  
   
   
   
@@ -601,9 +835,16 @@
       <a href="../../mode_md/-2.2.0/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     r2,2,0 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -617,13 +858,21 @@
   
   
   
+  
     <li class="md-nav__item">
       <a href="../../mode_md/-2.1.0/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     r2,1,0 mode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -644,13 +893,21 @@
   
   
   
+  
     <li class="md-nav__item">
       <a href="../../data/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     Data
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -663,6 +920,7 @@
   
   
     
+  
   
   
     
@@ -674,16 +932,22 @@
       
         
         
-        
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
+  
   <span class="md-ellipsis">
+    
+  
     API
+  
+
+    
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
@@ -692,7 +956,11 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
-            API
+            
+  
+    API
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -701,13 +969,21 @@
   
   
   
+  
     <li class="md-nav__item">
       <a href="../qnmode/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     jaxqualin.qnmode
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -721,6 +997,7 @@
   
   
     
+  
   
   
     <li class="md-nav__item md-nav__item--active">
@@ -734,9 +1011,16 @@
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
   
+  
   <span class="md-ellipsis">
+    
+  
     jaxqualin.waveforms
+  
+
+    
   </span>
+  
   
 
           <span class="md-nav__icon md-icon"></span>
@@ -745,9 +1029,16 @@
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     jaxqualin.waveforms
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -769,14 +1060,22 @@
       
         <li class="md-nav__item">
   <a href="#jaxqualin.waveforms" class="md-nav__link">
-    waveforms
+    <span class="md-ellipsis">
+      
+        waveforms
+      
+    </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform" class="md-nav__link">
-    waveform
+    <span class="md-ellipsis">
+      
+        waveform
+      
+    </span>
   </a>
   
     <nav class="md-nav" aria-label="waveform">
@@ -784,35 +1083,55 @@
         
           <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform.__init__" class="md-nav__link">
-    __init__()
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform.argabsmax" class="md-nav__link">
-    argabsmax()
+    <span class="md-ellipsis">
+      
+        argabsmax
+      
+    </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform.postmerger" class="md-nav__link">
-    postmerger()
+    <span class="md-ellipsis">
+      
+        postmerger
+      
+    </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform.set_lm" class="md-nav__link">
-    set_lm()
+    <span class="md-ellipsis">
+      
+        set_lm
+      
+    </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform.update_peaktime" class="md-nav__link">
-    update_peaktime()
+    <span class="md-ellipsis">
+      
+        update_peaktime
+      
+    </span>
   </a>
   
 </li>
@@ -824,7 +1143,11 @@
       
         <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.get_SXS_waveform_summed" class="md-nav__link">
-    get_SXS_waveform_summed()
+    <span class="md-ellipsis">
+      
+        get_SXS_waveform_summed
+      
+    </span>
   </a>
   
 </li>
@@ -843,13 +1166,21 @@
   
   
   
+  
     <li class="md-nav__item">
       <a href="../fit/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     jaxqualin.fit
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -860,6 +1191,7 @@
             
               
                 
+  
   
   
   
@@ -867,9 +1199,16 @@
       <a href="../selection/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     jaxqualin.selection
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -883,13 +1222,21 @@
   
   
   
+  
     <li class="md-nav__item">
       <a href="../data/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     jaxqualin.data
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -933,14 +1280,22 @@
       
         <li class="md-nav__item">
   <a href="#jaxqualin.waveforms" class="md-nav__link">
-    waveforms
+    <span class="md-ellipsis">
+      
+        waveforms
+      
+    </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform" class="md-nav__link">
-    waveform
+    <span class="md-ellipsis">
+      
+        waveform
+      
+    </span>
   </a>
   
     <nav class="md-nav" aria-label="waveform">
@@ -948,35 +1303,55 @@
         
           <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform.__init__" class="md-nav__link">
-    __init__()
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform.argabsmax" class="md-nav__link">
-    argabsmax()
+    <span class="md-ellipsis">
+      
+        argabsmax
+      
+    </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform.postmerger" class="md-nav__link">
-    postmerger()
+    <span class="md-ellipsis">
+      
+        postmerger
+      
+    </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform.set_lm" class="md-nav__link">
-    set_lm()
+    <span class="md-ellipsis">
+      
+        set_lm
+      
+    </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.waveform.update_peaktime" class="md-nav__link">
-    update_peaktime()
+    <span class="md-ellipsis">
+      
+        update_peaktime
+      
+    </span>
   </a>
   
 </li>
@@ -988,7 +1363,11 @@
       
         <li class="md-nav__item">
   <a href="#jaxqualin.waveforms.get_SXS_waveform_summed" class="md-nav__link">
-    get_SXS_waveform_summed()
+    <span class="md-ellipsis">
+      
+        get_SXS_waveform_summed
+      
+    </span>
   </a>
   
 </li>
@@ -1003,9 +1382,11 @@
           
           
             <div class="md-content" data-md-component="content">
+              
               <article class="md-content__inner md-typeset">
                 
                   
+
 
   
   
@@ -1019,11 +1400,19 @@
 
 
 <a id="jaxqualin.waveforms"></a>
-  <div class="doc doc-contents first">
+    <div class="doc doc-contents first">
 
-  
 
-  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
 
 
 
@@ -1036,211 +1425,216 @@
 
 
 
-
 <h4 id="jaxqualin.waveforms.waveform" class="doc doc-heading">
-          <code>waveform</code>
+            <code>waveform</code>
 
 
 </h4>
 
 
-  <div class="doc doc-contents ">
-
-  
-      <p>A class representing a waveform containing a ringdown phase to be fitted.</p>
+    <div class="doc doc-contents ">
 
 
 
-  <p><strong>Attributes:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
+        <p>A class representing a waveform containing a ringdown phase to be fitted.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>fulltime</code></td>
-          <td>
-                <code><span title="jaxqualin.utils.np.ndarray">ndarray</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The full time array of the waveform. </p>
-            </div>
-          </td>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
         </tr>
-        <tr>
-          <td><code>fullh</code></td>
-          <td>
-                <code><span title="jaxqualin.utils.np.ndarray">ndarray</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The full complex waveform. </p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td><code>peaktime</code></td>
-          <td>
-                <code>float</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The time of peak strain <code>jnp.abs(h)</code> of the waveform. </p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td><code>peakindx</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The array index of the time of peak strain of the
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.fulltime">fulltime</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The full time array of the waveform. </p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.fullh">fullh</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The full complex waveform. </p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.peaktime">peaktime</span></code></td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time of peak strain <code>jnp.abs(h)</code> of the waveform. </p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.peakindx">peakindx</span></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The array index of the time of peak strain of the
 waveform.</p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td><code>t_peak</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The time of peak strain of the waveform. This can be defined
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.t_peak">t_peak</span></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time of peak strain of the waveform. This can be defined
 by the user and overrides <code>peaktime</code>.</p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td><code>time</code></td>
-          <td>
-                <code><span title="jaxqualin.utils.np.ndarray">ndarray</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The time array of the waveform after the peak, starting at
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.time">time</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time array of the waveform after the peak, starting at
 <code>t_peak</code> and time shifted such that <code>t_peak = 0</code>.</p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td><code>hr</code></td>
-          <td>
-                <code><span title="jaxqualin.utils.jnp.ndarray">ndarray</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The real part of the waveform after the peak.</p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td><code>hi</code></td>
-          <td>
-                <code><span title="jaxqualin.utils.jnp.ndarray">ndarray</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The imaginary part of the waveform after the peak. </p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td><code>h</code></td>
-          <td>
-                <code><span title="jaxqualin.utils.jnp.ndarray">ndarray</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The complex waveform after the peak.</p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td><code>l</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The spherical harmonic mode number l of the waveform. </p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td><code>m</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The spherical harmonic mode number m of the waveform.</p>
-            </div>
-          </td>
-        </tr>
-    </tbody>
-  </table>
-
-
-
-  <p><strong>Methods:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-          <tr>
-            <td><code>update_peaktime</code></td>
-            <td>
-              <div class="doc-md-description">
-                <p>Sets <code>t_peak</code> to override the peak time. </p>
               </div>
             </td>
           </tr>
-          <tr>
-            <td><code>argabsmax</code></td>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.hr">hr</span></code></td>
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
             <td>
               <div class="doc-md-description">
-                <p>Returns the array index of the time of peak strain of the 
+                <p>The real part of the waveform after the peak.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.hi">hi</span></code></td>
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The imaginary part of the waveform after the peak. </p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.h">h</span></code></td>
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The complex waveform after the peak.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.l">l</span></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The spherical harmonic mode number l of the waveform. </p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="jaxqualin.waveforms.waveform.m">m</span></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The spherical harmonic mode number m of the waveform.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Methods:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="update_peaktime(t_peak) (jaxqualin.waveforms.waveform.update_peaktime)" href="../../references/#jaxqualin.waveforms.waveform.update_peaktime">update_peaktime</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Sets <code>t_peak</code> to override the peak time. </p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="argabsmax(remove_num=DEFAULT_REMOVE_NUM) (jaxqualin.waveforms.waveform.argabsmax)" href="../../references/#jaxqualin.waveforms.waveform.argabsmax">argabsmax</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Returns the array index of the time of peak strain of the 
 waveform.</p>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td><code>postmerger</code></td>
-            <td>
-              <div class="doc-md-description">
-                <p>Returns the time, real part, and imaginary part of the
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="postmerger(t_start, t_end=np.inf) (jaxqualin.waveforms.waveform.postmerger)" href="../../references/#jaxqualin.waveforms.waveform.postmerger">postmerger</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Returns the time, real part, and imaginary part of the
 waveform after the peak. </p>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td><code>set_lm</code></td>
-            <td>
-              <div class="doc-md-description">
-                <p>Sets the spherical harmonic mode numbers l and m of the 
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="set_lm(l, m) (jaxqualin.waveforms.waveform.set_lm)" href="../../references/#jaxqualin.waveforms.waveform.set_lm">set_lm</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Sets the spherical harmonic mode numbers l and m of the 
 waveform.</p>
-              </div>
-            </td>
-          </tr>
-    </tbody>
-  </table>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
 
 
-  
 
-  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
 
 
 
@@ -1252,426 +1646,436 @@ waveform.</p>
 
 
 <div class="doc doc-object doc-function">
-
-
 
 
 <h5 id="jaxqualin.waveforms.waveform.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">fulltime</span><span class="p">,</span> <span class="n">fullh</span><span class="p">,</span> <span class="n">t_peak</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t_start</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">remove_num</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">fulltime</span><span class="p">,</span> <span class="n">fullh</span><span class="p">,</span> <span class="n">t_peak</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t_start</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">remove_num</span><span class="o">=</span><span class="n">DEFAULT_REMOVE_NUM</span><span class="p">)</span></code>
 
 </h5>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Initialize a waveform.</p>
+    <div class="doc doc-contents ">
+
+        <p>Initialize a waveform.</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>fulltime</code></td>
-          <td>
-                <code><span title="jaxqualin.utils.np.ndarray">ndarray</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The full time array of the waveform.</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
         </tr>
-        <tr>
-          <td><code>fullh</code></td>
-          <td>
-                <code><span title="jaxqualin.utils.np.ndarray">ndarray</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The full complex waveform.</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>t_peak</code></td>
-          <td>
-                <code><span title="typing.Optional">Optional</span>[float]</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The time of peak strain of the waveform. This can be
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>fulltime</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The full time array of the waveform.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fullh</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The full complex waveform.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>t_peak</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="float">float</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time of peak strain of the waveform. This can be
 defined by the user and overrides <code>peaktime</code>.</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>t_start</code></td>
-          <td>
-                <code>float</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The time after the peak to start the waveform.</p>
-            </div>
-          </td>
-          <td>
-                <code>0.0</code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>t_end</code></td>
-          <td>
-                <code>float</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The time after the peak to end the waveform.</p>
-            </div>
-          </td>
-          <td>
-                <code><span title="jaxqualin.utils.np.inf">inf</span></code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>l</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The spherical harmonic mode number l of the waveform.</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>m</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The spherical harmonic mode number m of the waveform.</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>remove_num</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The number of points to remove from the beginning of
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>t_start</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time after the peak to start the waveform.</p>
+              </div>
+            </td>
+            <td>
+                  <code>0.0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>t_end</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time after the peak to end the waveform.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="numpy.inf">inf</span></code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>l</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The spherical harmonic mode number l of the waveform.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>m</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The spherical harmonic mode number m of the waveform.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>remove_num</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The number of points to remove from the beginning of
 the waveform to avoid numerical artifacts.</p>
-            </div>
-          </td>
-          <td>
-                <code>500</code>
-          </td>
-        </tr>
-    </tbody>
-  </table>
+              </div>
+            </td>
+            <td>
+                  <code><span title="jaxqualin.waveforms.DEFAULT_REMOVE_NUM">DEFAULT_REMOVE_NUM</span></code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-  </div>
+
+    </div>
 
 </div>
 
-
 <div class="doc doc-object doc-function">
-
-
 
 
 <h5 id="jaxqualin.waveforms.waveform.argabsmax" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">argabsmax</span><span class="p">(</span><span class="n">remove_num</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">argabsmax</span><span class="p">(</span><span class="n">remove_num</span><span class="o">=</span><span class="n">DEFAULT_REMOVE_NUM</span><span class="p">)</span></code>
 
 </h5>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Returns the array index of the time of peak strain of the waveform.</p>
+    <div class="doc doc-contents ">
+
+        <p>Returns the array index of the time of peak strain of the waveform.</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>remove_num</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The number of points to remove from the beginning of the
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>remove_num</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The number of points to remove from the beginning of the
 waveform to avoid numerical artifacts.</p>
-            </div>
-          </td>
-          <td>
-                <code>500</code>
-          </td>
-        </tr>
-    </tbody>
-  </table>
+              </div>
+            </td>
+            <td>
+                  <code><span title="jaxqualin.waveforms.DEFAULT_REMOVE_NUM">DEFAULT_REMOVE_NUM</span></code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-
-  <p><strong>Returns:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The array index of the time of peak strain of the waveform.</p>
-            </div>
-          </td>
+          <th>Type</th>
+          <th>Description</th>
         </tr>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The array index of the time of peak strain of the waveform.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-  </div>
+
+    </div>
 
 </div>
 
-
 <div class="doc doc-object doc-function">
-
-
 
 
 <h5 id="jaxqualin.waveforms.waveform.postmerger" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">postmerger</span><span class="p">(</span><span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">postmerger</span><span class="p">(</span><span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span></code>
 
 </h5>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Returns the time, real part, and imaginary part of the waveform after
+    <div class="doc doc-contents ">
+
+        <p>Returns the time, real part, and imaginary part of the waveform after
 the peak.</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>t_start</code></td>
-          <td>
-                <code>float</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The time after the peak to start the waveform. t_end: The
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>t_start</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time after the peak to start the waveform. t_end: The
 time after the peak to end the waveform.</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
-        </tr>
-    </tbody>
-  </table>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-
-  <p><strong>Returns:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td>
-                <code><span title="jaxqualin.utils.np.ndarray">ndarray</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The time, real part, and imaginary part of the waveform after the</p>
-            </div>
-          </td>
+          <th>Type</th>
+          <th>Description</th>
         </tr>
-        <tr>
-          <td>
-                <code><span title="jaxqualin.utils.jnp.ndarray">ndarray</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>peak.</p>
-            </div>
-          </td>
-        </tr>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time, real part, and imaginary part of the waveform after the</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>peak.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-  </div>
+
+    </div>
 
 </div>
 
-
 <div class="doc doc-object doc-function">
-
-
 
 
 <h5 id="jaxqualin.waveforms.waveform.set_lm" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">set_lm</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">set_lm</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span></code>
 
 </h5>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Sets the spherical harmonic mode numbers l and m of the waveform.</p>
+    <div class="doc doc-contents ">
+
+        <p>Sets the spherical harmonic mode numbers l and m of the waveform.</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>l</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The spherical harmonic mode number l of the waveform.</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
         </tr>
-        <tr>
-          <td><code>m</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The spherical harmonic mode number m of the waveform.</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
-        </tr>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>l</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The spherical harmonic mode number l of the waveform.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>m</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The spherical harmonic mode number m of the waveform.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-  </div>
+
+    </div>
 
 </div>
 
-
 <div class="doc doc-object doc-function">
-
-
 
 
 <h5 id="jaxqualin.waveforms.waveform.update_peaktime" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">update_peaktime</span><span class="p">(</span><span class="n">t_peak</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">update_peaktime</span><span class="p">(</span><span class="n">t_peak</span><span class="p">)</span></code>
 
 </h5>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Override the peak time of the waveform.</p>
+    <div class="doc doc-contents ">
+
+        <p>Override the peak time of the waveform.</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>t_peak</code></td>
-          <td>
-                <code>float</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The user-defined peak time of the waveform.</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
         </tr>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>t_peak</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The user-defined peak time of the waveform.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-  </div>
+
+    </div>
 
 </div>
 
@@ -1679,174 +2083,181 @@ time after the peak to end the waveform.</p>
 
   </div>
 
-  </div>
+    </div>
 
 </div>
-
 
 
 <div class="doc doc-object doc-function">
 
 
-
-
 <h4 id="jaxqualin.waveforms.get_SXS_waveform_summed" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get_SXS_waveform_summed</span><span class="p">(</span><span class="n">SXSnum</span><span class="p">,</span> <span class="n">iota</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">l_max</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">res</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">N_ext</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">get_SXS_waveform_summed</span><span class="p">(</span><span class="n">SXS_num</span><span class="p">,</span> <span class="n">iota</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">l_max</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">res</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">N_ext</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span></code>
 
 </h4>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Obtain the waveform of a SXS simulation summed over all modes up to l_max, 
-using <code>pycbc.waveform.waveform_modes.sum_modes</code>.</p>
+    <div class="doc doc-contents ">
+
+        <p>Obtain the waveform of a SXS simulation summed over all modes up to l_max.</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>SXSnum</code></td>
-          <td>
-                <code>str</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The SXS simulation number.</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
         </tr>
-        <tr>
-          <td><code>iota</code></td>
-          <td>
-                <code>float</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The inclination angle of the binary.</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>psi</code></td>
-          <td>
-                <code>float</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The phase to use.</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>l_max</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The maximum l mode to include in the waveform.</p>
-            </div>
-          </td>
-          <td>
-                <code>4</code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>res</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The level of the simulation, relative to the highest resolution level 
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>SXS_num</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The SXS simulation number.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>iota</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The inclination angle of the binary.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>psi</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The phase to use.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>l_max</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The maximum l mode to include in the waveform.</p>
+              </div>
+            </td>
+            <td>
+                  <code>4</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>res</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The level of the simulation, relative to the highest resolution level 
 (<code>res = 0</code> means highest resolution). Must be zero or negative.</p>
-            </div>
-          </td>
-          <td>
-                <code>0</code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>N_ext</code></td>
-          <td>
-                <code>int</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The extrapolation order of the simulation.</p>
-            </div>
-          </td>
-          <td>
-                <code>2</code>
-          </td>
-        </tr>
-    </tbody>
-  </table>
+              </div>
+            </td>
+            <td>
+                  <code>0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>N_ext</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The extrapolation order of the simulation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>2</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>h</code></td>            <td>
+                  <code><a class="autorefs autorefs-internal" title="waveform (jaxqualin.waveforms.waveform)" href="../../references/#jaxqualin.waveforms.waveform">waveform</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The waveform.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+<td><code>Mf</code></td>            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The final mass of the binary.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+<td><code>af</code></td>            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The final spin of the binary.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-  <p><strong>Returns:</strong></p>
-  <table>
-    <thead>
-      <tr>
-<th>Name</th>        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-        <tr>
-<td><code>h</code></td>          <td>
-                <code><a class="autorefs autorefs-internal" title="jaxqualin.waveforms.waveform" href="#jaxqualin.waveforms.waveform">waveform</a></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The waveform.</p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-<td><code>Mf</code></td>          <td>
-                <code>float</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The final mass of the binary.</p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-<td><code>af</code></td>          <td>
-                <code>float</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The final spin of the binary.</p>
-            </div>
-          </td>
-        </tr>
-    </tbody>
-  </table>
 
-  </div>
+    </div>
 
 </div>
 
@@ -1854,9 +2265,16 @@ using <code>pycbc.waveform.waveform_modes.sum_modes</code>.</p>
 
   </div>
 
-  </div>
+    </div>
 
 </div>
+
+
+
+
+
+
+
 
 
 
@@ -1867,6 +2285,7 @@ using <code>pycbc.waveform.waveform_modes.sum_modes</code>.</p>
             </div>
           
           
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
         
       </main>
@@ -1895,10 +2314,13 @@ using <code>pycbc.waveform.waveform_modes.sum_modes</code>.</p>
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.aecac24b.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
         <script src="../../docs/javascripts/mathjax.js"></script>
       
