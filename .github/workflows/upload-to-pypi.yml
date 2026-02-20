@@ -91,6 +91,8 @@ jobs:
     if: ${{ needs.build.result == 'success' && (github.event_name == 'release' || inputs.publish) }}
     permissions:
       id-token: write
+    env:
+      HAS_TWINE_TOKEN: ${{ secrets.TWINE_TOKEN }}
 
     steps:
       - name: Download distributions
@@ -100,14 +102,14 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI (token)
-        if: ${{ secrets.TWINE_TOKEN != '' }}
+        if: ${{ env.HAS_TWINE_TOKEN != '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.TWINE_TOKEN }}
           skip-existing: true
 
       - name: Publish to PyPI (trusted publishing)
-        if: ${{ secrets.TWINE_TOKEN == '' }}
+        if: ${{ env.HAS_TWINE_TOKEN == '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           skip-existing: true

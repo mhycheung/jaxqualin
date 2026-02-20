@@ -89,6 +89,8 @@ jobs:
     if: ${{ inputs.publish && needs.build.result == 'success' }}
     permissions:
       id-token: write
+    env:
+      HAS_TWINE_TEST_TOKEN: ${{ secrets.TWINE_TEST_TOKEN }}
 
     steps:
       - name: Download distributions
@@ -98,7 +100,7 @@ jobs:
           path: dist/
 
       - name: Publish to TestPyPI (token)
-        if: ${{ secrets.TWINE_TEST_TOKEN != '' }}
+        if: ${{ env.HAS_TWINE_TEST_TOKEN != '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
@@ -106,7 +108,7 @@ jobs:
           skip-existing: true
 
       - name: Publish to TestPyPI (trusted publishing)
-        if: ${{ secrets.TWINE_TEST_TOKEN == '' }}
+        if: ${{ env.HAS_TWINE_TEST_TOKEN == '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
